@@ -187,6 +187,18 @@ export default function InicioVigilante() {
           </Text>
         </View>
       </CardK1>
+
+      {emTurno && !bloqueado && (
+        <Pressable
+          onPress={() => Alert.alert('Encerrar turno?', 'O monitoramento, a localização e o pânico pelo Power serão desligados.', [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Encerrar turno', style: 'destructive', onPress: alternarTurno },
+          ])}
+          style={({ pressed }) => [st.encerrar, pressed && { opacity: 0.8 }]}>
+          <Ionicons name="stop-circle-outline" size={24} color="#fff" />
+          <Text style={st.botaoTxt}>Encerrar Turno</Text>
+        </Pressable>
+      )}
     </FundoK1>
   );
 }
@@ -206,4 +218,8 @@ const st = StyleSheet.create({
     borderWidth: 1, borderColor: '#ff4d47',
   },
   botaoTxt: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  encerrar: {
+    height: 54, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    borderWidth: 1.5, borderColor: '#7a0a06', backgroundColor: '#1a0605',
+  },
 });

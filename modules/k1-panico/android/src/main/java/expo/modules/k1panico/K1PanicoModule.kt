@@ -31,7 +31,10 @@ class K1PanicoModule : Module() {
 
     AsyncFunction("parar") {
       context.stopService(Intent(context, PanicoService::class.java))
-      context.getSharedPreferences(PanicoService.PREFS, Context.MODE_PRIVATE).edit().remove("token").apply()
+      val prefs = context.getSharedPreferences(PanicoService.PREFS, Context.MODE_PRIVATE)
+      // Se ainda há pânico guardado sem internet, mantém o token para ele ser enviado depois
+      val fila = prefs.getString("fila_panico", "[]") ?: "[]"
+      if (fila == "[]") prefs.edit().remove("token").apply()
     }
 
     Function("ativo") {

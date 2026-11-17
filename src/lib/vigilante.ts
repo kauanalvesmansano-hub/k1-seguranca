@@ -65,6 +65,16 @@ export function checkin(s: SessaoVigilante, senha: string, lat: number | null, l
   );
 }
 
+export type Ocorrencia = { id: string; tipo: string; descricao: string; status: 'nova' | 'vista' | 'resolvida'; criado_em: string };
+
+export function registrarOcorrencia(s: SessaoVigilante, tipo: string, descricao: string) {
+  return rpc<{ id: string }>('vig_ocorrencia', { p_token: s.token, p_tipo: tipo, p_descricao: descricao, p_lat: null, p_lng: null });
+}
+
+export function minhasOcorrencias(s: SessaoVigilante) {
+  return rpc<Ocorrencia[]>('vig_minhas_ocorrencias', { p_token: s.token });
+}
+
 export function panico(s: SessaoVigilante, lat: number | null, lng: number | null, bateria: number | null) {
   return rpc('vig_panico', { p_token: s.token, p_lat: lat, p_lng: lng, p_bateria: bateria });
 }

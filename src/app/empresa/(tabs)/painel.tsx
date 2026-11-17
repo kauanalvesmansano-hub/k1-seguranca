@@ -12,17 +12,20 @@ export default function PainelEmpresa() {
   const [online, setOnline] = useState(true);
   const [checkins, setCheckins] = useState<Checkin[]>([]);
   const [abertos, setAbertos] = useState(0);
+  const [ocNovas, setOcNovas] = useState(0);
   const [plano, setPlano] = useState<Plano | null>(null);
   const [atualizando, setAtualizando] = useState(false);
 
   const carregar = useCallback(async () => {
     setAtualizando(true);
-    const [e, c, a, p] = await Promise.all([
+    const [e, c, a, p, oc] = await Promise.all([
       supabase.from('empresas').select('nome').maybeSingle(),
       supabase.from('checkins').select('id,vigilante_id,resultado,criado_em,vigilantes(nome,posto)').order('criado_em', { ascending: false }).limit(5),
       supabase.from('alertas').select('id', { count: 'exact', head: true }).eq('status', 'aberto'),
       carregarPlano(),
+      supabase.from('ocorrencias').select('id', { count: 'exact', head: true }).eq('status', 'nova'),
     ]);
+    setOcNovas(oc.count ?? 0);
     setOnline(!e.error);
     if (e.data) setNome(e.data.nome);
     setCheckins((c.data as unknown as Checkin[]) ?? []);
@@ -41,6 +44,7 @@ export default function PainelEmpresa() {
         carregar();
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'alertas' }, () => carregar())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ocorrencias' }, () => carregar())
       .subscribe();
     return () => { supabase.removeChannel(canal); };
   }, [carregar]);
@@ -99,6 +103,15 @@ export default function PainelEmpresa() {
           </Text>
           <Text style={k.mut}>{abertos ? 'Toque para atender' : 'Comunicação ativa com os vigilantes'}</Text>
         </View>
+      </CardK1>
+
+      <CardK1 style={st.linha} onPress={() => router.push('/empresa/ocorrencias')}>
+        <Ionicons name="clipboard" size={30} color={ocNovas ? K1.amarelo : '#fff'} />
+        <View style={{ flex: 1 }}>
+          <Text style={[k.titulo, { fontSize: 15 }]}>Ocorrências</Text>
+          <Text style={{ color: ocNovas ? K1.amarelo : K1.mutado }}>{ocNovas ? `${ocNovas} nova${ocNovas > 1 ? 's' : ''} para ver` : 'Nenhuma ocorrência nova'}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={22} color="#888" />
       </CardK1>
 
       <CardK1 style={{ gap: 10 }}>

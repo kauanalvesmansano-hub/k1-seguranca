@@ -137,6 +137,7 @@
   <nav>
     <button data-tab="vivo" class="on" onclick="aba('vivo')">Ao vivo</button>
     <button data-tab="alertas" onclick="aba('alertas')">Alertas</button>
+    <button data-tab="ocorrencias" onclick="aba('ocorrencias')">Ocorrências <span id="ocBadge"></span></button>
     <button data-tab="vigilantes" onclick="aba('vigilantes')">Vigilantes</button>
     <button data-tab="contatos" onclick="aba('contatos')">Contatos de alerta</button>
     <button data-tab="config" onclick="aba('config')">Configurações e plano</button>
@@ -165,6 +166,14 @@
       <div class="card" style="padding:0;overflow:auto"><table>
         <thead><tr><th>Quando</th><th>Tipo</th><th>Vigilante</th><th>Local</th><th>Bateria</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody id="tbAlertas"></tbody></table></div>
+    </div>
+
+    <!-- OCORRÊNCIAS -->
+    <div id="aba-ocorrencias" class="hidden">
+      <div class="section-title"><h2>Ocorrências registradas pelos vigilantes</h2></div>
+      <div class="card" style="padding:0;overflow:auto"><table>
+        <thead><tr><th>Quando</th><th>Tipo</th><th>Vigilante</th><th>Descrição</th><th>Local</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody id="tbOc"></tbody></table></div>
     </div>
 
     <!-- VIGILANTES -->
@@ -290,7 +299,9 @@ const TIPOS = {
 };
 const ST_ALERTA = { aberto: ['Aberto', 'b-bad'], em_atendimento: ['Em atendimento', 'b-acc'], resolvido: ['Resolvido', 'b-ok'] };
 
-let S = { user:null, empresa:null, papel:null, vigilantes:[], alertas:[], contatos:[], map:null, markers:{}, canal:null, editVig:null };
+let S = { user:null, empresa:null, papel:null, vigilantes:[], alertas:[], contatos:[], ocorrencias:[], trilhas:{}, linhas:{}, map:null, markers:{}, canal:null, editVig:null };
+const TIPO_OC = { suspeito:'Suspeito', invasao:'Invasão', furto:'Furto/Roubo', dano:'Dano', acidente:'Acidente', incendio:'Incêndio', ronda:'Ronda', outros:'Outros' };
+const ST_OC = { nova:['Nova','b-warn'], vista:['Vista','b-acc'], resolvida:['Resolvida','b-ok'] };
 
 // ================= AUTENTICAÇÃO =================
 let modo = 'entrar';
@@ -354,13 +365,18 @@ async function cadastrarEmpresa(){
 
 // ================= DADOS =================
 async function carregarTudo(){
-  const [e, v, a, c] = await Promise.all([
+  const desde = new Date(Date.now() - 60 * 60000).toISOString();
+  const [e, v, a, c, o, t] = await Promise.all([
     sb.from('empresas').select('*').single(),
     sb.from('vigilantes').select('*').order('nome'),
     sb.from('alertas').select('*').order('criado_em', { ascending:false }).limit(200),
-    sb.from('contatos_alerta').select('*').order('tipo')
+    sb.from('contatos_alerta').select('*').order('tipo'),
+    sb.from('ocorrencias').select('*').order('criado_em', { ascending:false }).limit(200),
+    sb.from('telemetria').select('vigilante_id,lat,lng,criado_em').gte('criado_em', desde).order('criado_em').limit(5000)
   ]);
-  S.empresa = e.data; S.vigilantes = v.data || []; S.alertas = a.data || []; S.contatos = c.data || [];
+  S.empresa = e.data; S.vigilantes = v.data || []; S.alertas = a.data || []; S.contatos = c.data || []; S.ocorrencias = o.data || [];
+  S.trilhas = {};
+  (t.data || []).forEach(p => { if (p.lat != null) (S.trilhas[p.vigilante_id] ||= []).push([p.lat, p.lng]); });
 }
 const vigPorId = id => S.vigilantes.find(v => v.id === id);
 
@@ -374,8 +390,25 @@ function assinarTempoReal(){
     })
     .on('postgres_changes', { event:'*', schema:'public', table:'vigilantes' }, p => {
       if (p.eventType === 'DELETE') S.vigilantes = S.vigilantes.filter(v => v.id !== p.old.id);
-      else { const i = S.vigilantes.findIndex(v => v.id === p.new.id); if (i >= 0) S.vigilantes[i] = p.new; else S.vigilantes.push(p.new); }
+      else {
+        const i = S.vigilantes.findIndex(v => v.id === p.new.id); if (i >= 0) S.vigilantes[i] = p.new; else S.vigilantes.push(p.new);
+        // trajeto ao vivo: acrescenta o ponto novo
+        const n = p.new;
+        if (n.em_turno && n.ultima_lat != null) {
+          const tr = (S.trilhas[n.id] ||= []); const u = tr[tr.length - 1];
+          if (!u || u[0] !== n.ultima_lat || u[1] !== n.ultima_lng) { tr.push([n.ultima_lat, n.ultima_lng]); if (tr.length > 2000) tr.shift(); }
+        }
+        if (!n.em_turno) delete S.trilhas[n.id];
+      }
       renderVivo(); renderVigilantes();
+    })
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'ocorrencias' }, p => {
+      S.ocorrencias.unshift(p.new); renderOcorrencias(); bip();
+      $('bannerTxt').textContent = `📋 Nova ocorrência: ${TIPO_OC[p.new.tipo] || p.new.tipo} — ${vigPorId(p.new.vigilante_id)?.nome || 'Vigilante'}`;
+      $('banner').classList.remove('hidden'); $('banner').style.background = '#b45309';
+    })
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'ocorrencias' }, p => {
+      const i = S.ocorrencias.findIndex(o => o.id === p.new.id); if (i >= 0) S.ocorrencias[i] = p.new; renderOcorrencias();
     })
     .subscribe();
 }
@@ -395,24 +428,46 @@ function bip(){
 }
 function dispararAlarme(a){
   const v = vigPorId(a.vigilante_id);
+  $('banner').style.background = '';
   $('bannerTxt').textContent = `⚠ ${TIPOS[a.tipo][0]} — ${v ? v.nome : 'Vigilante'}${v?.posto ? ' (' + v.posto + ')' : ''} — ${hora(a.criado_em)}`;
   $('banner').classList.remove('hidden');
   clearInterval(alarmeTimer); bip(); alarmeTimer = setInterval(bip, 1500);
   if (window.Notification && Notification.permission === 'granted') new Notification('K1 Segurança — ' + TIPOS[a.tipo][0], { body: v ? v.nome : '' });
 }
-function silenciar(){ clearInterval(alarmeTimer); $('banner').classList.add('hidden'); aba('alertas'); }
+function silenciar(){ clearInterval(alarmeTimer); $('banner').classList.add('hidden'); const oc = $('banner').style.background; $('banner').style.background = ''; aba(oc ? 'ocorrencias' : 'alertas'); }
 document.addEventListener('click', () => { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); }, { once:true });
 
 // ================= NAVEGAÇÃO =================
 function aba(t){
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
-  ['vivo','alertas','vigilantes','contatos','config'].forEach(x => $('aba-' + x).classList.toggle('hidden', x !== t));
+  ['vivo','alertas','ocorrencias','vigilantes','contatos','config'].forEach(x => $('aba-' + x).classList.toggle('hidden', x !== t));
   if (t === 'vivo' && S.map) setTimeout(() => S.map.invalidateSize(), 50);
 }
 function fechar(id){ $(id).classList.add('hidden'); }
 function abrirTermo(){ $('mTermo').classList.remove('hidden'); }
 
-function renderTudo(){ renderHeader(); renderVivo(); renderAlertas(); renderVigilantes(); renderContatos(); renderConfig(); renderPlano(); }
+function renderTudo(){ renderHeader(); renderVivo(); renderAlertas(); renderOcorrencias(); renderVigilantes(); renderContatos(); renderConfig(); renderPlano(); }
+
+// ================= OCORRÊNCIAS =================
+function renderOcorrencias(){
+  const novas = S.ocorrencias.filter(o => o.status === 'nova').length;
+  $('ocBadge').innerHTML = novas ? `<span class="badge b-warn">${novas}</span>` : '';
+  $('tbOc').innerHTML = S.ocorrencias.length ? S.ocorrencias.map(o => {
+    const v = vigPorId(o.vigilante_id); const [st, sc] = ST_OC[o.status];
+    const mapa = o.lat != null ? `<a href="https://www.google.com/maps?q=${o.lat},${o.lng}" target="_blank" rel="noopener">Ver no mapa</a>` : '—';
+    return `<tr><td>${hora(o.criado_em)}</td><td><b>${esc(TIPO_OC[o.tipo] || o.tipo)}</b></td>
+      <td>${esc(v?.nome || '—')}<div class="small mut">${esc(v?.posto || '')}</div></td>
+      <td style="max-width:380px;white-space:pre-wrap">${esc(o.descricao)}</td><td>${mapa}</td>
+      <td><span class="badge ${sc}">${st}</span></td>
+      <td class="row">${o.status === 'nova' ? `<button class="sm" onclick="statusOc('${o.id}','vista')">Marcar vista</button>` : ''}
+        ${o.status !== 'resolvida' ? `<button class="sm sec" onclick="statusOc('${o.id}','resolvida')">Resolvida</button>` : ''}</td></tr>`;
+  }).join('') : '<tr><td colspan="7" class="mut">Nenhuma ocorrência ainda.</td></tr>';
+}
+async function statusOc(id, status){
+  const { error } = await sb.from('ocorrencias').update({ status }).eq('id', id);
+  if (error) return alert(traduz(error));
+  const o = S.ocorrencias.find(x => x.id === id); if (o) o.status = status; renderOcorrencias();
+}
 
 function renderHeader(){
   $('hEmpresa').textContent = S.empresa.nome;
@@ -457,6 +512,7 @@ function renderVivo(){
         <span>📶 ${v.ultimo_wifi == null ? '—' : v.ultimo_wifi ? 'Wi-Fi ' + esc(v.ultimo_wifi_nome || '') : 'Dados móveis'}</span>
         <span>📍 ${v.ultima_atualizacao ? Math.round(minutosAtras(v.ultima_atualizacao)) + ' min atrás' : '—'}</span>
         <span>✅ Último OK: ${hora(v.ultimo_checkin_ok)}</span>
+        ${S.seguir === v.id ? '<span style="color:#e10600;font-weight:700">● Seguindo no mapa</span>' : ''}
         ${v.em_turno ? `<span>⏰ Próxima confirmação: ${hora(v.proximo_checkin)}</span>` : ''}
       </div>
     </div>`).join('') : '<p class="mut">Nenhum vigilante cadastrado ainda. Vá em "Vigilantes".</p>';
@@ -471,10 +527,18 @@ function renderVivo(){
     const pop = `<b>${esc(v.nome)}</b><br>${esc(v.posto || '')}<br>${s.txt} · 🔋${v.ultima_bateria ?? '—'}%`;
     if (S.markers[v.id]) S.markers[v.id].setLatLng(ll).setStyle(opts).setPopupContent(pop);
     else S.markers[v.id] = L.circleMarker(ll, opts).addTo(S.map).bindPopup(pop);
+    // trajeto da última hora (tempo real)
+    const tr = v.em_turno ? (S.trilhas[v.id] || []) : [];
+    if (tr.length > 1) {
+      if (S.linhas[v.id]) S.linhas[v.id].setLatLngs(tr);
+      else S.linhas[v.id] = L.polyline(tr, { color:'#e10600', weight:3, opacity:.75, dashArray:'6 6' }).addTo(S.map);
+      S.markers[v.id].bringToFront();
+    } else if (S.linhas[v.id]) { S.linhas[v.id].remove(); delete S.linhas[v.id]; }
+    if (S.seguir === v.id) S.map.panTo(ll);
   });
   if (bounds.length && !S.mapaAjustado) { S.map.fitBounds(bounds, { padding:[40, 40], maxZoom:15 }); S.mapaAjustado = true; }
 }
-function focar(id){ const m = S.markers[id]; if (m) { S.map.setView(m.getLatLng(), 16); m.openPopup(); } }
+function focar(id){ const m = S.markers[id]; S.seguir = id; if (m) { S.map.setView(m.getLatLng(), 17); m.openPopup(); } }
 
 // ================= ALERTAS =================
 function renderAlertas(){

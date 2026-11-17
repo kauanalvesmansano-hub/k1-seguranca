@@ -17,6 +17,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.BatteryManager
@@ -32,9 +33,16 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
 /**
@@ -45,8 +53,12 @@ import kotlin.concurrent.thread
  * daqui (Kotlin), sem depender do app aberto, para a função vig_panico do
  * Supabase. O servidor então manda WhatsApp e faz a ligação para o monitoramento.
  *
- * Também envia a cada [INTERVALO_TELEMETRIA_MS] a localização, bateria e Wi-Fi
- * (função vig_telemetria), para a empresa ver cada vigilante no mapa.
+ * Localização em tempo real: quando o vigilante se move, a posição é enviada a
+ * cada [MIN_ENTRE_ENVIOS_MS] (se andou pelo menos [MIN_DISTANCIA_M]); parado,
+ * manda um "sinal de vida" a cada [INTERVALO_TELEMETRIA_MS] com bateria e Wi-Fi.
+ *
+ * Pânico sem internet: o alerta é guardado no celular (fila) com a hora real do
+ * aperto e enviado sozinho assim que a internet voltar. Nada aparece na tela.
  */
 class PanicoService : Service() {
 
@@ -59,6 +71,9 @@ class PanicoService : Service() {
     private const val JANELA_MS = 4000L
     private const val INTERVALO_ENTRE_PANICOS_MS = 30_000L
     private const val INTERVALO_TELEMETRIA_MS = 120_000L
+    private const val MIN_ENTRE_ENVIOS_MS = 15_000L
+    private const val MIN_DISTANCIA_M = 10f
+    private const val FILA = "fila_panico"
 
     @Volatile var rodando = false
   }
@@ -67,10 +82,28 @@ class PanicoService : Service() {
   private var ultimoPanico = 0L
   private val handler = Handler(Looper.getMainLooper())
   @Volatile private var localAtual: Location? = null
+  @Volatile private var ultimoEnvioLocal: Location? = null
+  @Volatile private var ultimoEnvioEm = 0L
+  private val enviandoTelemetria = AtomicBoolean(false)
+  private val filaExecutor = Executors.newSingleThreadExecutor()
+  private var ouvinteRede: ConnectivityManager.NetworkCallback? = null
 
   private val ouvinteLocal = LocationListener { loc ->
     val atual = localAtual
     if (atual == null || loc.time >= atual.time) localAtual = loc
+    // Tempo real: andou o suficiente e já passou o intervalo mínimo -> envia agora
+    val ult = ultimoEnvioLocal
+    val andou = ult == null || ult.distanceTo(loc) >= MIN_DISTANCIA_M
+    if (andou && SystemClock.elapsedRealtime() - ultimoEnvioEm >= MIN_ENTRE_ENVIOS_MS) enviarTelemetria()
+  }
+
+  private val reenvioFila = object : Runnable {
+    override fun run() {
+      if (temPanicoNaFila()) {
+        enviarFilaPanico()
+        handler.postDelayed(this, 20_000L)
+      }
+    }
   }
 
   private val cicloTelemetria = object : Runnable {
@@ -102,7 +135,9 @@ class PanicoService : Service() {
     ContextCompat.registerReceiver(this, receptor, filtro, ContextCompat.RECEIVER_NOT_EXPORTED)
     rodando = true
     iniciarLocalizacao()
+    observarInternet()
     handler.postDelayed(cicloTelemetria, 5_000L)
+    if (temPanicoNaFila()) handler.post(reenvioFila)
     Log.i(TAG, "Monitoramento do botão Power ativo")
   }
 
@@ -111,6 +146,8 @@ class PanicoService : Service() {
   override fun onDestroy() {
     try { unregisterReceiver(receptor) } catch (_: Exception) {}
     handler.removeCallbacks(cicloTelemetria)
+    handler.removeCallbacks(reenvioFila)
+    ouvinteRede?.let { try { (getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).unregisterNetworkCallback(it) } catch (_: Exception) {} }
     try { (getSystemService(Context.LOCATION_SERVICE) as LocationManager).removeUpdates(ouvinteLocal) } catch (_: Exception) {}
     rodando = false
     super.onDestroy()
@@ -132,18 +169,54 @@ class PanicoService : Service() {
   private fun dispararPanico() {
     Log.w(TAG, "PÂNICO acionado pelo botão Power")
     vibrarDiscreto()
-    val wake = (getSystemService(Context.POWER_SERVICE) as PowerManager)
-      .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "k1:panico")
-    wake.acquire(3 * 60 * 1000L)
-    thread(name = "k1-panico") {
+    val loc = melhorLocalizacao()
+    val item = JSONObject().apply {
+      put("lat", loc?.latitude ?: JSONObject.NULL)
+      put("lng", loc?.longitude ?: JSONObject.NULL)
+      put("bateria", nivelBateria() ?: JSONObject.NULL)
+      put("quando", isoAgora())
+    }
+    // 1) guarda no celular (não se perde sem internet nem se o app fechar)
+    synchronized(this) {
+      val p = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+      val fila = JSONArray(p.getString(FILA, "[]"))
+      fila.put(item)
+      p.edit().putString(FILA, fila.toString()).commit()
+    }
+    // 2) tenta mandar já; se não tiver internet, tenta de novo a cada 20 s e quando a conexão voltar
+    enviarFilaPanico()
+    handler.removeCallbacks(reenvioFila)
+    handler.postDelayed(reenvioFila, 20_000L)
+  }
+
+  private fun temPanicoNaFila(): Boolean =
+    JSONArray(getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(FILA, "[]")).length() > 0
+
+  /** Envia todos os pânicos guardados, na ordem; o que der certo sai da fila. */
+  private fun enviarFilaPanico() {
+    filaExecutor.execute {
+      val wake = (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "k1:panico")
+      wake.acquire(60_000L)
       try {
-        val loc = melhorLocalizacao()
-        val bateria = nivelBateria()
-        // Tenta por até ~3 minutos (ex.: sinal oscilando)
-        val esperas = longArrayOf(0, 3_000, 5_000, 10_000, 15_000, 30_000, 60_000, 60_000)
-        for (espera in esperas) {
-          if (espera > 0) Thread.sleep(espera)
-          if (enviar(loc, bateria)) { Log.i(TAG, "Pânico enviado"); break }
+        val p = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val token = p.getString("token", null) ?: return@execute
+        while (true) {
+          val item = synchronized(this) { JSONArray(p.getString(FILA, "[]")).optJSONObject(0) } ?: break
+          val ok = chamarRpc("vig_panico", JSONObject().apply {
+            put("p_token", token)
+            put("p_lat", item.opt("lat") ?: JSONObject.NULL)
+            put("p_lng", item.opt("lng") ?: JSONObject.NULL)
+            put("p_bateria", item.opt("bateria") ?: JSONObject.NULL)
+            put("p_ocorrido_em", item.optString("quando"))
+          })
+          if (!ok) break // sem internet: fica na fila
+          synchronized(this) {
+            val fila = JSONArray(p.getString(FILA, "[]"))
+            val resto = JSONArray()
+            for (i in 1 until fila.length()) resto.put(fila.get(i))
+            p.edit().putString(FILA, resto.toString()).commit()
+          }
+          Log.i(TAG, "Pânico enviado")
         }
       } catch (e: Exception) {
         Log.e(TAG, "Falha no pânico", e)
@@ -153,23 +226,33 @@ class PanicoService : Service() {
     }
   }
 
-  private fun enviar(loc: Location?, bateria: Int?): Boolean {
-    val token = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("token", null) ?: return false
-    return chamarRpc("vig_panico", JSONObject().apply {
-      put("p_token", token)
-      put("p_lat", loc?.latitude ?: JSONObject.NULL)
-      put("p_lng", loc?.longitude ?: JSONObject.NULL)
-      put("p_bateria", bateria ?: JSONObject.NULL)
-    })
+  /** Quando a internet volta, manda o que estiver na fila. */
+  private fun observarInternet() {
+    try {
+      val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+      val cb = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+          if (temPanicoNaFila()) enviarFilaPanico()
+          enviarTelemetria()
+        }
+      }
+      cm.registerDefaultNetworkCallback(cb)
+      ouvinteRede = cb
+    } catch (e: Exception) { Log.w(TAG, "Sem aviso de rede: ${e.message}") }
   }
+
+  private fun isoAgora(): String =
+    SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date())
 
   // ---------- Telemetria: localização, bateria, Wi-Fi ----------
   private fun enviarTelemetria() {
     val token = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("token", null) ?: return
+    if (!enviandoTelemetria.compareAndSet(false, true)) return
     thread(name = "k1-telemetria") {
+     try {
       val loc = melhorLocalizacao()
       val (wifi, rede) = estadoWifi()
-      chamarRpc("vig_telemetria", JSONObject().apply {
+      val ok = chamarRpc("vig_telemetria", JSONObject().apply {
         put("p_token", token)
         put("p_lat", loc?.latitude ?: JSONObject.NULL)
         put("p_lng", loc?.longitude ?: JSONObject.NULL)
@@ -179,6 +262,9 @@ class PanicoService : Service() {
         put("p_wifi_conectado", wifi ?: JSONObject.NULL)
         put("p_wifi_nome", rede ?: JSONObject.NULL)
       })
+      if (ok) { ultimoEnvioLocal = loc; ultimoEnvioEm = SystemClock.elapsedRealtime() }
+      if (ok && temPanicoNaFila()) enviarFilaPanico()
+     } finally { enviandoTelemetria.set(false) }
     }
   }
 
@@ -188,7 +274,9 @@ class PanicoService : Service() {
     val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
     for (prov in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
       try {
-        if (lm.isProviderEnabled(prov)) lm.requestLocationUpdates(prov, 60_000L, 15f, ouvinteLocal, Looper.getMainLooper())
+        // GPS a cada 5 s / 5 m; rede a cada 10 s / 10 m -> mapa acompanha quem está andando
+        val (tempo, dist) = if (prov == LocationManager.GPS_PROVIDER) Pair(5_000L, 5f) else Pair(10_000L, 10f)
+        if (lm.isProviderEnabled(prov)) lm.requestLocationUpdates(prov, tempo, dist, ouvinteLocal, Looper.getMainLooper())
       } catch (e: Exception) { Log.w(TAG, "Sem localização por $prov: ${e.message}") }
     }
   }
@@ -240,7 +328,7 @@ class PanicoService : Service() {
       con.disconnect()
       codigo in 200..299
     } catch (e: Exception) {
-      Log.w(TAG, "Sem conexão, tentando de novo: ${e.message}")
+      Log.w(TAG, "Sem conexão: ${e.message}")
       false
     }
   }
