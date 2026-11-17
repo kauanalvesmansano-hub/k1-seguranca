@@ -1,0 +1,14 @@
+import { Tabs } from 'expo-router';
+import { useOpcoesAbas, icone } from '../../../components/abas';
+
+export default function AbasFuncionario() {
+  const opcoes = useOpcoesAbas();
+  return (
+    <Tabs screenOptions={opcoes}>
+      <Tabs.Screen name="inicio" options={{ title: 'Início', tabBarIcon: icone('home') }} />
+      <Tabs.Screen name="ocorrencias" options={{ title: 'Ocorrências', tabBarIcon: icone('clipboard-outline') }} />
+      <Tabs.Screen name="mensagens" options={{ title: 'Mensagens', tabBarIcon: icone('chatbubbles-outline') }} />
+      <Tabs.Screen name="sos" options={{ title: 'SOS', tabBarIcon: icone('shield-outline') }} />
+    </Tabs>
+  );
+}
