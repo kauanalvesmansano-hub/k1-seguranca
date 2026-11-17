@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K1 Segurança — Painel da Empresa</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121821; --panel2:#18202b; --line:#243041; --txt:#e6edf3; --mut:#8b98a8;
+    --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --acc:#3b82f6; --off:#64748b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+  a{color:var(--acc)}
+  button{font:inherit;cursor:pointer;border:0;border-radius:8px;padding:9px 14px;background:var(--acc);color:#fff;font-weight:600}
+  button.sec{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+  button.danger{background:var(--bad)}
+  button.sm{padding:5px 10px;font-size:12px}
+  button:disabled{opacity:.5;cursor:default}
+  input,select,textarea{font:inherit;width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:#0e141c;color:var(--txt)}
+  label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+  .hidden{display:none!important}
+  .center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .auth{width:100%;max-width:420px}
+  .brand{font-weight:800;letter-spacing:.5px;font-size:20px}
+  .brand span{color:var(--acc)}
+  .mut{color:var(--mut)} .small{font-size:12px}
+  .err{color:var(--bad);font-size:13px;margin-top:10px;min-height:1em}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:1000}
+  nav{display:flex;gap:4px;padding:10px 20px;border-bottom:1px solid var(--line);overflow-x:auto}
+  nav button{background:transparent;color:var(--mut);font-weight:600}
+  nav button.on{background:var(--panel2);color:var(--txt)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
+  .b-ok{background:#14532d;color:#86efac} .b-warn{background:#78350f;color:#fcd34d}
+  .b-bad{background:#7f1d1d;color:#fca5a5} .b-off{background:#1e293b;color:#94a3b8} .b-acc{background:#1e3a8a;color:#bfdbfe}
+  main{padding:20px;max-width:1400px;margin:0 auto}
+  .live{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+  #map{height:560px;border-radius:14px;border:1px solid var(--line)}
+  .list{display:flex;flex-direction:column;gap:10px;max-height:560px;overflow:auto}
+  .vcard{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--off);border-radius:10px;padding:12px 14px}
+  .vcard.ok{border-left-color:var(--ok)} .vcard.warn{border-left-color:var(--warn)} .vcard.bad{border-left-color:var(--bad)}
+  .vcard h4{margin:0 0 4px;font-size:15px}
+  .kv{display:flex;gap:14px;flex-wrap:wrap;color:var(--mut);font-size:12px;margin-top:6px}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-size:12px;font-weight:600}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .stat b{display:block;font-size:24px;margin-top:4px}
+  #banner{position:fixed;left:0;right:0;top:0;z-index:3000;background:var(--bad);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;animation:pisca 1s infinite}
+  @keyframes pisca{50%{background:#991b1b}}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2500;display:flex;align-items:center;justify-content:center;padding:20px}
+  .modal .card{max-width:640px;width:100%;max-height:85vh;overflow:auto}
+  .termo{font-size:13px;line-height:1.55;color:#cbd5e1}
+  .termo h3{color:var(--txt);font-size:15px}
+  .section-title{display:flex;justify-content:space-between;align-items:center;margin:0 0 14px}
+  .section-title h2{margin:0;font-size:18px}
+  @media (max-width:900px){.live{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ================= CONFIGURAÇÃO ================= -->
+<script>
+  // Supabase > Project Settings > API
+  const SUPABASE_URL = "https://ftswxxdhxjkwufdagkzd.supabase.co";       // ex.: https://xxxx.supabase.co
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0c3d4eGRoeGprd3VmZGFna3pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4ODQxMTksImV4cCI6MjExMDQ2MDExOX0.VD2-2rIO9mjgQ0YzJgMRTkn3YvUv0W5VM7qFDvv8jWA";
+  const TERMO_VERSAO = "v1-2026-11";
+</script>
+
+<div id="banner" class="hidden"><span id="bannerTxt"></span><button class="sec sm" onclick="silenciar()">Ciente / silenciar</button></div>
+
+<!-- ================= LOGIN ================= -->
+<section id="telaLogin" class="center hidden">
+  <div class="card auth">
+    <div class="brand">K1 <span>SEGURANÇA</span></div>
+    <p class="mut small">Painel de monitoramento de vigilantes</p>
+    <div class="row" style="margin:14px 0 4px">
+      <button id="tabEntrar" class="sm" onclick="modoAuth('entrar')">Entrar</button>
+      <button id="tabCriar" class="sec sm" onclick="modoAuth('criar')">Criar conta da empresa</button>
+    </div>
+    <label>E-mail</label><input id="email" type="email" autocomplete="email">
+    <label>Senha</label><input id="senha" type="password" autocomplete="current-password">
+    <button id="btnAuth" style="width:100%;margin-top:16px" onclick="autenticar()">Entrar</button>
+    <div id="errAuth" class="err"></div>
+  </div>
+</section>
+
+<!-- ================= CADASTRO EMPRESA ================= -->
+<section id="telaCadastro" class="center hidden">
+  <div class="card auth" style="max-width:520px">
+    <div class="brand">Cadastro da <span>empresa</span></div>
+    <p class="mut small">R$ 20,00 por vigilante/mês. Você pode alterar a quantidade depois.</p>
+    <label>Nome da empresa</label><input id="cNome">
+    <div class="grid2">
+      <div><label>CNPJ</label><input id="cCnpj" placeholder="00.000.000/0000-00"></div>
+      <div><label>Quantidade de vigilantes</label><input id="cQtd" type="number" min="1" value="5" oninput="calcValor()"></div>
+    </div>
+    <label>Seu nome (responsável)</label><input id="cResp">
+    <p class="small">Valor mensal: <b id="cValor">R$ 100,00</b></p>
+    <label class="row" style="gap:8px;color:var(--txt);font-size:13px;cursor:pointer">
+      <input id="cAceite" type="checkbox" style="width:auto"> Li e aceito o <a href="#" onclick="abrirTermo();return false">Termo de Uso e Monitoramento</a>
+    </label>
+    <button style="width:100%;margin-top:14px" onclick="cadastrarEmpresa()">Cadastrar empresa</button>
+    <button class="sec" style="width:100%;margin-top:8px" onclick="sair()">Sair</button>
+    <div id="errCad" class="err"></div>
+  </div>
+</section>
+
+<!-- ================= BLOQUEIO ================= -->
+<section id="telaBloqueio" class="center hidden">
+  <div class="card auth" style="max-width:520px;text-align:center">
+    <div class="brand">K1 <span>SEGURANÇA</span></div>
+    <h2 id="blTitulo" style="color:var(--bad)">Acesso bloqueado</h2>
+    <p id="blTexto" class="mut"></p>
+    <div id="blFatura"></div>
+    <button class="sec" style="margin-top:14px" onclick="sair()">Sair</button>
+  </div>
+</section>
+
+<!-- ================= PAINEL ================= -->
+<section id="telaPainel" class="hidden">
+  <header>
+    <div>
+      <div class="brand">K1 <span>SEGURANÇA</span></div>
+      <div class="small mut"><span id="hEmpresa"></span></div>
+    </div>
+    <div class="row"><span id="hAlertas"></span><button class="sec sm" onclick="sair()">Sair</button></div>
+  </header>
+  <nav>
+    <button data-tab="vivo" class="on" onclick="aba('vivo')">Ao vivo</button>
+    <button data-tab="alertas" onclick="aba('alertas')">Alertas</button>
+    <button data-tab="vigilantes" onclick="aba('vigilantes')">Vigilantes</button>
+    <button data-tab="contatos" onclick="aba('contatos')">Contatos de alerta</button>
+    <button data-tab="config" onclick="aba('config')">Configurações e plano</button>
+  </nav>
+  <main>
+    <!-- AO VIVO -->
+    <div id="aba-vivo">
+      <div class="stats">
+        <div class="stat mut small">Em turno<b id="sTurno">0</b></div>
+        <div class="stat mut small">Alertas abertos<b id="sAbertos" style="color:var(--bad)">0</b></div>
+        <div class="stat mut small">Sem sinal (&gt;10 min)<b id="sSemSinal" style="color:var(--warn)">0</b></div>
+        <div class="stat mut small">Bateria baixa (&lt;20%)<b id="sBateria" style="color:var(--warn)">0</b></div>
+      </div>
+      <div class="live">
+        <div id="map"></div>
+        <div id="listaVivo" class="list"></div>
+      </div>
+    </div>
+
+    <!-- ALERTAS -->
+    <div id="aba-alertas" class="hidden">
+      <div class="section-title"><h2>Alertas</h2>
+        <select id="fAlerta" style="width:auto" onchange="renderAlertas()">
+          <option value="abertos">Abertos e em atendimento</option><option value="todos">Todos (últimos 200)</option>
+        </select></div>
+      <div class="card" style="padding:0;overflow:auto"><table>
+        <thead><tr><th>Quando</th><th>Tipo</th><th>Vigilante</th><th>Local</th><th>Bateria</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody id="tbAlertas"></tbody></table></div>
+    </div>
+
+    <!-- VIGILANTES -->
+    <div id="aba-vigilantes" class="hidden">
+      <div class="section-title"><h2>Vigilantes <span id="vQtd" class="mut small"></span></h2>
+        <button onclick="abrirNovoVig()">+ Novo vigilante</button></div>
+      <div class="card" style="padding:0;overflow:auto"><table>
+        <thead><tr><th>Nome</th><th>Matrícula de acesso (app)</th><th>Matrícula interna</th><th>Posto</th><th>Celular</th><th>Termo</th><th>Situação</th><th>Ações</th></tr></thead>
+        <tbody id="tbVig"></tbody></table></div>
+    </div>
+
+    <!-- CONTATOS -->
+    <div id="aba-contatos" class="hidden">
+      <div class="section-title"><h2>Quem recebe os alertas no WhatsApp</h2></div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="grid2">
+          <div><label>Tipo</label><select id="ctTipo"><option value="monitoramento">Monitoramento</option><option value="encarregado">Encarregado</option><option value="empresa">Empresa</option></select></div>
+          <div><label>Nome</label><input id="ctNome"></div>
+          <div><label>WhatsApp (com DDI e DDD)</label><input id="ctZap" placeholder="5511999998888"></div>
+          <div><label>Receber ligação automática no pânico?</label><select id="ctLig"><option value="false">Não</option><option value="true">Sim</option></select></div>
+        </div>
+        <button style="margin-top:14px" onclick="addContato()">Adicionar contato</button>
+        <div id="errCt" class="err"></div>
+      </div>
+      <div class="card" style="padding:0;overflow:auto"><table>
+        <thead><tr><th>Tipo</th><th>Nome</th><th>WhatsApp</th><th>Ligação</th><th></th></tr></thead>
+        <tbody id="tbCt"></tbody></table></div>
+      <p class="mut small">O envio pelo WhatsApp e a ligação automática entram na etapa 4. Os alertas já ficam guardados como "pendentes" para envio.</p>
+    </div>
+
+    <!-- CONFIG -->
+    <div id="aba-config" class="hidden">
+      <div class="section-title"><h2>Configurações e plano</h2></div>
+      <div class="card" style="max-width:640px;margin-bottom:16px" id="cardPlano"></div>
+      <div class="card" style="max-width:640px">
+        <div class="grid2">
+          <div><label>Nome da empresa</label><input id="cfNome"></div>
+          <div><label>CNPJ</label><input id="cfCnpj"></div>
+          <div><label>Vigilantes contratados</label><input id="cfQtd" type="number" min="1" oninput="calcPlano()"></div>
+          <div><label>Valor mensal</label><input id="cfValor" disabled></div>
+          <div><label>Confirmação de presença a cada</label><select id="cfIntervalo">
+            <option value="30">30 minutos</option><option value="60">1 hora</option><option value="90">1h30</option><option value="120">2 horas</option></select></div>
+          <div><label>Prazo para responder</label><select id="cfPrazo">
+            <option value="3">3 minutos</option><option value="5">5 minutos</option><option value="10">10 minutos</option></select></div>
+          <div><label>Senha errada gera alerta</label><select id="cfTent">
+            <option value="1">No 1º erro</option><option value="2">No 2º erro</option></select></div>
+        </div>
+        <button style="margin-top:16px" onclick="salvarConfig()">Salvar</button>
+        <div id="errCf" class="err"></div>
+        <p class="small mut">Termo aceito em <span id="cfTermo"></span>. <a href="#" onclick="abrirTermo();return false">Ver termo</a></p>
+      </div>
+    </div>
+  </main>
+</section>
+
+<!-- ================= MODAIS ================= -->
+<div id="mVig" class="modal hidden"><div class="card">
+  <h2 id="mVigTit" style="margin-top:0">Novo vigilante</h2>
+  <div id="mVigDados" class="grid2">
+    <div><label>Nome</label><input id="vNome"></div>
+    <div><label>Matrícula interna da empresa</label><input id="vMat"></div>
+    <div><label>Telefone</label><input id="vTel"></div>
+    <div><label>Posto</label><input id="vPosto"></div>
+  </div>
+  <div class="grid2">
+    <div><label>Senha normal (4 a 8 números)</label><input id="vSenha" inputmode="numeric" maxlength="8"></div>
+    <div><label>Senha de coação (4 a 8 números)</label><input id="vCoacao" inputmode="numeric" maxlength="8"></div>
+  </div>
+  <p class="small mut">A <b>senha de coação</b> é usada quando o vigilante está rendido: o celular mostra "Confirmado" normalmente, mas o monitoramento recebe um alerta silencioso. Combine as duas senhas pessoalmente com o vigilante. Por segurança, elas não aparecem mais depois de salvas.</p>
+  <div class="row" style="margin-top:12px"><button id="mVigBtn" onclick="salvarVig()">Salvar</button><button class="sec" onclick="fechar('mVig')">Cancelar</button></div>
+  <div id="errVig" class="err"></div>
+</div></div>
+
+<div id="mObrigado" class="modal hidden"><div class="card" style="text-align:center;max-width:460px">
+  <div style="font-size:54px">🛡️</div><h2>Plano renovado!</h2>
+  <p id="obrigadoTxt" style="font-size:16px;line-height:1.5"></p>
+  <button onclick="fechar('mObrigado')">OK</button>
+</div></div>
+
+<div id="mTermo" class="modal hidden"><div class="card">
+  <div class="termo">
+    <h3>TERMO DE USO E MONITORAMENTO — K1 SEGURANÇA (versão v1-2026-11)</h3>
+    <p><b>1. Objeto.</b> O K1 Segurança é um sistema de apoio à segurança de vigilantes em serviço. Ele oferece localização, nível de bateria, status de conexão Wi-Fi, confirmação periódica de presença por senha, senha de coação e botão de pânico.</p>
+    <p><b>2. Uso exclusivo em serviço.</b> A EMPRESA CONTRATANTE se compromete a usar o aplicativo somente em aparelhos fornecidos por ela para o trabalho, e apenas durante a jornada do vigilante. O monitoramento começa no "Início de turno" e termina no "Fim de turno" registrados no app.</p>
+    <p><b>3. Dados coletados.</b> Durante o turno: localização, bateria, carregamento, conexão e nome da rede Wi-Fi, confirmações de presença e acionamentos de pânico. Não são coletados fotos, áudio, mensagens, contatos nem conteúdo pessoal do aparelho.</p>
+    <p><b>4. Finalidade e base legal (LGPD).</b> Os dados são tratados para proteger a vida e a integridade física do vigilante (art. 7º, VII e art. 11, II, "e" da Lei 13.709/2018) e para executar o contrato de prestação de serviço de segurança. A EMPRESA CONTRATANTE é a controladora dos dados dos seus vigilantes. A K1 é a operadora.</p>
+    <p><b>5. Ciência do vigilante.</b> A EMPRESA CONTRATANTE deve informar cada vigilante sobre o monitoramento. O vigilante também aceita este termo dentro do aplicativo antes do primeiro uso.</p>
+    <p><b>6. Permissões do aparelho.</b> O aplicativo pede permissões de localização (inclusive em segundo plano), notificações e execução contínua. Elas são necessárias para o funcionamento dos alertas.</p>
+    <p><b>7. Alertas.</b> Senha errada, senha de coação, falta de resposta no prazo e botão de pânico geram alertas para os contatos cadastrados pela EMPRESA CONTRATANTE. O K1 Segurança é uma ferramenta de apoio e <b>não substitui</b> o 190, a central de monitoramento nem os procedimentos de segurança da empresa. O funcionamento depende de bateria, sinal de internet e GPS do aparelho.</p>
+    <p><b>8. Retenção.</b> Os dados de localização e telemetria são guardados por até 90 dias. Os alertas são guardados por até 5 anos ou pelo prazo exigido em lei.</p>
+    <p><b>9. Preço e pagamento.</b> R$ 20,00 por vigilante contratado, por mês. A fatura é gerada no fechamento do mês (a partir do dia 25) e paga por Pix até o dia 5 do mês seguinte. Sem pagamento até o vencimento, o acesso ao painel e ao aplicativo é bloqueado até a confirmação do pagamento. A cada fechamento, a EMPRESA CONTRATANTE informa se deseja continuar o plano no mês seguinte.</p>
+    <p><b>10. Direitos do titular.</b> O vigilante pode pedir acesso, correção ou exclusão dos seus dados por meio da EMPRESA CONTRATANTE, respeitadas as obrigações legais.</p>
+    <p class="mut small">Modelo inicial. Revise com um advogado antes do uso comercial.</p>
+  </div>
+  <button onclick="fechar('mTermo')">Fechar</button>
+</div></div>
+
+<script>
+// ===================================================================
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const brl = n => Number(n).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+const hora = d => d ? new Date(d).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : '—';
+const minutosAtras = d => d ? (Date.now() - new Date(d).getTime()) / 60000 : Infinity;
+
+const ERROS = {
+  termo_nao_aceito: 'É preciso aceitar o termo.',
+  usuario_ja_vinculado_a_empresa: 'Este usuário já tem uma empresa cadastrada.',
+  sem_permissao: 'Você não tem permissão para isso.',
+  senha_deve_ter_4_a_8_numeros: 'As senhas devem ter de 4 a 8 números.',
+  senha_e_coacao_devem_ser_diferentes: 'A senha normal e a de coação precisam ser diferentes.',
+  limite_de_vigilantes_do_plano_atingido: 'Limite do plano atingido. Aumente a quantidade em Configurações e plano.',
+  'Invalid login credentials': 'E-mail ou senha incorretos.',
+  'User already registered': 'Este e-mail já tem conta. Use "Entrar".',
+  duplicate: 'Já existe um vigilante com essa matrícula.'
+};
+const traduz = e => { const m = e?.message || String(e); for (const k in ERROS) if (m.includes(k)) return ERROS[k]; return m; };
+
+const TIPOS = {
+  panico: ['PÂNICO', 'b-bad'], coacao: ['COAÇÃO', 'b-bad'],
+  senha_errada: ['SENHA ERRADA', 'b-warn'], sem_resposta: ['SEM RESPOSTA', 'b-warn']
+};
+const ST_ALERTA = { aberto: ['Aberto', 'b-bad'], em_atendimento: ['Em atendimento', 'b-acc'], resolvido: ['Resolvido', 'b-ok'] };
+
+let S = { user:null, empresa:null, papel:null, vigilantes:[], alertas:[], contatos:[], map:null, markers:{}, canal:null, editVig:null };
+
+// ================= AUTENTICAÇÃO =================
+let modo = 'entrar';
+function modoAuth(m){
+  modo = m;
+  $('tabEntrar').className = m === 'entrar' ? 'sm' : 'sec sm';
+  $('tabCriar').className  = m === 'criar'  ? 'sm' : 'sec sm';
+  $('btnAuth').textContent = m === 'entrar' ? 'Entrar' : 'Criar conta';
+  $('errAuth').textContent = '';
+}
+async function autenticar(){
+  const email = $('email').value.trim(), password = $('senha').value;
+  $('errAuth').textContent = '';
+  if (!email || password.length < 6) { $('errAuth').textContent = 'Informe e-mail e senha (mínimo 6 caracteres).'; return; }
+  $('btnAuth').disabled = true;
+  try {
+    if (modo === 'entrar') {
+      const { error } = await sb.auth.signInWithPassword({ email, password }); if (error) throw error;
+    } else {
+      const { data, error } = await sb.auth.signUp({ email, password }); if (error) throw error;
+      if (!data.session) { $('errAuth').style.color = 'var(--ok)'; $('errAuth').textContent = 'Conta criada! Confirme no seu e-mail e depois clique em Entrar.'; modoAuth('entrar'); return; }
+    }
+    await iniciar();
+  } catch (e) { $('errAuth').style.color = ''; $('errAuth').textContent = traduz(e); }
+  finally { $('btnAuth').disabled = false; }
+}
+async function sair(){ if (S.canal) sb.removeChannel(S.canal); await sb.auth.signOut(); location.reload(); }
+
+function mostrar(tela){ ['telaLogin','telaCadastro','telaPainel','telaBloqueio'].forEach(t => $(t).classList.toggle('hidden', t !== tela)); }
+
+async function iniciar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session) { mostrar('telaLogin'); return; }
+  S.user = session.user;
+  const { data: vinc } = await sb.from('usuarios_empresa').select('empresa_id,papel,nome').eq('user_id', S.user.id).maybeSingle();
+  if (!vinc) { mostrar('telaCadastro'); calcValor(); return; }
+  S.papel = vinc.papel;
+  const { data: plano } = await sb.rpc('empresa_plano');
+  S.plano = plano;
+  if (plano && plano.plano_status !== 'ativo') { mostrarBloqueio(plano); return; }
+  await carregarTudo();
+  mostrar('telaPainel');
+  iniciarMapa();
+  renderTudo();
+  assinarTempoReal();
+  setInterval(renderVivo, 30000); // atualiza "há X min"
+}
+
+// ================= CADASTRO EMPRESA =================
+function calcValor(){ $('cValor').textContent = brl(Math.max(1, +$('cQtd').value || 0) * 20); }
+async function cadastrarEmpresa(){
+  $('errCad').textContent = '';
+  const nome = $('cNome').value.trim(), resp = $('cResp').value.trim(), qtd = parseInt($('cQtd').value, 10);
+  if (nome.length < 2 || !resp || !(qtd >= 1)) { $('errCad').textContent = 'Preencha nome da empresa, responsável e quantidade.'; return; }
+  if (!$('cAceite').checked) { $('errCad').textContent = ERROS.termo_nao_aceito; return; }
+  const { error } = await sb.rpc('registrar_empresa', { p_nome:nome, p_cnpj:$('cCnpj').value, p_qtd_vigilantes:qtd,
+    p_nome_responsavel:resp, p_aceite_termo:true, p_termo_versao:TERMO_VERSAO });
+  if (error) { $('errCad').textContent = traduz(error); return; }
+  iniciar();
+}
+
+// ================= DADOS =================
+async function carregarTudo(){
+  const [e, v, a, c] = await Promise.all([
+    sb.from('empresas').select('*').single(),
+    sb.from('vigilantes').select('*').order('nome'),
+    sb.from('alertas').select('*').order('criado_em', { ascending:false }).limit(200),
+    sb.from('contatos_alerta').select('*').order('tipo')
+  ]);
+  S.empresa = e.data; S.vigilantes = v.data || []; S.alertas = a.data || []; S.contatos = c.data || [];
+}
+const vigPorId = id => S.vigilantes.find(v => v.id === id);
+
+function assinarTempoReal(){
+  S.canal = sb.channel('k1-painel')
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'alertas' }, p => {
+      S.alertas.unshift(p.new); renderTudo(); dispararAlarme(p.new);
+    })
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'alertas' }, p => {
+      const i = S.alertas.findIndex(a => a.id === p.new.id); if (i >= 0) S.alertas[i] = p.new; renderTudo();
+    })
+    .on('postgres_changes', { event:'*', schema:'public', table:'vigilantes' }, p => {
+      if (p.eventType === 'DELETE') S.vigilantes = S.vigilantes.filter(v => v.id !== p.old.id);
+      else { const i = S.vigilantes.findIndex(v => v.id === p.new.id); if (i >= 0) S.vigilantes[i] = p.new; else S.vigilantes.push(p.new); }
+      renderVivo(); renderVigilantes();
+    })
+    .subscribe();
+}
+
+// ================= ALARME =================
+let audioCtx = null, alarmeTimer = null;
+function bip(){
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.25].forEach(t => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'square'; o.frequency.value = 880; g.gain.value = 0.15;
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(audioCtx.currentTime + t); o.stop(audioCtx.currentTime + t + 0.18);
+    });
+  } catch {}
+}
+function dispararAlarme(a){
+  const v = vigPorId(a.vigilante_id);
+  $('bannerTxt').textContent = `⚠ ${TIPOS[a.tipo][0]} — ${v ? v.nome : 'Vigilante'}${v?.posto ? ' (' + v.posto + ')' : ''} — ${hora(a.criado_em)}`;
+  $('banner').classList.remove('hidden');
+  clearInterval(alarmeTimer); bip(); alarmeTimer = setInterval(bip, 1500);
+  if (window.Notification && Notification.permission === 'granted') new Notification('K1 Segurança — ' + TIPOS[a.tipo][0], { body: v ? v.nome : '' });
+}
+function silenciar(){ clearInterval(alarmeTimer); $('banner').classList.add('hidden'); aba('alertas'); }
+document.addEventListener('click', () => { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); }, { once:true });
+
+// ================= NAVEGAÇÃO =================
+function aba(t){
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  ['vivo','alertas','vigilantes','contatos','config'].forEach(x => $('aba-' + x).classList.toggle('hidden', x !== t));
+  if (t === 'vivo' && S.map) setTimeout(() => S.map.invalidateSize(), 50);
+}
+function fechar(id){ $(id).classList.add('hidden'); }
+function abrirTermo(){ $('mTermo').classList.remove('hidden'); }
+
+function renderTudo(){ renderHeader(); renderVivo(); renderAlertas(); renderVigilantes(); renderContatos(); renderConfig(); renderPlano(); }
+
+function renderHeader(){
+  $('hEmpresa').textContent = S.empresa.nome;
+  const n = S.alertas.filter(a => a.status === 'aberto').length;
+  const fat = S.plano?.fatura;
+  const fech = fat && fat.status !== 'paga' && fat.renovar === null ? `<a href="#" onclick="aba('config');return false" class="badge b-warn" style="text-decoration:none">Fechamento do mês: ${brl(fat.valor_total)}</a> ` : '';
+  $('hAlertas').innerHTML = fech + (n ? `<span class="badge b-bad">${n} alerta(s) aberto(s)</span>` : `<span class="badge b-ok">Sem alertas abertos</span>`);
+}
+
+// ================= AO VIVO =================
+function statusVig(v){
+  const aberto = S.alertas.find(a => a.vigilante_id === v.id && a.status !== 'resolvido');
+  if (aberto) return { cls:'bad', txt:TIPOS[aberto.tipo][0], badge:'b-bad' };
+  if (!v.ativo) return { cls:'', txt:'Desativado', badge:'b-off' };
+  if (!v.em_turno) return { cls:'', txt:'Fora de turno', badge:'b-off' };
+  if (minutosAtras(v.ultima_atualizacao) > 10) return { cls:'warn', txt:'Sem sinal', badge:'b-warn' };
+  if ((v.ultima_bateria ?? 100) < 20) return { cls:'warn', txt:'Bateria baixa', badge:'b-warn' };
+  return { cls:'ok', txt:'OK', badge:'b-ok' };
+}
+const COR = { ok:'#22c55e', warn:'#f59e0b', bad:'#ef4444', '':'#64748b' };
+
+function iniciarMapa(){
+  if (S.map) return;
+  S.map = L.map('map').setView([-15.78, -47.93], 4);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(S.map);
+}
+function renderVivo(){
+  const lista = S.vigilantes.filter(v => v.ativo);
+  $('sTurno').textContent = lista.filter(v => v.em_turno).length;
+  $('sAbertos').textContent = S.alertas.filter(a => a.status === 'aberto').length;
+  $('sSemSinal').textContent = lista.filter(v => v.em_turno && minutosAtras(v.ultima_atualizacao) > 10).length;
+  $('sBateria').textContent = lista.filter(v => v.em_turno && (v.ultima_bateria ?? 100) < 20).length;
+
+  const ordem = { bad:0, warn:1, ok:2, '':3 };
+  const ord = lista.map(v => ({ v, s:statusVig(v) })).sort((a, b) => ordem[a.s.cls] - ordem[b.s.cls]);
+  $('listaVivo').innerHTML = ord.length ? ord.map(({ v, s }) => `
+    <div class="vcard ${s.cls}" onclick="focar('${v.id}')" style="cursor:pointer">
+      <div class="row" style="justify-content:space-between"><h4>${esc(v.nome)}</h4><span class="badge ${s.badge}">${s.txt}</span></div>
+      <div class="small mut">${esc(v.posto || 'Sem posto')} · Mat. ${esc(v.matricula)}</div>
+      <div class="kv">
+        <span>🔋 ${v.ultima_bateria ?? '—'}%${v.ultimo_carregando ? ' ⚡' : ''}</span>
+        <span>📶 ${v.ultimo_wifi == null ? '—' : v.ultimo_wifi ? 'Wi-Fi ' + esc(v.ultimo_wifi_nome || '') : 'Dados móveis'}</span>
+        <span>📍 ${v.ultima_atualizacao ? Math.round(minutosAtras(v.ultima_atualizacao)) + ' min atrás' : '—'}</span>
+        <span>✅ Último OK: ${hora(v.ultimo_checkin_ok)}</span>
+        ${v.em_turno ? `<span>⏰ Próxima confirmação: ${hora(v.proximo_checkin)}</span>` : ''}
+      </div>
+    </div>`).join('') : '<p class="mut">Nenhum vigilante cadastrado ainda. Vá em "Vigilantes".</p>';
+
+  if (!S.map) return;
+  const bounds = [];
+  lista.forEach(v => {
+    const s = statusVig(v);
+    if (v.ultima_lat == null || v.ultima_lng == null) { if (S.markers[v.id]) { S.markers[v.id].remove(); delete S.markers[v.id]; } return; }
+    const ll = [v.ultima_lat, v.ultima_lng]; bounds.push(ll);
+    const opts = { radius: s.cls === 'bad' ? 11 : 8, color:'#fff', weight:2, fillColor:COR[s.cls], fillOpacity:1 };
+    const pop = `<b>${esc(v.nome)}</b><br>${esc(v.posto || '')}<br>${s.txt} · 🔋${v.ultima_bateria ?? '—'}%`;
+    if (S.markers[v.id]) S.markers[v.id].setLatLng(ll).setStyle(opts).setPopupContent(pop);
+    else S.markers[v.id] = L.circleMarker(ll, opts).addTo(S.map).bindPopup(pop);
+  });
+  if (bounds.length && !S.mapaAjustado) { S.map.fitBounds(bounds, { padding:[40, 40], maxZoom:15 }); S.mapaAjustado = true; }
+}
+function focar(id){ const m = S.markers[id]; if (m) { S.map.setView(m.getLatLng(), 16); m.openPopup(); } }
+
+// ================= ALERTAS =================
+function renderAlertas(){
+  const f = $('fAlerta').value;
+  const lista = f === 'todos' ? S.alertas : S.alertas.filter(a => a.status !== 'resolvido');
+  $('tbAlertas').innerHTML = lista.length ? lista.map(a => {
+    const v = vigPorId(a.vigilante_id); const [tt, tc] = TIPOS[a.tipo]; const [st, sc] = ST_ALERTA[a.status];
+    const mapa = a.lat != null ? `<a href="https://www.google.com/maps?q=${a.lat},${a.lng}" target="_blank" rel="noopener">Ver no mapa</a>` : '—';
+    return `<tr>
+      <td>${hora(a.criado_em)}</td><td><span class="badge ${tc}">${tt}</span></td>
+      <td>${esc(v?.nome || '—')}<div class="small mut">${esc(v?.posto || '')}${v?.telefone ? ' · ' + esc(v.telefone) : ''}</div></td>
+      <td>${mapa}</td><td>${a.bateria ?? '—'}%</td>
+      <td><span class="badge ${sc}">${st}</span>${a.observacao ? `<div class="small mut">${esc(a.observacao)}</div>` : ''}</td>
+      <td class="row">
+        ${a.status === 'aberto' ? `<button class="sm" onclick="statusAlerta('${a.id}','em_atendimento')">Atender</button>` : ''}
+        ${a.status !== 'resolvido' ? `<button class="sm sec" onclick="statusAlerta('${a.id}','resolvido')">Resolver</button>` : ''}
+      </td></tr>`;
+  }).join('') : '<tr><td colspan="7" class="mut">Nenhum alerta.</td></tr>';
+}
+async function statusAlerta(id, status){
+  const upd = { status };
+  if (status === 'resolvido') {
+    const obs = prompt('Observação (o que aconteceu / providência tomada):', '');
+    if (obs === null) return;
+    Object.assign(upd, { observacao: obs, resolvido_em: new Date().toISOString(), resolvido_por: S.user.id });
+  }
+  const { error } = await sb.from('alertas').update(upd).eq('id', id);
+  if (error) return alert(traduz(error));
+  const a = S.alertas.find(x => x.id === id); Object.assign(a, upd); renderTudo();
+}
+
+// ================= VIGILANTES =================
+function renderVigilantes(){
+  const ativos = S.vigilantes.filter(v => v.ativo).length;
+  $('vQtd').textContent = `(${ativos} de ${S.empresa.qtd_vigilantes_contratados} do plano)`;
+  const adm = S.papel === 'admin';
+  $('tbVig').innerHTML = S.vigilantes.length ? S.vigilantes.map(v => `<tr>
+    <td>${esc(v.nome)}<div class="small mut">${esc(v.telefone || '')}</div></td><td><b style="font-size:16px;letter-spacing:1px">${esc(v.matricula_acesso || '—')}</b></td><td>${esc(v.matricula)}</td><td>${esc(v.posto || '—')}</td>
+    <td>${v.dispositivo_ativo ? '<span class="badge b-ok">Conectado</span>' : '<span class="badge b-off">Não ativado</span>'}</td>
+    <td>${v.termo_aceito_em ? hora(v.termo_aceito_em) : '<span class="badge b-warn">Pendente</span>'}</td>
+    <td>${v.ativo ? '<span class="badge b-ok">Ativo</span>' : '<span class="badge b-off">Desativado</span>'}</td>
+    <td class="row">${adm ? `
+      <button class="sm sec" onclick="abrirSenhas('${v.id}')">Trocar senhas</button>
+      ${v.dispositivo_ativo ? `<button class="sm sec" onclick="revogar('${v.id}')">Desconectar celular</button>` : ''}
+      <button class="sm ${v.ativo ? 'danger' : ''}" onclick="alternarAtivo('${v.id}', ${!v.ativo})">${v.ativo ? 'Desativar' : 'Reativar'}</button>` : ''}
+    </td></tr>`).join('') : '<tr><td colspan="8" class="mut">Nenhum vigilante. Clique em "+ Novo vigilante".</td></tr>';
+}
+function abrirNovoVig(){
+  S.editVig = null; $('mVigTit').textContent = 'Novo vigilante'; $('mVigDados').classList.remove('hidden');
+  ['vNome','vMat','vTel','vPosto','vSenha','vCoacao'].forEach(i => $(i).value = ''); $('errVig').textContent = '';
+  $('mVig').classList.remove('hidden');
+}
+function abrirSenhas(id){
+  S.editVig = id; $('mVigTit').textContent = 'Trocar senhas — ' + vigPorId(id).nome; $('mVigDados').classList.add('hidden');
+  $('vSenha').value = ''; $('vCoacao').value = ''; $('errVig').textContent = '';
+  $('mVig').classList.remove('hidden');
+}
+async function salvarVig(){
+  $('errVig').textContent = ''; $('mVigBtn').disabled = true;
+  try {
+    const senha = $('vSenha').value.trim(), coacao = $('vCoacao').value.trim();
+    if (S.editVig) {
+      const { error } = await sb.rpc('alterar_senhas_vigilante', { p_vigilante_id:S.editVig, p_senha:senha, p_senha_coacao:coacao });
+      if (error) throw error;
+    } else {
+      if (!$('vNome').value.trim() || !$('vMat').value.trim()) throw new Error('Informe nome e matrícula.');
+      const { data:novo, error } = await sb.rpc('criar_vigilante', { p_nome:$('vNome').value, p_matricula:$('vMat').value,
+        p_telefone:$('vTel').value, p_posto:$('vPosto').value, p_senha:senha, p_senha_coacao:coacao });
+      if (error) throw error;
+      alert(`Vigilante criado!\n\nAcesso ao app K1 Segurança:\nMATRÍCULA: ${novo.matricula_acesso}\nSENHA: a senha normal cadastrada\n\nEntregue esses dados pessoalmente ao vigilante.`);
+      const { data } = await sb.from('vigilantes').select('*').order('nome'); S.vigilantes = data || [];
+    }
+    fechar('mVig'); renderTudo();
+  } catch (e) { $('errVig').textContent = traduz(e); }
+  finally { $('mVigBtn').disabled = false; }
+}
+async function revogar(id){
+  if (!confirm('Desconectar o celular deste vigilante? Ele terá que ativar o app de novo.')) return;
+  const { error } = await sb.rpc('revogar_dispositivo', { p_vigilante_id:id }); if (error) return alert(traduz(error));
+  Object.assign(vigPorId(id), { dispositivo_ativo:false, em_turno:false }); renderTudo();
+}
+async function alternarAtivo(id, ativo){
+  if (ativo && S.vigilantes.filter(v => v.ativo).length >= S.empresa.qtd_vigilantes_contratados) return alert(ERROS.limite_de_vigilantes_do_plano_atingido);
+  const { error } = await sb.from('vigilantes').update({ ativo }).eq('id', id); if (error) return alert(traduz(error));
+  vigPorId(id).ativo = ativo; renderTudo();
+}
+
+// ================= CONTATOS =================
+function renderContatos(){
+  const adm = S.papel === 'admin';
+  $('tbCt').innerHTML = S.contatos.length ? S.contatos.map(c => `<tr>
+    <td><span class="badge b-acc">${esc(c.tipo)}</span></td><td>${esc(c.nome)}</td><td>${esc(c.whatsapp)}</td>
+    <td>${c.receber_ligacao ? 'Sim' : 'Não'}</td>
+    <td>${adm ? `<button class="sm danger" onclick="delContato('${c.id}')">Remover</button>` : ''}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="mut">Cadastre pelo menos o número do monitoramento.</td></tr>';
+}
+async function addContato(){
+  $('errCt').textContent = '';
+  const zap = $('ctZap').value.replace(/\D/g, '');
+  if (!$('ctNome').value.trim() || zap.length < 10) { $('errCt').textContent = 'Informe nome e WhatsApp com DDD (ex.: 5511999998888).'; return; }
+  const { data, error } = await sb.from('contatos_alerta').insert({ empresa_id:S.empresa.id, tipo:$('ctTipo').value,
+    nome:$('ctNome').value.trim(), whatsapp:zap, receber_ligacao:$('ctLig').value === 'true' }).select().single();
+  if (error) { $('errCt').textContent = traduz(error); return; }
+  S.contatos.push(data); $('ctNome').value = ''; $('ctZap').value = ''; renderContatos();
+}
+async function delContato(id){
+  if (!confirm('Remover este contato?')) return;
+  const { error } = await sb.from('contatos_alerta').delete().eq('id', id); if (error) return alert(traduz(error));
+  S.contatos = S.contatos.filter(c => c.id !== id); renderContatos();
+}
+
+// ================= PLANO / PAGAMENTO =================
+const mesAno = d => { const [a, m] = d.split('-'); return ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][m-1] + '/' + a; };
+const dataBR = d => d.split('-').reverse().join('/');
+function qrSvg(texto){ try { const q = qrcode(0, 'M'); q.addData(texto); q.make(); return q.createSvgTag({ cellSize:4, margin:2 }); } catch { return ''; } }
+function htmlFatura(p){
+  const f = p.fatura; if (!f) return '<p class="mut">Nenhuma fatura ainda. A fatura é gerada no fechamento do mês (a partir do dia 25).</p>';
+  const pend = f.status === 'aberta' || f.status === 'vencida';
+  const st = { aberta:['Aguardando pagamento','b-warn'], vencida:['Vencida','b-bad'], paga:['Paga','b-ok'], cancelada:['Cancelada','b-off'] }[f.status];
+  return `<div class="row" style="justify-content:space-between"><b>Fatura de ${mesAno(f.competencia)}</b><span class="badge ${st[1]}">${st[0]}</span></div>
+    <p style="text-align:center;margin:10px 0">${f.qtd_vigilantes} vigilantes × ${brl(f.valor_unitario)}<br><b style="font-size:30px">${brl(f.valor_total)}</b><br><span class="mut">Vencimento ${dataBR(f.vencimento)}</span></p>
+    ${pend ? `<div style="background:#fff;padding:10px;border-radius:10px;width:max-content;margin:0 auto">${qrSvg(f.pix_copia_cola)}</div>
+      <label>Pix copia e cola</label><textarea readonly rows="3" style="font-size:11px">${esc(f.pix_copia_cola)}</textarea>
+      <div class="row" style="margin-top:8px"><button class="sm" onclick="copiar(S.plano.fatura.pix_copia_cola)">Copiar Pix copia e cola</button>
+      <button class="sec sm" onclick="copiar(S.plano.fatura.pix_chave)">Copiar chave: ${esc(f.pix_chave)}</button>
+      ${p.whatsapp_k1 ? `<a class="small" target="_blank" rel="noopener" href="https://wa.me/${esc(p.whatsapp_k1)}?text=${encodeURIComponent('Comprovante Pix K1 Segurança - ' + mesAno(f.competencia) + ' - ' + brl(f.valor_total))}">Enviar comprovante no WhatsApp</a>` : ''}</div>` : ''}`;
+}
+async function copiar(t){ try { await navigator.clipboard.writeText(t); alert('Copiado!'); } catch { prompt('Copie:', t); } }
+function mostrarBloqueio(p){
+  $('blTitulo').textContent = p.plano_status === 'bloqueado' ? 'Acesso bloqueado' : 'Plano encerrado';
+  $('blTexto').textContent = p.plano_status === 'bloqueado'
+    ? 'A fatura venceu sem pagamento. O painel e o app dos vigilantes estão bloqueados. Pague o Pix abaixo: o acesso volta assim que o pagamento for confirmado.'
+    : 'Sua empresa optou por não continuar o plano.';
+  $('blFatura').innerHTML = `<div style="text-align:left">${htmlFatura(p)}</div>` +
+    (p.plano_status === 'encerrado' && p.fatura ? '<button class="ok" style="margin-top:12px;background:#15803d" onclick="renovar(true)">Quero reativar o plano</button>' : '');
+  mostrar('telaBloqueio');
+}
+function renderPlano(){
+  const p = S.plano; if (!p) { $('cardPlano').innerHTML = ''; return; }
+  const f = p.fatura;
+  let pergunta = '';
+  if (f && f.status !== 'cancelada') {
+    pergunta = f.renovar === null
+      ? `<div style="margin-top:14px;text-align:center"><b>Deseja continuar o plano no próximo mês?</b>
+         <div class="row" style="justify-content:center;margin-top:8px"><button style="background:#15803d" onclick="renovar(true)">Sim, continuar</button><button class="sec" onclick="renovar(false)">Não</button></div></div>`
+      : `<p style="text-align:center;color:${f.renovar ? 'var(--ok)' : 'var(--warn)'}">${f.renovar ? '✓ Plano renovado para o próximo mês.' : 'Você escolheu não continuar: o acesso encerra no fim do mês.'}
+         ${f.renovar ? '' : ' <a href="#" onclick="renovar(true);return false">Mudei de ideia</a>'}</p>`;
+  }
+  $('cardPlano').innerHTML = `<h3 style="margin-top:0">Plano e pagamento</h3>
+    <p>${p.vigilantes_contratados} vigilantes × ${brl(p.valor_por_vigilante)} = <b>${brl(p.previa_total)}/mês</b></p>${htmlFatura(p)}${pergunta}`;
+}
+async function renovar(sim){
+  if (!S.plano?.fatura) return;
+  if (!sim && !confirm('Não continuar o plano? Todo o acesso (painel e app dos vigilantes) será encerrado no fim do mês.')) return;
+  const { data, error } = await sb.rpc('empresa_responder_renovacao', { p_fatura_id:S.plano.fatura.id, p_renovar:sim });
+  if (error) return alert(traduz(error));
+  if (sim) { $('obrigadoTxt').textContent = data.mensagem; $('mObrigado').classList.remove('hidden'); } else alert(data.mensagem);
+  const r = await sb.rpc('empresa_plano'); S.plano = r.data;
+  if (S.plano.plano_status === 'ativo' && !$('telaBloqueio').classList.contains('hidden')) { location.reload(); return; }
+  renderPlano();
+}
+
+// ================= CONFIG =================
+function renderConfig(){
+  const e = S.empresa;
+  $('cfNome').value = e.nome; $('cfCnpj').value = e.cnpj || ''; $('cfQtd').value = e.qtd_vigilantes_contratados;
+  $('cfIntervalo').value = String(e.intervalo_checkin_min); $('cfPrazo').value = String(e.prazo_resposta_min);
+  $('cfTent').value = String(e.tentativas_senha); $('cfTermo').textContent = hora(e.termo_aceito_em) + ' (' + e.termo_versao + ')';
+  calcPlano();
+}
+function calcPlano(){ $('cfValor').value = brl((+$('cfQtd').value || 0) * Number(S.empresa.valor_por_vigilante)) + ' / mês'; }
+async function salvarConfig(){
+  $('errCf').textContent = '';
+  const qtd = parseInt($('cfQtd').value, 10);
+  const ativos = S.vigilantes.filter(v => v.ativo).length;
+  if (!(qtd >= 1)) { $('errCf').textContent = 'Quantidade inválida.'; return; }
+  if (qtd < ativos) { $('errCf').textContent = `Você tem ${ativos} vigilantes ativos. Desative alguns antes de reduzir o plano.`; return; }
+  const upd = { nome:$('cfNome').value.trim(), cnpj:$('cfCnpj').value.trim() || null, qtd_vigilantes_contratados:qtd,
+    intervalo_checkin_min:+$('cfIntervalo').value, prazo_resposta_min:+$('cfPrazo').value, tentativas_senha:+$('cfTent').value };
+  const { error } = await sb.from('empresas').update(upd).eq('id', S.empresa.id);
+  if (error) { $('errCf').textContent = traduz(error); return; }
+  Object.assign(S.empresa, upd); renderTudo();
+  $('errCf').style.color = 'var(--ok)'; $('errCf').textContent = 'Salvo!'; setTimeout(() => { $('errCf').textContent = ''; $('errCf').style.color = ''; }, 2500);
+}
+
+// ================= INÍCIO =================
+$('senha').addEventListener('keydown', e => { if (e.key === 'Enter') autenticar(); });
+if (SUPABASE_URL.startsWith('COLE_')) {
+  document.body.innerHTML = '<div class="center"><div class="card auth"><div class="brand">K1 <span>SEGURANÇA</span></div><p>Abra este arquivo num editor e preencha <b>SUPABASE_URL</b> e <b>SUPABASE_ANON_KEY</b> no topo (Supabase → Project Settings → API).</p></div></div>';
+} else {
+  iniciar();
+}
+</script>
+</body>
+</html>
