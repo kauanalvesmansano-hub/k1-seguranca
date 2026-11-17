@@ -27,6 +27,12 @@
       "expo-secure-store"
     ],
     "scheme": "k1seguranca",
-    "backgroundColor": "#000000"
+    "backgroundColor": "#000000",
+    "owner": "k1cyberbr",
+    "extra": {
+      "eas": {
+        "projectId": "a77f9353-5ac7-4438-8d5a-bbcc0146314b"
+      }
+    }
   }
 }

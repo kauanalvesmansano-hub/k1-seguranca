@@ -1,0 +1,49 @@
+name: APK Android (teste)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Instalar dependências
+        run: npm ci --legacy-peer-deps
+
+      - name: Gerar projeto Android
+        run: npx expo prebuild --platform android --no-install
+        env:
+          CI: 1
+
+      - name: Compilar APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon -Dorg.gradle.jvmargs=-Xmx4g
+
+      - name: Renomear APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk K1-Seguranca.apk
+
+      - name: Publicar para download
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: teste-${{ github.run_number }}
+          name: K1 Segurança — teste ${{ github.run_number }}
+          body: APK de teste do K1 Segurança. Baixe K1-Seguranca.apk e instale no Android.
+          files: K1-Seguranca.apk
