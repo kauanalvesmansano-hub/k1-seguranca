@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -5,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { K1 } from '../../../components/k1';
 import { MapaFamilia, type PessoaMapa } from '../../../components/MapaFamilia';
 import { useFamilia } from '../../../lib/useFamilia';
-import { atenderAlerta, haQuanto, TIPO_ALERTA, type Membro } from '../../../lib/familia';
+import { atenderAlerta, haQuanto, temSosAoVivo, TIPO_ALERTA, type Membro } from '../../../lib/familia';
 
 const CORES = ['#22c55e', '#3b82f6', '#a855f7', '#f97316', '#ec4899', '#14b8a6', '#eab308', '#ef4444'];
 
@@ -41,6 +42,12 @@ export default function MapaDaFamilia() {
           <View key={a.id} style={[st.alerta, { top: ins.top + 60 }]}>
             <Text style={st.alertaTit}>⚠ {TIPO_ALERTA[a.tipo] ?? a.tipo} — {a.nome}</Text>
             <Text style={st.alertaSub}>{haQuanto(a.criado_em)}{a.status === 'em_atendimento' ? ' · alguém já está atendendo' : ''}</Text>
+            {temSosAoVivo(a) && a.nome !== sessao?.nome && (
+              <Pressable style={[st.alertaBtn, { backgroundColor: '#e10600', marginTop: 6, flexDirection: 'row', gap: 6, justifyContent: 'center' }]}
+                onPress={() => router.push({ pathname: '/sos/[id]', params: { id: a.id, modo: 'membro' } })}>
+                <Text style={st.alertaBtnTxt}>● VER CÂMERA AO VIVO{a.sos_encerrado_em ? ' (gravado)' : ''}</Text>
+              </Pressable>
+            )}
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
               {a.lat != null && <Pressable style={st.alertaBtn} onPress={() => Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${a.lat},${a.lng}`)}><Text style={st.alertaBtnTxt}>Ir até lá</Text></Pressable>}
               {a.status === 'aberto' && <Pressable style={st.alertaBtn} onPress={() => responder(a.id, false)}><Text style={st.alertaBtnTxt}>Estou indo</Text></Pressable>}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https://unpkg.com https://*.openstreetmap.org https://tiles.openfreemap.org; font-src 'self' data: https://tiles.openfreemap.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://tiles.openfreemap.org https://*.openstreetmap.org; worker-src 'self' blob:; child-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https://unpkg.com https://*.openstreetmap.org https://tiles.openfreemap.org; font-src 'self' data: https://tiles.openfreemap.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://tiles.openfreemap.org https://*.openstreetmap.org; worker-src 'self' blob:; media-src 'self' blob: data:; child-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <title>K1 Segurança — Painel da Empresa</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -279,6 +279,23 @@
   <p class="small mut">A <b>senha de coação</b> é usada quando o vigilante está rendido: o celular mostra "Confirmado" normalmente, mas o monitoramento recebe um alerta silencioso. Combine as duas senhas pessoalmente com o vigilante. Por segurança, elas não aparecem mais depois de salvas.</p>
   <div class="row" style="margin-top:12px"><button id="mVigBtn" onclick="salvarVig()">Salvar</button><button class="sec" onclick="fechar('mVig')">Cancelar</button></div>
   <div id="errVig" class="err"></div>
+</div></div>
+
+<div id="mSos" class="modal hidden"><div class="card" style="max-width:760px">
+  <div class="row" style="justify-content:space-between;align-items:center">
+    <h2 style="margin:0">🔴 SOS ao vivo — <span id="sosNome"></span></h2>
+    <button class="sec sm" onclick="fecharSos()">Fechar</button>
+  </div>
+  <p class="small mut" id="sosInfo" style="margin:6px 0">Câmera e áudio de quem pediu socorro, com atraso de ~6 a 10 s.</p>
+  <div style="position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:4/3">
+    <video id="sosVideo" playsinline autoplay controls style="width:100%;height:100%;object-fit:contain;background:#000"></video>
+    <div id="sosAud" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#ddd;font-size:18px;pointer-events:none">🎙 Só áudio (sem câmera)</div>
+    <div id="sosSt" style="position:absolute;left:10px;top:10px;padding:4px 10px;border-radius:12px;background:rgba(0,0,0,.6);font-size:13px;font-weight:700">Aguardando imagem…</div>
+  </div>
+  <div class="row" style="margin-top:12px;gap:8px">
+    <a id="sosMapa" target="_blank" rel="noopener" class="hidden"><button class="sec">Ver no mapa</button></a>
+    <button id="sosEncerrar" style="background:#e10600" onclick="encerrarSos()">Encerrar transmissão</button>
+  </div>
 </div></div>
 
 <div id="mObrigado" class="modal hidden"><div class="card" style="text-align:center;max-width:460px">
@@ -672,6 +689,7 @@ function renderAlertas(){
       <td>${mapa}</td><td>${a.bateria ?? '—'}%</td>
       <td><span class="badge ${sc}">${st}</span>${a.observacao ? `<div class="small mut">${esc(a.observacao)}</div>` : ''}</td>
       <td class="row">
+        ${a.tipo === 'panico' && (a.sos_gravando || a.sos_encerrado_em) ? `<button class="sm" style="background:#e10600" onclick="verSos('${a.id}')">● Ao vivo</button>` : ''}
         ${a.status === 'aberto' ? `<button class="sm" onclick="statusAlerta('${a.id}','em_atendimento')">Atender</button>` : ''}
         ${a.status !== 'resolvido' ? `<button class="sm sec" onclick="statusAlerta('${a.id}','resolvido')">Resolver</button>` : ''}
       </td></tr>`;
@@ -687,6 +705,52 @@ async function statusAlerta(id, status){
   const { error } = await sb.from('alertas').update(upd).eq('id', id);
   if (error) return alert(traduz(error));
   const a = S.alertas.find(x => x.id === id); Object.assign(a, upd); renderTudo();
+}
+
+// ================= SOS AO VIVO (câmera + áudio do K1 Família) =================
+const SOS = { id:null, ultimo:-1, fila:[], tocando:false, timer:null, url:null, gravado:false };
+function sosBlob(b64, mime){ const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return URL.createObjectURL(new Blob([u], { type:mime })); }
+function sosProx(){
+  const v = $('sosVideo');
+  if (!SOS.fila.length){ SOS.tocando = false; $('sosSt').textContent = SOS.gravado ? 'Fim da gravação' : 'AO VIVO · aguardando próximo trecho…'; return; }
+  SOS.tocando = true; const t = SOS.fila.shift();
+  if (SOS.url) URL.revokeObjectURL(SOS.url); SOS.url = sosBlob(t.dados, t.mime);
+  $('sosAud').style.display = t.tipo === 'audio' ? 'flex' : 'none';
+  v.src = SOS.url; v.play().catch(() => { $('sosSt').textContent = 'Clique no vídeo para ouvir'; });
+  $('sosSt').textContent = (SOS.gravado ? 'GRAVAÇÃO' : 'AO VIVO') + ' · trecho ' + (t.seq + 1);
+}
+async function sosPuxar(){
+  if (!SOS.id) return;
+  if (SOS.gravado && SOS.fila.length >= 2) return;
+  const [{ data:a }, { data:tr, error }] = await Promise.all([
+    sb.from('alertas').select('lat,lng,sos_gravando,sos_encerrado_em,sos_encerrado_por').eq('id', SOS.id).maybeSingle(),
+    sb.from('sos_midia').select('seq,tipo,mime,dados').eq('alerta_id', SOS.id).gt('seq', SOS.ultimo).order('seq').limit(4),
+  ]);
+  if (error) { $('sosInfo').textContent = 'Sem conexão. Tentando de novo…'; return; }
+  if (a) {
+    SOS.gravado = !!a.sos_encerrado_em;
+    $('sosEncerrar').classList.toggle('hidden', SOS.gravado);
+    $('sosInfo').textContent = SOS.gravado ? 'Transmissão encerrada por ' + (a.sos_encerrado_por || '—') + '. Mostrando a gravação.' : 'Câmera e áudio de quem pediu socorro, com atraso de ~6 a 10 s.';
+    if (a.lat != null) { $('sosMapa').href = 'https://www.google.com/maps?q=' + a.lat + ',' + a.lng; $('sosMapa').classList.remove('hidden'); }
+  }
+  (tr || []).forEach(t => { if (t.seq > SOS.ultimo) { SOS.ultimo = t.seq; SOS.fila.push(t); } });
+  if (!SOS.gravado) while (SOS.fila.length > 4) SOS.fila.shift();
+  if (!SOS.tocando) sosProx();
+}
+function verSos(id){
+  const a = S.alertas.find(x => x.id === id); const v = a && vigPorId(a.vigilante_id);
+  Object.assign(SOS, { id, ultimo:-1, fila:[], tocando:false, gravado:false });
+  $('sosNome').textContent = v?.nome || '—';
+  const vid = $('sosVideo'); vid.onended = sosProx; vid.onerror = sosProx;
+  $('mSos').classList.remove('hidden');
+  sosPuxar(); clearInterval(SOS.timer); SOS.timer = setInterval(sosPuxar, 3000);
+}
+function fecharSos(){ clearInterval(SOS.timer); SOS.id = null; const v = $('sosVideo'); v.pause(); v.removeAttribute('src'); $('mSos').classList.add('hidden'); }
+async function encerrarSos(){
+  if (!SOS.id || !confirm('Encerrar a transmissão? O celular para de gravar. O alerta continua aberto até ser resolvido.')) return;
+  const { error } = await sb.rpc('sos_encerrar', { p_alerta_id:SOS.id });
+  if (error) return alert(traduz(error));
+  sosPuxar();
 }
 
 // ================= VIGILANTES =================

@@ -104,6 +104,17 @@ class ChamadaActivity : Activity() {
       abrirApp()
       finish()
     })
+    if (i.getBooleanExtra("sos", false)) {
+      // K1 Família: abre a câmera + áudio ao vivo de quem pediu socorro
+      raiz.addView(botao("● Ver câmera ao vivo", Color.parseColor("#E10600")) {
+        enviarAoServico(CentralService.ACAO_ATENDER)
+        try {
+          startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("k1seguranca://sos/$alertaId?modo=central"))
+            .setPackage(packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (_: Exception) { abrirApp() }
+        finish()
+      })
+    }
     if (!lat.isNaN() && !lng.isNaN()) {
       raiz.addView(botao("Ver no mapa", Color.parseColor("#1D4ED8")) {
         enviarAoServico(CentralService.ACAO_SILENCIAR)

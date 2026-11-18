@@ -18,6 +18,11 @@
   <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
   <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
   <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+  <!-- K1 Família: SOS grava câmera + áudio -->
+  <uses-permission android:name="android.permission.CAMERA" />
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
   <application>
     <service
@@ -45,6 +50,19 @@
       android:turnScreenOn="true"
       android:screenOrientation="portrait"
       android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen" />
+    <service
+      android:name="expo.modules.k1panico.GravacaoService"
+      android:exported="false"
+      android:foregroundServiceType="camera|microphone" />
+    <activity
+      android:name="expo.modules.k1panico.SosGravacaoActivity"
+      android:exported="false"
+      android:launchMode="singleInstance"
+      android:excludeFromRecents="true"
+      android:showWhenLocked="true"
+      android:turnScreenOn="true"
+      android:noHistory="true"
+      android:theme="@android:style/Theme.Translucent.NoTitleBar" />
     <receiver
       android:name="expo.modules.k1panico.InicioReceiver"
       android:exported="true">

@@ -29,16 +29,16 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "O K1 Segurança usa a câmera para ler o QR code dos pontos de ronda e tirar foto das ocorrências.",
-          "recordAudioAndroid": false
+          "cameraPermission": "O K1 Segurança usa a câmera para ler o QR code da ronda, tirar foto das ocorrências e, no K1 Família, gravar o SOS.",
+          "recordAudioAndroid": true,
+          "microphonePermission": "No K1 Família, o SOS grava o áudio para a central ouvir o que está acontecendo."
         }
       ],
       [
         "expo-image-picker",
         {
           "cameraPermission": "O K1 Segurança usa a câmera para tirar foto das ocorrências.",
-          "photosPermission": false,
-          "microphonePermission": false
+          "photosPermission": false
         }
       ]
     ],

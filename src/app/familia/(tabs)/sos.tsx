@@ -56,7 +56,7 @@ export default function SOSFamilia() {
 
       <CardK1 style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
         <Ionicons name="power" size={26} color={K1.vermelho} />
-        <Text style={[k.mut, { flex: 1 }]}>Com o compartilhamento ligado, apertar o botão Power 4 vezes seguidas também pede socorro, mesmo com o app fechado e a tela bloqueada. Sem internet, o pedido é enviado assim que a conexão voltar.</Text>
+        <Text style={[k.mut, { flex: 1 }]}>Com o compartilhamento ligado, apertar o botão Power 4 vezes seguidas também pede socorro, mesmo com o app fechado e a tela bloqueada — e, se estiver ligado em Ajustes, liga a câmera e o microfone para a família ver e ouvir ao vivo. Sem internet, o pedido é enviado assim que a conexão voltar.</Text>
       </CardK1>
     </FundoK1>
   );

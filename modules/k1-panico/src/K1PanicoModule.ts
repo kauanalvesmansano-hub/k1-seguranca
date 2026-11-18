@@ -6,6 +6,9 @@ declare class K1PanicoModule extends NativeModule<{}> {
   parar(): Promise<void>;
   ativo(): boolean;
   testarBatida(): boolean;
+  // K1 Família: gravar câmera + áudio no SOS
+  sosConfigurar(ligado: boolean): void;
+  sosGravando(): boolean;
   // Celular da central: toca como ligação quando chega alerta
   centralIniciar(url: string, anonKey: string, token: string): Promise<void>;
   centralParar(): Promise<void>;

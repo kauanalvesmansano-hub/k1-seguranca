@@ -43,6 +43,15 @@ class K1PanicoModule : Module() {
       if (fila == "[]") prefs.edit().remove("token").apply()
     }
 
+    // K1 Família: gravar câmera + áudio no SOS (a própria pessoa liga/desliga)
+    Function("sosConfigurar") { ligado: Boolean ->
+      context.getSharedPreferences(PanicoService.PREFS, Context.MODE_PRIVATE).edit().putBoolean("gravar_sos", ligado).apply()
+    }
+
+    Function("sosGravando") {
+      GravacaoService.gravando
+    }
+
     Function("ativo") {
       PanicoService.rodando
     }

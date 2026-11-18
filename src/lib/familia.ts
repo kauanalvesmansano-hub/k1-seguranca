@@ -1,5 +1,6 @@
 import { rpc, salvarSessao, sairVigilante, type SessaoVigilante } from './vigilante';
 import { ativarPanicoPower, desativarPanicoPower } from './panicoNativo';
+import K1Panico from '../../modules/k1-panico/src/K1PanicoModule';
 
 /** K1 Família: preço (o servidor confirma na fatura). */
 export const FAMILIA_PRIMEIRO = 15;
@@ -12,8 +13,11 @@ export type Membro = {
   wifi: boolean | null; atualizado: string | null; acompanhar_ate: string | null; acompanhar_destino: string | null;
   area_lat: number | null; area_lng: number | null; area_raio: number | null; fora_da_area: boolean;
 };
-export type AlertaFamilia = { id: string; tipo: string; status: string; lat: number | null; lng: number | null; criado_em: string; nome: string };
-export type Familia = { eu: string; familia: string; homem_caido_min: number; membros: Membro[]; alertas: AlertaFamilia[] };
+export type AlertaFamilia = {
+  id: string; tipo: string; status: string; lat: number | null; lng: number | null; criado_em: string; nome: string;
+  sos_gravando?: boolean; sos_encerrado_em?: string | null; trechos?: number;
+};
+export type Familia = { eu: string; familia: string; homem_caido_min: number; gravar_sos?: boolean; membros: Membro[]; alertas: AlertaFamilia[] };
 
 export const TIPO_ALERTA: Record<string, string> = {
   panico: 'SOS — PEDIU SOCORRO', sem_movimento: 'POSSÍVEL QUEDA / SEM MOVIMENTO', bateria_baixa: 'BATERIA BAIXA',
@@ -38,9 +42,21 @@ export async function aceitarTermoFamilia(s: SessaoVigilante) {
   return nova;
 }
 
-export function carregarFamilia(s: SessaoVigilante) {
-  return rpc<Familia>('membro_familia', { p_token: s.token });
+export async function carregarFamilia(s: SessaoVigilante) {
+  const f = await rpc<Familia>('membro_familia', { p_token: s.token });
+  // o serviço nativo precisa saber se grava câmera/áudio no Power 4x
+  try { K1Panico?.sosConfigurar(f.gravar_sos !== false); } catch { /* Expo Go */ }
+  return f;
 }
+
+/** Liga/desliga a gravação de câmera + áudio no SOS (escolha da própria pessoa). */
+export async function configurarGravacaoSos(s: SessaoVigilante, ligar: boolean) {
+  await rpc('membro_gravar_sos', { p_token: s.token, p_ligar: ligar });
+  try { K1Panico?.sosConfigurar(ligar); } catch { /* Expo Go */ }
+}
+
+/** Há câmera/áudio para assistir neste alerta? */
+export const temSosAoVivo = (a: AlertaFamilia) => a.tipo === 'panico' && (!!a.sos_gravando || (a.trechos ?? 0) > 0);
 
 /** Liga/pausa o envio da localização (e o pânico pelo Power junto). */
 export async function compartilhar(s: SessaoVigilante, ligar: boolean, homemCaidoMin = 0) {

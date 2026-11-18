@@ -231,6 +231,7 @@ class CentralService : Service() {
       putExtra("lng", if (a.isNull("lng")) Double.NaN else a.optDouble("lng", Double.NaN))
       putExtra("bateria", if (a.isNull("bateria")) -1 else a.optInt("bateria", -1))
       putExtra("hora", a.optString("criado_em"))
+      putExtra("sos", tipo == "panico" && a.optBoolean("gravar_sos", false))
     }
     val fl = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     val piTela = PendingIntent.getActivity(this, notifId(id), tela, fl)

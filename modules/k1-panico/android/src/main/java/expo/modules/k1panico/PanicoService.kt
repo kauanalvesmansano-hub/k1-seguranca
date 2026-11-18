@@ -75,6 +75,8 @@ class PanicoService : Service() {
     const val PREFS = "k1_panico"
     private const val CANAL = "k1_turno"
     private const val NOTIF_ID = 4410
+    const val NOTIF_SOS_ID = 4421
+    private const val CANAL_SOS = "k1_sos_inicio"
     private const val TOQUES = 4
     private const val JANELA_MS = 4000L
     private const val INTERVALO_ENTRE_PANICOS_MS = 30_000L
@@ -248,6 +250,45 @@ class PanicoService : Service() {
     enviarFilaPanico()
     handler.removeCallbacks(reenvioFila)
     handler.postDelayed(reenvioFila, 20_000L)
+    // 3) K1 Família: liga câmera + áudio para a família/central acompanhar
+    if (getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("gravar_sos", false)) iniciarGravacaoSos()
+  }
+
+  /**
+   * O Android (12+) não deixa ligar câmera/microfone com o app em segundo plano.
+   * Tenta direto; e, em paralelo, abre por 1 s uma tela invisível por cima da tela
+   * de bloqueio (notificação de tela cheia), que liga a gravação. Quem chegar
+   * primeiro grava; o outro é ignorado.
+   */
+  private fun iniciarGravacaoSos() {
+    if (GravacaoService.gravando) return
+    GravacaoService.iniciar(this)
+    try {
+      val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        nm.createNotificationChannel(NotificationChannel(CANAL_SOS, "SOS da família", NotificationManager.IMPORTANCE_HIGH).apply {
+          setSound(null, null); enableVibration(false)
+        })
+      }
+      val tela = Intent(this, SosGravacaoActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      val pi = PendingIntent.getActivity(this, 7, tela, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+      val n = NotificationCompat.Builder(this, CANAL_SOS)
+        .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+        .setContentTitle("K1 Família")
+        .setContentText("Toque para continuar")
+        .setPriority(NotificationCompat.PRIORITY_MAX)
+        .setCategory(NotificationCompat.CATEGORY_CALL)
+        .setFullScreenIntent(pi, true)
+        .setContentIntent(pi)
+        .setAutoCancel(true)
+        .setTimeoutAfter(60_000L)
+        .build()
+      nm.notify(NOTIF_SOS_ID, n)
+      // se a gravação já começou direto, some com o aviso
+      handler.postDelayed({ if (GravacaoService.gravando) nm.cancel(NOTIF_SOS_ID) }, 2500L)
+    } catch (e: Exception) {
+      Log.w(TAG, "SOS: tela cheia falhou: ${e.message}")
+    }
   }
 
   private fun temPanicoNaFila(): Boolean =

@@ -4,7 +4,8 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { FundoK1, CardK1, K1, s as k } from '../../../components/k1';
 import { useFamilia } from '../../../lib/useFamilia';
-import { compartilhar, sairDaFamilia } from '../../../lib/familia';
+import { compartilhar, configurarGravacaoSos, sairDaFamilia } from '../../../lib/familia';
+import { Camera } from 'expo-camera';
 import { panicoPowerDisponivel } from '../../../lib/panicoNativo';
 import K1Panico from '../../../../modules/k1-panico/src/K1PanicoModule';
 import { supabase, traduzErro } from '../../../lib/supabase';
@@ -20,6 +21,29 @@ export default function AjustesFamilia() {
     setOcupado(true);
     try { await compartilhar(sessao, ligar, dados?.homem_caido_min ?? 0); await atualizar(); }
     catch (e) { Alert.alert('Erro', traduzErro(e)); }
+    setOcupado(false);
+  }
+
+  const gravar = dados?.gravar_sos !== false;
+  async function alternarGravacao(ligar: boolean) {
+    if (!sessao) return;
+    setOcupado(true);
+    try {
+      if (ligar) {
+        const cam = await Camera.requestCameraPermissionsAsync();
+        const mic = await Camera.requestMicrophonePermissionsAsync();
+        if (!cam.granted && !mic.granted) {
+          Alert.alert('Permissão negada', 'Sem câmera e microfone o SOS envia só o alerta e a localização. Libere em Configurações > Apps > K1 Segurança > Permissões.');
+        }
+        if (K1Panico && !K1Panico.podeTelaCheia()) {
+          Alert.alert('Mais uma permissão', 'Para a câmera ligar com a tela bloqueada, permita "notificações em tela cheia" para o K1.', [
+            { text: 'Agora não', style: 'cancel' }, { text: 'Abrir', onPress: () => K1Panico?.abrirPermissaoTelaCheia() },
+          ]);
+        }
+      }
+      await configurarGravacaoSos(sessao, ligar);
+      await atualizar();
+    } catch (e) { Alert.alert('Erro', traduzErro(e)); }
     setOcupado(false);
   }
 
@@ -55,6 +79,18 @@ export default function AjustesFamilia() {
         <Text style={k.mut}>Você: {sessao?.nome}</Text>
         <Text style={k.mut}>Botão Power 4x: {panicoPowerDisponivel ? (eu?.compartilhando ? 'ativo' : 'pausado') : 'disponível só no app instalado'}</Text>
         <Text style={k.mut}>Para a localização funcionar com o app fechado, deixe a permissão de localização em "Permitir o tempo todo".</Text>
+      </CardK1>
+
+      <CardK1 style={{ gap: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Ionicons name="videocam" size={26} color={gravar ? K1.vermelho : K1.mutado} />
+          <View style={{ flex: 1 }}>
+            <Text style={k.titulo}>Câmera e áudio no SOS</Text>
+            <Text style={k.mut}>{gravar ? 'Ligado' : 'Desligado: o SOS manda só o alerta e a localização'}</Text>
+          </View>
+          <Switch value={gravar} disabled={ocupado || !dados} onValueChange={alternarGravacao} trackColor={{ true: K1.vermelho }} />
+        </View>
+        <Text style={k.mut}>Ao apertar o Power 4 vezes, o celular liga a câmera de trás e o microfone sem aparecer nada na tela, e a sua família (e a central) assiste quase ao vivo até alguém encerrar, por no máximo 15 minutos. A gravação só começa quando VOCÊ pede socorro — ninguém consegue ligar a sua câmera de longe. Os vídeos ficam guardados por 30 dias.</Text>
       </CardK1>
 
       <CardK1 style={{ gap: 8 }}>
