@@ -453,4 +453,12 @@ do $$ begin
   end if;
 end $$;
 
+-- 3.11 search_path fixo em todas as funções (evita sequestro de função por outro schema)
+alter function public._crc16(text) set search_path = public;
+alter function public._emv(text, text) set search_path = public;
+alter function public._sem_acento(text, integer) set search_path = public, extensions;
+alter function public._senha_valida(text) set search_path = public;
+alter function public._distancia_m(double precision, double precision, double precision, double precision) set search_path = public;
+alter function public._pix_copia_cola(text, text, text, numeric, text) set search_path = public;
+
 select 'migracao 006 ok' as resultado;
