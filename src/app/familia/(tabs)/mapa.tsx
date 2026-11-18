@@ -16,7 +16,7 @@ export default function MapaDaFamilia() {
   const [foco, setFoco] = useState<string | null>(null);
 
   const membros = dados?.membros ?? [];
-  const cor = (m: Membro, i: number) => (dados?.alertas.some(a => a.status !== 'resolvido' && a.nome === m.nome && ['panico', 'sem_movimento', 'atraso_chegada'].includes(a.tipo))
+  const cor = (m: Membro, i: number) => (dados?.alertas.some(a => a.status !== 'resolvido' && a.nome === m.nome && ['panico', 'sem_movimento', 'atraso_chegada', 'batida'].includes(a.tipo))
     ? '#ef4444' : CORES[i % CORES.length]);
   const pessoas: PessoaMapa[] = membros.flatMap((m, i) => m.lat != null && m.lng != null ? [{
     id: m.id, nome: m.nome, lat: m.lat, lng: m.lng, cor: cor(m, i), eu: m.id === dados?.eu, bateria: m.bateria,

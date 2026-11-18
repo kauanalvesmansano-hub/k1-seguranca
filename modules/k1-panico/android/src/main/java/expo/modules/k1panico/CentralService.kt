@@ -54,7 +54,7 @@ class CentralService : Service() {
     @Volatile var rodando = false
     @Volatile var instancia: CentralService? = null
 
-    val CRITICOS = setOf("panico", "coacao", "sem_movimento", "atraso_chegada")
+    val CRITICOS = setOf("panico", "coacao", "sem_movimento", "atraso_chegada", "batida")
 
     fun titulo(tipo: String): String = when (tipo) {
       "panico" -> "PÂNICO — ASSALTO"
@@ -65,6 +65,7 @@ class CentralService : Service() {
       "fora_do_posto" -> "FORA DO POSTO"
       "bateria_baixa" -> "BATERIA BAIXA"
       "atraso_chegada" -> "NÃO CHEGOU NO HORÁRIO"
+      "batida" -> "POSSÍVEL BATIDA DE CARRO/MOTO"
       "teste" -> "TESTE DE ALARME"
       else -> tipo.uppercase()
     }

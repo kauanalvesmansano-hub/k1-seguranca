@@ -86,8 +86,17 @@ class PanicoService : Service() {
     private const val NOTIF_HOMEM_CAIDO = 4411
     private const val LIMIAR_MOVIMENTO = 1.2f      // m/s² de variação em relação à gravidade
     private const val TEMPO_RESPOSTA_MS = 30_000L
+    // Detecção de batida de carro/moto
+    private const val NOTIF_BATIDA = 4412
+    private const val LIMIAR_BATIDA = 4.0f * SensorManager.GRAVITY_EARTH   // impacto de ~4 g
+    private const val VEL_MIN_BATIDA = 7.0f                                 // ~25 km/h antes do impacto
+    private const val VEL_PARADO = 2.5f                                     // ~9 km/h depois do impacto
+    private const val CONFIRMA_BATIDA_MS = 12_000L
+    private const val INTERVALO_BATIDAS_MS = 5 * 60_000L
+    const val ACAO_ESTOU_BEM = "expo.modules.k1panico.ESTOU_BEM"
 
     @Volatile var rodando = false
+    @Volatile var instancia: PanicoService? = null
   }
 
   private val eventos = ArrayDeque<Long>()
@@ -101,11 +110,18 @@ class PanicoService : Service() {
   private var ouvinteRede: ConnectivityManager.NetworkCallback? = null
   @Volatile private var ultimoMovimento = SystemClock.elapsedRealtime()
   @Volatile private var preAlarmeDesde = 0L
+  private val velocidades = ArrayDeque<Pair<Long, Float>>()   // (quando, m/s)
+  @Volatile private var ultimaBatidaEm = 0L
+  @Volatile private var batidaPendente = false
+  @Volatile private var preBatidaDesde = 0L
+  @Volatile private var dadosBatida: Pair<Int, Double>? = null   // (km/h antes, força em g)
+  @Volatile private var batidaTeste = false
 
   private val ouvinteMovimento = object : SensorEventListener {
     override fun onSensorChanged(e: SensorEvent) {
       val (x, y, z) = Triple(e.values[0], e.values[1], e.values[2])
       val modulo = Math.sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+      if (modulo >= LIMIAR_BATIDA) possivelImpacto(modulo)
       if (Math.abs(modulo - SensorManager.GRAVITY_EARTH) > LIMIAR_MOVIMENTO) {
         ultimoMovimento = SystemClock.elapsedRealtime()
         if (preAlarmeDesde > 0) cancelarPreAlarme()
@@ -122,6 +138,7 @@ class PanicoService : Service() {
   }
 
   private val ouvinteLocal = LocationListener { loc ->
+    registrarVelocidade(loc)
     val atual = localAtual
     if (atual == null || loc.time >= atual.time) localAtual = loc
     // Tempo real: andou o suficiente e já passou o intervalo mínimo -> envia agora
@@ -167,6 +184,7 @@ class PanicoService : Service() {
     // Eventos de tela só podem ser recebidos com registro dinâmico
     ContextCompat.registerReceiver(this, receptor, filtro, ContextCompat.RECEIVER_NOT_EXPORTED)
     rodando = true
+    instancia = this
     iniciarLocalizacao()
     observarInternet()
     iniciarSensorMovimento()
@@ -176,7 +194,10 @@ class PanicoService : Service() {
     Log.i(TAG, "Monitoramento do botão Power ativo")
   }
 
-  override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+  override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    if (intent?.action == ACAO_ESTOU_BEM) cancelarPreBatida()
+    return START_STICKY
+  }
 
   override fun onDestroy() {
     try { unregisterReceiver(receptor) } catch (_: Exception) {}
@@ -185,6 +206,8 @@ class PanicoService : Service() {
     handler.removeCallbacks(verificaHomemCaido)
     try { (getSystemService(Context.SENSOR_SERVICE) as SensorManager).unregisterListener(ouvinteMovimento) } catch (_: Exception) {}
     cancelarPreAlarme()
+    cancelarPreBatida()
+    instancia = null
     ouvinteRede?.let { try { (getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).unregisterNetworkCallback(it) } catch (_: Exception) {} }
     try { (getSystemService(Context.LOCATION_SERVICE) as LocationManager).removeUpdates(ouvinteLocal) } catch (_: Exception) {}
     rodando = false
@@ -288,7 +311,7 @@ class PanicoService : Service() {
   private fun iniciarSensorMovimento() {
     try {
       val sm = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-      sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { sm.registerListener(ouvinteMovimento, it, SensorManager.SENSOR_DELAY_NORMAL) }
+      sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { sm.registerListener(ouvinteMovimento, it, SensorManager.SENSOR_DELAY_GAME) }
     } catch (e: Exception) { Log.w(TAG, "Sem acelerômetro: ${e.message}") }
   }
 
@@ -346,6 +369,122 @@ class PanicoService : Service() {
     preAlarmeDesde = 0L
     try { (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(NOTIF_HOMEM_CAIDO) } catch (_: Exception) {}
     try { (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator).cancel() } catch (_: Exception) {}
+  }
+
+  // ---------- Batida de carro/moto ----------
+  // Regra: estava a 25 km/h ou mais, houve um impacto forte (~4 g) e, 12 s depois, o celular está quase parado.
+  // Aí o celular vibra e pergunta "Você está bem?" por 30 s; sem resposta, avisa a família/empresa com a localização.
+  @Synchronized
+  private fun registrarVelocidade(loc: Location) {
+    val agora = SystemClock.elapsedRealtime()
+    var v = if (loc.hasSpeed()) loc.speed else -1f
+    if (v < 0) {
+      val ant = localAtual
+      if (ant != null && loc.time > ant.time) v = ant.distanceTo(loc) / ((loc.time - ant.time) / 1000f)
+    }
+    if (v >= 0 && v < 90f) velocidades.addLast(agora to v)
+    while (velocidades.isNotEmpty() && agora - velocidades.first().first > 60_000L) velocidades.removeFirst()
+  }
+
+  @Synchronized
+  private fun velocidadeMaxima(desdeMs: Long): Float {
+    val agora = SystemClock.elapsedRealtime()
+    return velocidades.filter { agora - it.first <= desdeMs }.maxOfOrNull { it.second } ?: 0f
+  }
+
+  @Synchronized
+  private fun velocidadeAtual(): Float? {
+    val agora = SystemClock.elapsedRealtime()
+    return velocidades.lastOrNull()?.takeIf { agora - it.first <= 8_000L }?.second
+  }
+
+  private fun possivelImpacto(modulo: Float) {
+    val agora = SystemClock.elapsedRealtime()
+    if (batidaPendente || preBatidaDesde > 0 || agora - ultimaBatidaEm < INTERVALO_BATIDAS_MS) return
+    val antes = velocidadeMaxima(20_000L)
+    if (antes < VEL_MIN_BATIDA) return
+    batidaPendente = true
+    val g = Math.round(modulo / SensorManager.GRAVITY_EARTH * 10.0) / 10.0
+    dadosBatida = Math.round(antes * 3.6f) to g
+    Log.w(TAG, "Impacto de $g g a ${Math.round(antes * 3.6f)} km/h: aguardando confirmação")
+    handler.postDelayed({
+      batidaPendente = false
+      val depois = velocidadeAtual()
+      if (depois == null || depois <= VEL_PARADO) iniciarPreBatida(teste = false)
+    }, CONFIRMA_BATIDA_MS)
+  }
+
+  /** Simula uma batida (botão de teste no app): mesmo aviso e mesmo alerta, marcado como TESTE. */
+  fun testarBatida() {
+    handler.post {
+      if (preBatidaDesde > 0) return@post
+      dadosBatida = 60 to 6.5
+      iniciarPreBatida(teste = true)
+    }
+  }
+
+  private val verificaBatida = Runnable {
+    if (preBatidaDesde > 0) {
+      val teste = batidaTeste
+      cancelarPreBatida()
+      ultimaBatidaEm = SystemClock.elapsedRealtime()
+      enviarBatida(teste)
+    }
+  }
+
+  private fun iniciarPreBatida(teste: Boolean) {
+    preBatidaDesde = SystemClock.elapsedRealtime()
+    batidaTeste = teste
+    try {
+      val v = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+      val padrao = longArrayOf(0, 1000, 300, 1000, 300, 1000, 300, 1000, 300, 1000)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) v.vibrate(VibrationEffect.createWaveform(padrao, -1))
+      else @Suppress("DEPRECATION") v.vibrate(padrao, -1)
+    } catch (_: Exception) {}
+    try {
+      val estouBem = PendingIntent.getService(this, 77, Intent(this, PanicoService::class.java).setAction(ACAO_ESTOU_BEM),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+      val notif = NotificationCompat.Builder(this, CANAL_ALERTA)
+        .setSmallIcon(applicationInfo.icon)
+        .setContentTitle(if (teste) "TESTE: possível batida detectada" else "Possível batida detectada. Você está bem?")
+        .setContentText("Se não tocar em ESTOU BEM em 30 s, avisamos quem cuida de você com a sua localização.")
+        .setPriority(NotificationCompat.PRIORITY_MAX)
+        .setCategory(NotificationCompat.CATEGORY_ALARM)
+        .setOngoing(true)
+        .addAction(0, "ESTOU BEM", estouBem)
+        .build()
+      (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIF_BATIDA, notif)
+    } catch (_: Exception) {}
+    handler.removeCallbacks(verificaBatida)
+    handler.postDelayed(verificaBatida, TEMPO_RESPOSTA_MS)
+  }
+
+  private fun cancelarPreBatida() {
+    handler.removeCallbacks(verificaBatida)
+    if (preBatidaDesde == 0L) return
+    preBatidaDesde = 0L
+    try { (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(NOTIF_BATIDA) } catch (_: Exception) {}
+    try { (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator).cancel() } catch (_: Exception) {}
+  }
+
+  private fun enviarBatida(teste: Boolean) {
+    val token = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("token", null) ?: return
+    val loc = melhorLocalizacao()
+    val (kmh, g) = dadosBatida ?: (0 to 0.0)
+    thread(name = "k1-batida") {
+      val corpo = JSONObject().apply {
+        put("p_token", token)
+        put("p_lat", loc?.latitude ?: JSONObject.NULL)
+        put("p_lng", loc?.longitude ?: JSONObject.NULL)
+        put("p_velocidade", kmh)
+        put("p_forca", g)
+        put("p_teste", teste)
+      }
+      for (espera in longArrayOf(0, 5_000, 15_000, 30_000, 60_000, 120_000)) {
+        if (espera > 0) Thread.sleep(espera)
+        if (chamarRpc("vig_batida", corpo)) break
+      }
+    }
   }
 
   // ---------- Telemetria: localização, bateria, Wi-Fi ----------

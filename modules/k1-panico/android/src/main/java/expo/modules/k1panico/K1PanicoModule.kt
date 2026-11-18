@@ -47,6 +47,13 @@ class K1PanicoModule : Module() {
       PanicoService.rodando
     }
 
+    // Simula uma batida para testar (vibra, pergunta "Você está bem?" e, sem resposta, avisa)
+    Function("testarBatida") {
+      val s = PanicoService.instancia
+      s?.testarBatida()
+      s != null
+    }
+
     // ===== Celular da central: toca como ligação quando chega alerta =====
     AsyncFunction("centralIniciar") { url: String, anonKey: String, token: String ->
       context.getSharedPreferences(CentralService.PREFS, Context.MODE_PRIVATE).edit()

@@ -335,7 +335,7 @@ const traduz = e => { const m = e?.message || String(e); for (const k in ERROS) 
 const TIPOS = {
   panico: ['PÂNICO', 'b-bad'], coacao: ['COAÇÃO', 'b-bad'],
   senha_errada: ['SENHA ERRADA', 'b-warn'], sem_resposta: ['SEM RESPOSTA', 'b-warn'],
-  sem_movimento: ['HOMEM CAÍDO / SEM MOVIMENTO', 'b-bad'], fora_do_posto: ['FORA DO POSTO', 'b-warn'], bateria_baixa: ['BATERIA BAIXA', 'b-warn'], atraso_chegada: ['NÃO CHEGOU NO HORÁRIO', 'b-bad']
+  sem_movimento: ['HOMEM CAÍDO / SEM MOVIMENTO', 'b-bad'], fora_do_posto: ['FORA DO POSTO', 'b-warn'], bateria_baixa: ['BATERIA BAIXA', 'b-warn'], atraso_chegada: ['NÃO CHEGOU NO HORÁRIO', 'b-bad'], batida: ['POSSÍVEL BATIDA', 'b-bad']
 };
 const tipoTxt = t => (TIPOS[t] || [t, 'b-warn']);
 const ST_ALERTA = { aberto: ['Aberto', 'b-bad'], em_atendimento: ['Em atendimento', 'b-acc'], resolvido: ['Resolvido', 'b-ok'] };

@@ -6,7 +6,7 @@ import { FundoK1, CardK1, K1, dataHora, s as k } from '../../components/k1';
 import { supabase, traduzErro } from '../../lib/supabase';
 
 type Alerta = {
-  id: string; tipo: 'panico' | 'coacao' | 'senha_errada' | 'sem_resposta' | 'bateria_baixa' | 'fora_do_posto' | 'sem_movimento' | 'atraso_chegada';
+  id: string; tipo: 'panico' | 'coacao' | 'senha_errada' | 'sem_resposta' | 'bateria_baixa' | 'fora_do_posto' | 'sem_movimento' | 'atraso_chegada' | 'batida';
   lat: number | null; lng: number | null; observacao?: string | null;
   bateria: number | null; status: 'aberto' | 'em_atendimento' | 'resolvido'; criado_em: string;
   vigilantes?: { nome: string; posto: string | null; telefone: string | null } | null;
@@ -17,6 +17,7 @@ const TIPO: Record<Alerta['tipo'], { txt: string; cor: string }> = {
   sem_movimento: { txt: 'HOMEM CAÍDO / SEM MOVIMENTO', cor: '#ef4444' }, fora_do_posto: { txt: 'FORA DO POSTO', cor: K1.amarelo },
   bateria_baixa: { txt: 'BATERIA BAIXA', cor: K1.amarelo },
   atraso_chegada: { txt: 'NÃO CHEGOU NO HORÁRIO', cor: '#ef4444' },
+  batida: { txt: 'POSSÍVEL BATIDA DE CARRO/MOTO', cor: '#ef4444' },
 };
 
 /** Alertas em aberto (sino do painel). */

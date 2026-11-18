@@ -17,7 +17,7 @@ export type Familia = { eu: string; familia: string; homem_caido_min: number; me
 
 export const TIPO_ALERTA: Record<string, string> = {
   panico: 'SOS — PEDIU SOCORRO', sem_movimento: 'POSSÍVEL QUEDA / SEM MOVIMENTO', bateria_baixa: 'BATERIA BAIXA',
-  fora_do_posto: 'SAIU DA ÁREA SEGURA', atraso_chegada: 'NÃO CHEGOU NO HORÁRIO', coacao: 'COAÇÃO',
+  fora_do_posto: 'SAIU DA ÁREA SEGURA', batida: 'POSSÍVEL BATIDA DE CARRO/MOTO', atraso_chegada: 'NÃO CHEGOU NO HORÁRIO', coacao: 'COAÇÃO',
   senha_errada: 'SENHA ERRADA', sem_resposta: 'SEM RESPOSTA',
 };
 

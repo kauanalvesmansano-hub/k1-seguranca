@@ -5,6 +5,7 @@ declare class K1PanicoModule extends NativeModule<{}> {
   iniciar(url: string, anonKey: string, token: string, homemCaidoMin: number): Promise<void>;
   parar(): Promise<void>;
   ativo(): boolean;
+  testarBatida(): boolean;
   // Celular da central: toca como ligação quando chega alerta
   centralIniciar(url: string, anonKey: string, token: string): Promise<void>;
   centralParar(): Promise<void>;
