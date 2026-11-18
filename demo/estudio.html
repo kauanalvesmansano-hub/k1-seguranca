@@ -1,0 +1,262 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">
+<title>K1 — Teste ao vivo no servidor</title>
+<meta name="viewport" content="width=1920">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#050506;font-family:'Inter','Roboto','DejaVu Sans',Arial,sans-serif;color:#fff}
+#fundo{position:absolute;inset:0;background:radial-gradient(ellipse at 30% 20%,#2a0505 0%,#0b0b0e 50%,#050506 100%)}
+#topo{position:absolute;left:40px;right:40px;top:22px;height:64px;display:flex;align-items:center;gap:18px}
+#topo img{width:58px;height:58px;border-radius:14px}
+#topo .t{font-weight:900;font-size:30px;letter-spacing:3px}
+#topo .vivo{margin-left:auto;display:flex;align-items:center;gap:12px;font-weight:800;font-size:22px;color:#fca5a5}
+#topo .ponto{width:16px;height:16px;border-radius:50%;background:#ef4444;box-shadow:0 0 14px #ef4444}
+#relogio{font-variant-numeric:tabular-nums;color:#e4e4e7;font-weight:700;margin-left:16px}
+/* notebook */
+#note{position:absolute;left:40px;top:110px;width:1040px;height:640px}
+#note .tampa{position:absolute;left:0;top:0;width:1040px;height:610px;background:#1d1d21;border-radius:22px;padding:16px;box-shadow:0 30px 90px rgba(0,0,0,.6)}
+#note .base{position:absolute;left:-40px;top:606px;width:1120px;height:26px;background:linear-gradient(#3a3a40,#1d1d21);border-radius:0 0 24px 24px}
+#note .tela{position:relative;width:100%;height:100%;background:#0b0c0f;border-radius:10px;overflow:hidden}
+.barra{height:44px;background:#111216;display:flex;align-items:center;padding:0 16px;gap:10px;font-size:17px;color:#a1a1aa;border-bottom:1px solid #26262b}
+.barra b{color:#fff}
+#mapaC{position:absolute;left:0;top:44px;width:690px;bottom:0;background:#efede8}
+#listaC{position:absolute;right:0;top:44px;width:318px;bottom:0;padding:12px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.alerta{background:#991b1b;border-radius:12px;padding:10px 12px;font-size:16px}
+.alerta b{display:block;font-size:17px}
+.cardp{background:#18181b;border-radius:12px;padding:10px 12px;font-size:15px;color:#d4d4d8}
+/* celulares */
+.cel{position:absolute;width:330px;height:660px;border-radius:46px;background:#111;border:10px solid #2a2a2e;box-shadow:0 30px 90px rgba(0,0,0,.6),0 0 0 2px #3f3f46;overflow:hidden}
+.cel .tela{position:absolute;inset:0;background:#000;overflow:hidden}
+.cel .notch{position:absolute;top:10px;left:50%;width:90px;height:22px;margin-left:-45px;background:#000;border-radius:14px;z-index:5}
+.rot{position:absolute;text-align:center;font-size:17px;color:#a1a1aa;font-weight:700;letter-spacing:2px}
+.apptop{height:86px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:10px;font-weight:900;letter-spacing:2px;font-size:17px;border-bottom:2px solid #7a0a06}
+.big{font-size:30px;font-weight:900;text-align:center}
+.mut{color:#a1a1aa;font-size:15px;text-align:center}
+.btn{margin:10px 18px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px}
+/* console */
+#srv{position:absolute;left:40px;right:40px;top:780px;height:270px;background:#0a0a0c;border:1px solid #27272a;border-radius:16px;overflow:hidden;font-family:'DejaVu Sans Mono','Courier New',monospace}
+#srv .cab{height:38px;background:#141418;display:flex;align-items:center;padding:0 16px;gap:10px;font-size:16px;color:#a1a1aa;font-family:inherit}
+#srv .cab b{color:#22c55e}
+#linhas{padding:8px 16px;font-size:16px;line-height:25px}
+.ln{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ln .h{color:#71717a}.ln .f{color:#93c5fd}.ln .ok{color:#22c55e}.ln .er{color:#f87171}.ln .db{color:#fbbf24}.ln .ag{color:#f0abfc}
+#leg{position:absolute;left:1120px;right:40px;top:110px;height:0}
+#agente{position:absolute;left:1100px;width:740px;top:120px;text-align:center;font-size:20px;font-weight:800;color:#f0abfc;opacity:.95}
+.av{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:#111;border:4px solid #22c55e;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.35);transition:none}
+.av .n{position:absolute;top:44px;left:50%;transform:translateX(-50%);background:#111;color:#fff;font-size:12px;padding:1px 7px;border-radius:8px;white-space:nowrap}
+.pulso{position:absolute;border-radius:50%;border:4px solid #ef4444}
+#painelCtl{position:absolute;right:10px;bottom:10px;z-index:99;background:#222;padding:8px;border-radius:8px;font-size:14px}
+</style></head><body>
+<div id="fundo"></div>
+<div id="topo"><img id="logo" alt=""><div class="t">K1 SEGURANÇA</div><div style="color:#a1a1aa;font-size:22px">teste ao vivo no servidor real</div>
+  <div class="vivo"><div class="ponto"></div>AO VIVO<span id="relogio">--:--:--</span></div></div>
+
+<div id="note"><div class="tampa"><div class="tela">
+  <div class="barra"><b>Central K1</b> · painel da empresa · <span id="empresaNome">—</span><span style="margin-left:auto" id="statusC">aguardando…</span></div>
+  <div id="mapaC"><svg id="svgC" width="690" height="534"></svg></div>
+  <div id="listaC"></div>
+</div></div><div class="base"></div></div>
+<div class="rot" style="left:40px;width:1040px;top:752px;display:none">NOTEBOOK · CENTRAL</div>
+
+<div class="cel" id="celA" style="left:1110px;top:110px"><div class="notch"></div><div class="tela" id="telaA"></div></div>
+<div class="rot" style="left:1110px;width:330px;top:775px;display:none">VIGILANTE</div>
+<div class="cel" id="celB" style="left:1510px;top:110px"><div class="notch"></div><div class="tela" id="telaB"></div></div>
+
+<div id="srv"><div class="cab">▣ <b>SERVIDOR</b> · Supabase (Postgres + funções) · requisições reais deste teste<span style="margin-left:auto" id="contador">0 requisições</span></div><div id="linhas"></div></div>
+
+<div id="agente" style="position:absolute;left:1100px;width:740px;top:76px;text-align:center;font-size:19px;font-weight:800;color:#f0abfc"></div>
+<div id="painelCtl"><button id="btnRodar">▶ Rodar teste</button> <span id="estadoRun"></span></div>
+
+<script>
+const URL_SB = 'https://ftswxxdhxjkwufdagkzd.supabase.co';
+const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0c3d4eGRoeGprd3VmZGFna3pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4ODQxMTksImV4cCI6MjExMDQ2MDExOX0.VD2-2rIO9mjgQ0YzJgMRTkn3YvUv0W5VM7qFDvv8jWA';
+const $ = id => document.getElementById(id);
+const P = Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
+// ======== ESTADO (o mesmo usado ao vivo e na reprodução do vídeo) ========
+const S = { log:[], t:0, celA:{tela:'login'}, celB:{tela:'espera'}, central:null, familia:null, agente:'', relogio:null, nreq:0 };
+let EVENTOS = []; // [{t, tipo, ...}]
+const ini = Date.now();
+function ev(o){ o.t = Date.now() - ini; EVENTOS.push(o); aplicar(o); desenhar(); }
+function aplicar(e){
+  if (e.tipo === 'req') { S.nreq++; S.log.push(e); if (S.log.length > 9) S.log.shift(); }
+  if (e.tipo === 'celA') Object.assign(S.celA, e.v);
+  if (e.tipo === 'celB') Object.assign(S.celB, e.v);
+  if (e.tipo === 'central') S.central = e.v;
+  if (e.tipo === 'familia') S.familia = e.v;
+  if (e.tipo === 'agente') S.agente = e.v;
+  if (e.tipo === 'relogio') S.relogio = e.v;
+}
+// ======== CHAMADA AO SERVIDOR REAL ========
+const ESCONDER = new Set(['p_token','p_senha','p_codigo']);
+async function rpc(fn, args, efeitoDb){
+  const t0 = performance.now();
+  let status = 0, corpo = null, txt = '';
+  try {
+    const r = await fetch(`${URL_SB}/rest/v1/rpc/${fn}`, { method:'POST', headers:{ apikey:ANON, Authorization:'Bearer '+ANON, 'Content-Type':'application/json' }, body:JSON.stringify(args) });
+    status = r.status; txt = await r.text(); try { corpo = JSON.parse(txt); } catch { corpo = txt; }
+  } catch (e) { txt = String(e); }
+  const ms = Math.round(performance.now() - t0);
+  const mostra = Object.entries(args).filter(([k]) => !ESCONDER.has(k)).map(([k,v]) => `${k.replace('p_','')}=${typeof v==='number'?Number(v.toFixed?v.toFixed(5):v):JSON.stringify(v)}`).join(' ');
+  ev({ tipo:'req', fn, args:mostra, status, ms, db:efeitoDb||'', resp:resumo(fn, corpo, status) , hora:new Date().toLocaleTimeString('pt-BR') });
+  ev({ tipo:'relogio', v:new Date().toLocaleTimeString('pt-BR') });
+  if (status < 200 || status >= 300) throw new Error(fn + ' ' + status + ' ' + txt.slice(0,120));
+  return corpo;
+}
+function resumo(fn, c, st){
+  if (st >= 300) return (c && c.message) || 'erro';
+  if (fn==='vig_entrar' || fn==='membro_entrar') return c && c.erro ? c.erro : `token emitido (${c.nome})`;
+  if (fn==='vig_checkin') return c && c.resultado ? `app mostra: ${c.mensagem||'Confirmado'}` : 'ok';
+  if (fn==='central_mapa') return `${(c.pessoas||[]).length} em turno · ${(c.alertas||[]).length} alerta(s)`;
+  if (fn==='membro_familia') return `${(c.membros||[]).length} pessoas · ${(c.alertas||[]).length} alerta(s)`;
+  if (fn==='vig_registrar_ponto') return `ponto "${c.ponto}" registrado`;
+  if (fn==='vig_panico' || fn==='vig_batida') return 'alerta criado';
+  return 'ok';
+}
+// ======== AGENTES (roteiro do teste) ========
+const espera = ms => new Promise(r => setTimeout(r, ms));
+const BASE = [-22.78080, -51.23110];
+const ROTA = [[0,0],[0.0006,0],[0.0012,0],[0.0012,0.0007],[0.0012,0.0014],[0.0006,0.0014],[0,0.0014],[0,0.0007],[0,0.0002]];
+const RJ = [[-0.004,-0.006],[-0.003,-0.0045],[-0.002,-0.003],[-0.001,-0.0015],[-0.0003,-0.0005],[-0.00025,-0.00045]];
+async function rodar(){
+  $('painelCtl').style.display = 'none';
+  let tg, tc = P.central, tj, tm;
+  const pollC = async () => { try { const c = await rpc('central_mapa', { p_token:tc }); ev({ tipo:'central', v:c }); } catch {} };
+  const pollF = async () => { try { const f = await rpc('membro_familia', { p_token:tm }); ev({ tipo:'familia', v:f }); } catch {} };
+  try {
+    ev({ tipo:'marco', id:'inicio' });
+    ev({ tipo:'agente', v:'🤖 Agente Vigilante: entrando no app com matrícula e senha' });
+    ev({ tipo:'celA', v:{ tela:'login' } }); await espera(1500);
+    const s = await rpc('vig_entrar', { p_matricula:P.g, p_senha:P.s }, 'UPDATE credenciais (token novo, hash SHA-256)');
+    tg = s.token;
+    if (!s.termo_aceito) await rpc('vig_aceitar_termo', { p_token:tg });
+    ev({ tipo:'celA', v:{ tela:'inicio', nome:s.nome } }); await pollC(); await espera(1200);
+    ev({ tipo:'marco', id:'turno' });
+    ev({ tipo:'agente', v:'🤖 Agente Vigilante: inicia o turno e sai para a ronda' });
+    await rpc('vig_turno', { p_token:tg, p_iniciar:true }, 'UPDATE vigilantes (em turno)');
+    ev({ tipo:'celA', v:{ tela:'turno', ronda:0 } });
+    let ronda = 0;
+    for (let i = 0; i < ROTA.length; i++) {
+      const lat = BASE[0] + ROTA[i][0], lng = BASE[1] + ROTA[i][1];
+      await rpc('vig_telemetria', { p_token:tg, p_lat:lat, p_lng:lng, p_precisao_m:6, p_bateria:78 - Math.floor(i/4), p_carregando:false, p_wifi_conectado:false, p_wifi_nome:null }, 'INSERT telemetria · UPDATE vigilantes');
+      if (i === 2 || i === 6) {
+        ev({ tipo:'marco', id: i===2 ? 'qr' : 'qr2' });
+        ev({ tipo:'agente', v:'🤖 Agente Vigilante: lê o QR code do ponto de ronda' });
+        ev({ tipo:'celA', v:{ tela:'qr' } }); await espera(900);
+        await rpc('vig_registrar_ponto', { p_token:tg, p_codigo: i===2 ? P.q1 : P.q2, p_lat:lat, p_lng:lng }, 'INSERT rondas_registros');
+        ronda++; ev({ tipo:'celA', v:{ tela:'turno', ronda } });
+      }
+      await pollC(); await espera(700);
+    }
+    ev({ tipo:'marco', id:'coacao' });
+    ev({ tipo:'agente', v:'🤖 Agente Vigilante: rendido, digita a SENHA DE COAÇÃO' });
+    ev({ tipo:'celA', v:{ tela:'senha', digitos:0 } });
+    for (let d = 1; d <= 4; d++) { await espera(380); ev({ tipo:'celA', v:{ digitos:d } }); }
+    const ck = await rpc('vig_checkin', { p_token:tg, p_senha:P.c, p_lat:BASE[0], p_lng:BASE[1]+0.0002 }, 'INSERT checkins · INSERT alertas (coação, silencioso)');
+    ev({ tipo:'celA', v:{ tela:'confirmado' } });
+    await espera(600); await pollC(); await espera(2200);
+    ev({ tipo:'marco', id:'panico' });
+    ev({ tipo:'agente', v:'🤖 Agente Vigilante: aperta o botão Power 4 vezes' });
+    ev({ tipo:'celA', v:{ tela:'bloqueado', toques:0 } });
+    for (let k = 1; k <= 4; k++) { await espera(420); ev({ tipo:'celA', v:{ toques:k } }); }
+    await rpc('vig_panico', { p_token:tg, p_lat:BASE[0], p_lng:BASE[1]+0.0002, p_bateria:76 }, 'INSERT alertas (pânico) → central + WhatsApp');
+    ev({ tipo:'celA', v:{ tela:'panico' } });
+    await espera(500); await pollC(); await espera(1500); await pollC(); await espera(1800);
+
+    ev({ tipo:'marco', id:'familia' });
+    ev({ tipo:'agente', v:'🤖 Agentes Família: Mãe e Júlia entram com o código de convite' });
+    const sm = await rpc('membro_entrar', { p_codigo:P.cm }, 'UPDATE credenciais (convite usado)'); tm = sm.token;
+    await rpc('vig_aceitar_termo', { p_token:tm }); await rpc('membro_compartilhar', { p_token:tm, p_ligar:true }, 'UPDATE vigilantes (compartilhando)');
+    await rpc('vig_telemetria', { p_token:tm, p_lat:BASE[0]-0.0002, p_lng:BASE[1]-0.0004, p_precisao_m:8, p_bateria:82, p_carregando:true, p_wifi_conectado:true, p_wifi_nome:'Casa' }, 'INSERT telemetria');
+    const sj = await rpc('membro_entrar', { p_codigo:P.cj }, 'UPDATE credenciais (convite usado)'); tj = sj.token;
+    await rpc('vig_aceitar_termo', { p_token:tj }); await rpc('membro_compartilhar', { p_token:tj, p_ligar:true }, 'UPDATE vigilantes (compartilhando)');
+    ev({ tipo:'celB', v:{ tela:'familia' } }); await pollF(); await espera(1000);
+    ev({ tipo:'marco', id:'carro' });
+    ev({ tipo:'agente', v:'🤖 Agente Júlia: dirigindo a ~60 km/h, a família acompanha no mapa' });
+    for (let i = 0; i < RJ.length; i++) {
+      await rpc('vig_telemetria', { p_token:tj, p_lat:BASE[0]+RJ[i][0], p_lng:BASE[1]+RJ[i][1], p_precisao_m:5, p_bateria:64, p_carregando:false, p_wifi_conectado:false, p_wifi_nome:null }, 'INSERT telemetria · UPDATE vigilantes');
+      await pollF(); await espera(600);
+    }
+    ev({ tipo:'marco', id:'batida' });
+    ev({ tipo:'agente', v:'🤖 Agente Júlia: impacto forte e o carro parou → "Você está bem?"' });
+    ev({ tipo:'celB', v:{ prebatida:30 } });
+    for (let k = 29; k >= 0; k -= 3) { await espera(260); ev({ tipo:'celB', v:{ prebatida:k } }); }
+    await rpc('vig_batida', { p_token:tj, p_lat:BASE[0]+RJ[5][0], p_lng:BASE[1]+RJ[5][1], p_velocidade:62, p_forca:6.5, p_teste:true }, 'INSERT alertas (batida) → família + central');
+    ev({ tipo:'celB', v:{ prebatida:null } });
+    await espera(400); await pollF(); await espera(1500); await pollF(); await espera(1500);
+    ev({ tipo:'marco', id:'fim' });
+    ev({ tipo:'agente', v:'✅ Teste concluído: todas as funções responderam no servidor real' });
+    await rpc('vig_turno', { p_token:tg, p_iniciar:false }, 'UPDATE vigilantes (fim do turno)');
+    await rpc('membro_compartilhar', { p_token:tj, p_ligar:false }); await rpc('membro_compartilhar', { p_token:tm, p_ligar:false });
+    await espera(1500);
+    $('estadoRun').textContent = 'OK';
+    window.TESTE_OK = true;
+  } catch (e) {
+    ev({ tipo:'agente', v:'❌ ' + e.message }); window.TESTE_ERRO = e.message;
+  }
+  window.TESTE_FIM = true;
+}
+$('btnRodar').onclick = rodar;
+// ======== DESENHO ========
+const CORES_TIPO = { panico:'PÂNICO — ASSALTO', coacao:'COAÇÃO (silencioso)', batida:'POSSÍVEL BATIDA', sem_resposta:'SEM RESPOSTA', bateria_baixa:'BATERIA BAIXA', fora_do_posto:'FORA DO POSTO', senha_errada:'SENHA ERRADA', atraso_chegada:'NÃO CHEGOU', sem_movimento:'HOMEM CAÍDO' };
+function proj(lat, lng, w, h, c, esc){ return [w/2 + (lng - c[1]) * esc, h/2 - (lat - c[0]) * esc]; }
+function ruas(w,h){ let s=`<rect width="${w}" height="${h}" fill="#efede8"/>`; for(let x=40;x<w;x+=170) s+=`<rect x="${x}" y="0" width="22" height="${h}" fill="#fff"/>`; for(let y=60;y<h;y+=150) s+=`<rect x="0" y="${y}" width="${w}" height="22" fill="#fff"/>`;
+  for(let x=62;x<w;x+=170) for(let y=82;y<h;y+=150) s+=`<rect x="${x+8}" y="${y+8}" width="132" height="112" rx="6" fill="#dedbd2"/>`; return s; }
+function desenhar(){
+  $('relogio').textContent = S.relogio || '--:--:--';
+  $('contador').textContent = S.nreq + ' requisições';
+  $('agente').textContent = S.agente;
+  // console
+  $('linhas').innerHTML = S.log.map(e => `<div class="ln"><span class="h">${e.hora}</span> <span class="f">POST /rpc/${e.fn}</span> ${esc(e.args).slice(0,70)} → <span class="${e.status<300?'ok':'er'}">${e.status}</span> <span class="h">${e.ms} ms</span>${e.db?` · <span class="db">${esc(e.db)}</span>`:''} · ${esc(e.resp)}</div>`).join('');
+  // central
+  const c = S.central;
+  $('empresaNome').textContent = c ? c.empresa : '—';
+  $('statusC').textContent = c ? `${c.pessoas.length} em turno · ${c.alertas.length} alerta(s)` : 'aguardando…';
+  const W=690,H=534, CEN=[-22.7802,-51.2304], ESC=230000;
+  let svg = ruas(W,H);
+  const pessoas = (c && c.pessoas) || [];
+  const al = (c && c.alertas) || [];
+  pessoas.forEach(p => { if (p.lat==null) return; const [x,y]=proj(p.lat,p.lng,W,H,CEN,ESC);
+    const alertado = al.some(a => a.nome===p.nome && ['panico','coacao'].includes(a.tipo));
+    if (alertado) svg += `<circle cx="${x}" cy="${y}" r="40" fill="rgba(239,68,68,.25)" stroke="#ef4444" stroke-width="3"/>`;
+    svg += `<circle cx="${x}" cy="${y}" r="20" fill="#111" stroke="${alertado?'#ef4444':'#22c55e'}" stroke-width="5"/><text x="${x}" y="${y+6}" text-anchor="middle" font-size="15" font-weight="900" fill="#fff">${esc(ini2(p.nome))}</text>
+      <rect x="${x-46}" y="${y+26}" width="92" height="22" rx="8" fill="#111"/><text x="${x}" y="${y+42}" text-anchor="middle" font-size="13" fill="#fff">${esc(p.nome.split(' ')[0])} · ${p.bateria??'—'}%</text>`; });
+  $('svgC').innerHTML = svg;
+  $('listaC').innerHTML = (al.length ? al.slice(0,4).map(a => `<div class="alerta"><b>⚠ ${CORES_TIPO[a.tipo]||a.tipo}</b>${esc(a.nome)} · ${new Date(a.criado_em).toLocaleTimeString('pt-BR')}${a.observacao?`<div style="font-size:13px;color:#fecaca;margin-top:4px">${esc(a.observacao).slice(0,90)}</div>`:''}</div>`).join('') : '<div class="cardp">Nenhum alerta aberto</div>')
+    + pessoas.map(p => `<div class="cardp">● <b style="color:#fff">${esc(p.nome)}</b><br>🔋 ${p.bateria??'—'}% · ${esc(p.posto||'')}</div>`).join('');
+  // celular A (vigilante)
+  const a = S.celA; let h = '';
+  if (a.tela==='login') h = `<div class="apptop">K1 · VIGILANTE</div><div style="padding:30px 18px;display:flex;flex-direction:column;gap:14px"><div class="mut">Matrícula</div><div class="big" style="background:#18181b;border-radius:12px;padding:12px">${esc(P.g||'')}</div><div class="mut">Senha</div><div class="big" style="background:#18181b;border-radius:12px;padding:12px">••••</div></div><div class="btn" style="background:#e10600">ENTRAR</div>`;
+  if (a.tela==='inicio') h = `<div class="apptop">K1 · VIGILANTE</div><div class="big" style="margin-top:40px">Olá, ${esc((a.nome||'').split(' ')[0])}</div><div class="mut" style="margin-top:8px">Pronto para o turno</div><div class="btn" style="background:#16a34a;margin-top:60px">INICIAR TURNO</div>`;
+  if (a.tela==='turno' || a.tela==='qr') h = `<div class="apptop">K1 · EM TURNO</div><div class="mut" style="margin-top:22px">Próxima senha em</div><div class="big" style="font-size:52px">59:12</div><div class="mut" style="margin-top:14px">Ronda</div><div class="big">${a.ronda||0} / 2 pontos</div>${a.tela==='qr'?`<div style="margin:24px auto;width:200px;height:200px;border:4px solid #22c55e;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#22c55e;font-weight:900">LENDO QR…</div>`:`<div class="mut" style="margin-top:30px">📍 Localização enviada a cada poucos segundos</div>`}`;
+  if (a.tela==='senha' || a.tela==='confirmado') h = `<div class="apptop">K1 · VIGILANTE</div><div class="mut" style="margin-top:26px">Confirme sua senha</div><div style="display:flex;gap:16px;justify-content:center;margin-top:20px">${[1,2,3,4].map(k=>`<div style="width:22px;height:22px;border-radius:50%;border:3px solid #a1a1aa;background:${k<=(a.digitos||0)||a.tela==='confirmado'?'#fff':'transparent'}"></div>`).join('')}</div>${a.tela==='confirmado'?'<div class="big" style="color:#22c55e;margin-top:60px">✓ CONFIRMADO</div><div class="mut" style="margin-top:12px;padding:0 20px">(o app não mostra nada — a central foi avisada em silêncio)</div>':'<div class="mut" style="margin-top:60px">senha de coação: 4 3 2 1</div>'}`;
+  if (a.tela==='bloqueado' || a.tela==='panico') h = `<div style="position:absolute;inset:0;background:#050505"></div><div style="position:absolute;top:150px;left:0;right:0;text-align:center;font-size:80px;font-weight:200;color:#e4e4e7">${(S.relogio||'').slice(0,5)}</div><div class="mut" style="position:absolute;top:260px;left:0;right:0">tela bloqueada</div>${a.tela==='bloqueado'?`<div style="position:absolute;top:340px;left:0;right:0;text-align:center;font-size:70px;font-weight:900;color:#ef4444">${a.toques||''}${a.toques?'×':''}</div><div class="mut" style="position:absolute;top:430px;left:0;right:0">botão Power</div>`:`<div style="position:absolute;bottom:60px;left:20px;right:20px;background:#991b1b;border-radius:16px;padding:16px;font-weight:900;font-size:19px">🚨 PÂNICO ENVIADO<div style="font-size:13px;font-weight:600;color:#fecaca">vibração curta e discreta</div></div>`}`;
+  $('telaA').innerHTML = h;
+  // celular B (família - mãe)
+  const b = S.celB; let g = '';
+  if (b.tela==='espera') g = `<div class="apptop">K1 · FAMÍLIA</div><div class="mut" style="margin-top:80px;padding:0 20px">Celular da mãe<br>aguardando o teste da família…</div>`;
+  if (b.tela==='familia') {
+    const f = S.familia; const W2=310,H2=420, C2=[-22.7825,-51.2340], E2=42000;
+    let s2 = ruas(W2,H2);
+    ((f&&f.membros)||[]).forEach((m,i) => { if (m.lat==null) return; const [x,y]=proj(m.lat,m.lng,W2,H2,C2,E2); const cor = (f.alertas||[]).some(z=>z.nome===m.nome && z.tipo==='batida') ? '#ef4444' : (i? '#3b82f6':'#a855f7');
+      s2 += `<circle cx="${x}" cy="${y}" r="17" fill="#111" stroke="${cor}" stroke-width="4"/><text x="${x}" y="${y+5}" text-anchor="middle" font-size="13" font-weight="900" fill="#fff">${esc(m.nome[0])}</text><rect x="${x-34}" y="${y+21}" width="68" height="18" rx="7" fill="#111"/><text x="${x}" y="${y+34}" text-anchor="middle" font-size="11" fill="#fff">${esc(m.nome.split(' ')[0])} ${m.bateria??''}%</text>`; });
+    const bat = ((f&&f.alertas)||[]).find(z=>z.tipo==='batida');
+    g = `<div style="height:70px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;font-weight:900;font-size:15px;letter-spacing:2px;background:#0b0c0f">${esc((f&&f.familia)||'K1 FAMÍLIA')}</div><svg width="310" height="420">${s2}</svg>`
+      + (bat ? `<div style="position:absolute;left:10px;right:10px;bottom:14px;background:#991b1b;border-radius:16px;padding:12px"><div style="font-weight:900;font-size:16px">🚗 POSSÍVEL BATIDA — ${esc(bat.nome)}</div><div style="font-size:12px;color:#fecaca;margin-top:4px">${esc((bat.observacao||'').replace('TESTE da detecção de batida. ','TESTE · '))}</div><div style="display:flex;gap:6px;margin-top:8px"><div style="flex:1;background:rgba(0,0,0,.35);border-radius:8px;padding:7px;text-align:center;font-size:13px;font-weight:800">Ir até lá</div><div style="flex:1;background:#15803d;border-radius:8px;padding:7px;text-align:center;font-size:13px;font-weight:800">Estou indo</div></div></div>`
+        : `<div style="padding:10px 14px;font-size:13px;color:#a1a1aa">${((f&&f.membros)||[]).map(m=>`● ${esc(m.nome)} · ${m.compartilhando?'compartilhando':'pausado'}`).join('<br>')}</div>`);
+    if (b.prebatida != null) g += `<div style="position:absolute;inset:0;background:rgba(0,0,0,.6)"></div><div style="position:absolute;left:12px;right:12px;top:190px;background:#18181b;border:2px solid #ef4444;border-radius:18px;padding:16px;text-align:center"><div style="font-size:13px;color:#a1a1aa">no celular da Júlia</div><div style="font-weight:900;font-size:19px;margin-top:4px">Possível batida.<br>Você está bem?</div><div style="font-size:46px;font-weight:900;color:#ef4444">${b.prebatida}s</div><div style="background:#16a34a;border-radius:10px;padding:9px;font-weight:900">ESTOU BEM</div></div>`;
+  }
+  $('telaB').innerHTML = g;
+}
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ini2 = n => { const p=(n||'').trim().split(/\s+/); return ((p[0]||'?')[0]+(p.length>1?p[p.length-1][0]:'')).toUpperCase(); };
+// ======== REPRODUÇÃO (vídeo): estado no tempo t a partir dos eventos gravados ========
+window.reproduzir = function(eventos, t){
+  Object.assign(S, { log:[], celA:{tela:'login'}, celB:{tela:'espera'}, central:null, familia:null, agente:'', relogio:null, nreq:0 });
+  for (const e of eventos) { if (e.t > t) break; aplicar(e); }
+  desenhar();
+};
+window.EVENTOS_GRAVADOS = () => EVENTOS;
+if (P.logo) $('logo').src = P.logo; else $('logo').src = 'https://raw.githubusercontent.com/kauanalvesmansano-hub/k1-seguranca/main/assets/icon.png';
+if (P.modo === 'video') $('painelCtl').style.display = 'none';
+desenhar();
+</script>
+</body></html>
