@@ -4,6 +4,8 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { FundoK1, CardK1, K1, brl, s as k } from '../../../components/k1';
 import { supabase, traduzErro } from '../../../lib/supabase';
+import { useTipoConta } from '../../../lib/conta';
+import { precoFamilia } from '../../../lib/familia';
 import { precoVigilante } from '../../../lib/empresa';
 import { ativarCentral, centralDisponivel, desativarCentral, pedirSemEconomia, pedirTelaCheia, statusCentral, testarCentral, type StatusCentral } from '../../../lib/central';
 
@@ -87,6 +89,7 @@ function Opcao<T extends number>({ rotulo, valor, opcoes, onChange }: {
 }
 
 export default function Configuracoes() {
+  const { familia } = useTipoConta();
   const [e, setE] = useState<Empresa | null>(null);
   const [qtd, setQtd] = useState('');
   const [salvando, setSalvando] = useState(false);
@@ -135,17 +138,19 @@ export default function Configuracoes() {
       <CardK1 style={{ gap: 16 }}>
         <Text style={k.titulo}>{e.nome}</Text>
         <View style={{ gap: 6 }}>
-          <Text style={k.mut}>Vigilantes contratados (R$ 25,00 cada · mais de 15: R$ 20,00 cada)</Text>
+          <Text style={k.mut}>{familia ? 'Pessoas no plano (R$ 15,00 a 1ª + R$ 7,00 cada a mais)' : 'Vigilantes contratados (R$ 25,00 cada · mais de 15: R$ 20,00 cada)'}</Text>
           <TextInput value={qtd} onChangeText={setQtd} keyboardType="number-pad" style={st.input} />
-          <Text style={k.mut}>Valor mensal estimado: {brl((parseInt(qtd, 10) || 0) * precoVigilante(parseInt(qtd, 10) || 0))}</Text>
+          <Text style={k.mut}>Valor mensal estimado: {brl(familia ? precoFamilia(parseInt(qtd, 10) || 0) : (parseInt(qtd, 10) || 0) * precoVigilante(parseInt(qtd, 10) || 0))}</Text>
         </View>
+        {!familia && <>
         <Opcao rotulo="Pedir senha a cada" valor={e.intervalo_checkin_min} onChange={v => setE({ ...e, intervalo_checkin_min: v })}
           opcoes={[{ v: 30, t: '30 min' }, { v: 60, t: '1 hora' }, { v: 90, t: '1h30' }, { v: 120, t: '2 horas' }]} />
         <Opcao rotulo="Prazo para responder" valor={e.prazo_resposta_min} onChange={v => setE({ ...e, prazo_resposta_min: v })}
           opcoes={[{ v: 3, t: '3 min' }, { v: 5, t: '5 min' }, { v: 10, t: '10 min' }]} />
         <Opcao rotulo="Senha errada gera alerta" valor={e.tentativas_senha} onChange={v => setE({ ...e, tentativas_senha: v })}
           opcoes={[{ v: 1, t: 'No 1º erro' }, { v: 2, t: 'No 2º erro' }]} />
-        <Opcao rotulo="Homem caído: alertar se o celular ficar parado por" valor={e.homem_caido_min ?? 0} onChange={v => setE({ ...e, homem_caido_min: v })}
+        </>}
+        <Opcao rotulo={familia ? 'Possível queda: avisar a família se o celular ficar parado por' : 'Homem caído: alertar se o celular ficar parado por'} valor={e.homem_caido_min ?? 0} onChange={v => setE({ ...e, homem_caido_min: v })}
           opcoes={[{ v: 0, t: 'Desligado' }, { v: 5, t: '5 min' }, { v: 10, t: '10 min' }, { v: 15, t: '15 min' }, { v: 30, t: '30 min' }]} />
         <Text style={[k.mut, { fontSize: 12 }]}>Antes do alerta, o celular vibra e pergunta "Você está bem?" por 30 s. Vale a partir do próximo início de turno.</Text>
         <Pressable onPress={salvar} disabled={salvando} style={st.salvar}>

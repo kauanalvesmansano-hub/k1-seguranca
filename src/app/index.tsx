@@ -6,7 +6,7 @@ import { lerSessao } from '../lib/vigilante';
 import { supabase } from '../lib/supabase';
 import { configurado } from '../lib/config';
 
-/** Primeira tela: escolher FUNCIONÁRIO ou EMPRESA. */
+/** Primeira tela: FUNCIONÁRIO, EMPRESA ou PESSOAL / FAMÍLIA. */
 export default function Escolha() {
   const [verificando, setVerificando] = useState(true);
 
@@ -14,6 +14,7 @@ export default function Escolha() {
     (async () => {
       // Se já estiver logado, vai direto para a área certa
       const vig = await lerSessao();
+      if (vig?.tipo === 'familia') { router.replace(vig.termo_aceito ? '/familia/mapa' : '/familia/termo'); return; }
       if (vig) { router.replace(vig.termo_aceito ? '/funcionario/inicio' : '/funcionario/termo'); return; }
       if (configurado) {
         const { data } = await supabase.auth.getSession();
@@ -35,6 +36,7 @@ export default function Escolha() {
       <Text style={s.titulo}>COMO VOCÊ VAI ACESSAR?</Text>
       <BotaoVermelho titulo="SOU FUNCIONÁRIO" icone="person-outline" onPress={() => router.push('/funcionario/login')} />
       <BotaoContorno titulo="SOU EMPRESA" icone="business-outline" onPress={() => router.push('/empresa/login')} />
+      <BotaoContorno titulo="PESSOAL / FAMÍLIA" icone="people-outline" onPress={() => router.push('/familia/entrar')} />
     </TelaK1>
   );
 }

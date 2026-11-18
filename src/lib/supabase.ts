@@ -22,6 +22,7 @@ export const supabase = createClient(
 const ERROS: Record<string, string> = {
   dados_invalidos: 'Matrícula ou senha incorretas.',
   bloqueado_temporariamente: 'Muitas tentativas erradas. O acesso foi bloqueado por um tempo. Procure sua empresa.',
+  convite_invalido: 'Código inválido ou vencido. Peça um novo código para o responsável.',
   muitas_tentativas: 'Muitas tentativas a partir desta rede. Aguarde 15 minutos.',
   cnpj_ja_cadastrado: 'Este CNPJ já tem cadastro no K1 Segurança.',
   cnpj_invalido: 'CNPJ inválido.',

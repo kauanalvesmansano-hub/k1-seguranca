@@ -4,10 +4,13 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { FundoK1, CabecalhoK1, CardK1, Online, K1, brl, horaCompleta, horaCurta, s as k } from '../../../components/k1';
 import { supabase } from '../../../lib/supabase';
+import { useTipoConta } from '../../../lib/conta';
+import { lerSessao } from '../../../lib/vigilante';
 import { carregarPlano, RESULTADO, type Checkin, type Plano } from '../../../lib/empresa';
 
 /** Painel da empresa (modelo: Central da Empresa, Última Senha, Status, Comunicações, Rádio). */
 export default function PainelEmpresa() {
+  const { familia } = useTipoConta();
   const [nome, setNome] = useState('');
   const [online, setOnline] = useState(true);
   const [checkins, setCheckins] = useState<Checkin[]>([]);
@@ -63,13 +66,25 @@ export default function PainelEmpresa() {
       } />
 
       <CardK1 style={st.linha}>
-        <Ionicons name="business" size={32} color="#fff" />
+        <Ionicons name={familia ? 'home' : 'business'} size={32} color="#fff" />
         <View style={{ flex: 1 }}>
-          <Text style={k.titulo} numberOfLines={1}>Central da Empresa</Text>
+          <Text style={k.titulo} numberOfLines={1}>{familia ? 'Central da Família' : 'Central da Empresa'}</Text>
           <Text style={k.mut} numberOfLines={1}>{nome || 'Gestão de Segurança'}</Text>
         </View>
         <Online online={online} />
       </CardK1>
+
+      {familia && (
+        <CardK1 onPress={async () => { const s = await lerSessao(); router.push(s?.tipo === 'familia' ? '/familia/mapa' : '/familia/nova-pessoa'); }}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 12, borderColor: '#2563eb' }}>
+          <Ionicons name="map" size={30} color="#60a5fa" />
+          <View style={{ flex: 1 }}>
+            <Text style={k.titulo}>Mapa da família ao vivo</Text>
+            <Text style={k.mut}>Veja todos no mapa. Neste celular, entre também como pessoa (toque e escolha "Eu").</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color="#888" />
+        </CardK1>
+      )}
 
       {plano?.em_teste && plano.teste_ate && (
         <CardK1 onPress={() => router.push('/empresa/plano')} style={{ borderColor: '#16a34a', backgroundColor: '#052e16', gap: 2 }}>
@@ -81,7 +96,7 @@ export default function PainelEmpresa() {
       {perguntarRenovacao && (
         <CardK1 onPress={() => router.push('/empresa/plano')} style={{ borderColor: K1.amarelo, gap: 4 }}>
           <Text style={[k.titulo, { color: K1.amarelo }]}>Fechamento do mês: {brl(f.valor_total)}</Text>
-          <Text style={k.mut}>{f.qtd_vigilantes} vigilantes × {brl(f.valor_unitario)}. Toque para ver o Pix e escolher se deseja continuar o plano.</Text>
+          <Text style={k.mut}>{familia ? `${f.qtd_vigilantes} pessoa(s): ${brl(f.valor_total)}` : `${f.qtd_vigilantes} vigilantes × ${brl(f.valor_unitario)}`}. Toque para ver o Pix e escolher se deseja continuar o plano.</Text>
         </CardK1>
       )}
 
@@ -108,7 +123,7 @@ export default function PainelEmpresa() {
           <Text style={{ color: abertos ? '#ef4444' : K1.verde, fontSize: 20, fontWeight: '700' }}>
             {abertos ? `${abertos} alerta${abertos > 1 ? 's' : ''} em aberto` : 'Tudo Operacional'}
           </Text>
-          <Text style={k.mut}>{abertos ? 'Toque para atender' : 'Comunicação ativa com os vigilantes'}</Text>
+          <Text style={k.mut}>{abertos ? 'Toque para atender' : familia ? 'Tudo tranquilo com a família' : 'Comunicação ativa com os vigilantes'}</Text>
         </View>
       </CardK1>
 

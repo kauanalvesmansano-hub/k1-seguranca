@@ -14,7 +14,7 @@ export const precoVigilante = (qtd: number) => (qtd >= VOLUME_A_PARTIR ? PRECO_V
 
 export type Plano = {
   plano_status: 'ativo' | 'bloqueado' | 'encerrado';
-  em_teste?: boolean; teste_ate?: string | null;
+  em_teste?: boolean; teste_ate?: string | null; tipo?: 'seguranca' | 'familia';
   vigilantes_contratados: number; vigilantes_ativos: number; valor_por_vigilante: number; previa_total: number;
   pix_nome: string; whatsapp_k1: string | null; fatura: Fatura | null;
 };

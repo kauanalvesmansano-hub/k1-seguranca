@@ -6,6 +6,7 @@ import { FundoK1, CardK1, K1, dataHora, horaCurta, s as k } from '../../../compo
 import { MapaVigilante } from '../../../components/MapaVigilante';
 import { useVigilanteAoVivo, percorrido, type VigilanteAoVivo } from '../../../lib/aoVivo';
 import { supabase, traduzErro } from '../../../lib/supabase';
+import { useTipoConta } from '../../../lib/conta';
 import { RESULTADO } from '../../../lib/empresa';
 
 type Vigilante = VigilanteAoVivo;
@@ -16,6 +17,7 @@ const tempo = (min: number | null) =>
 
 /** Informações de UM vigilante: mapa, bateria, Wi-Fi, confirmações e ações. */
 export default function DetalheVigilante() {
+  const { familia } = useTipoConta();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { v, trajeto, pontos, rondaFeitos, rondaTotal, checkins, alertaAberto, atualizando, carregar } = useVigilanteAoVivo(id);
   const [, setRelogio] = useState(0);
@@ -96,12 +98,12 @@ export default function DetalheVigilante() {
 
       <CardK1 style={{ gap: 10 }}>
         <View style={st.linha}>
-          <Text style={[k.titulo, { fontSize: 16 }]}>Cerca virtual do posto</Text>
+          <Text style={[k.titulo, { fontSize: 16 }]}>{familia ? 'Área segura' : 'Cerca virtual do posto'}</Text>
           <Text style={{ color: v.posto_lat == null ? K1.mutado : v.fora_do_posto ? K1.amarelo : K1.verde, fontWeight: '700' }}>
             {v.posto_lat == null ? 'Desligada' : v.fora_do_posto ? 'FORA' : `${v.posto_raio_m} m`}
           </Text>
         </View>
-        <Text style={k.mut}>Se o vigilante sair da área do posto, a empresa recebe o alerta "Fora do posto".</Text>
+        <Text style={k.mut}>{familia ? 'Ex.: escola ou casa. Se a pessoa sair da área, a família recebe o alerta "Saiu da área segura".' : 'Se o vigilante sair da área do posto, a empresa recebe o alerta "Fora do posto".'}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {[100, 200, 500].map(r => (
             <Pressable key={r} style={st.btn} disabled={!posicao} onPress={() => definirPosto(r)}>
@@ -112,7 +114,7 @@ export default function DetalheVigilante() {
             <Pressable style={[st.btn, { backgroundColor: '#3f3f46' }]} onPress={() => definirPosto(null)}><Text style={st.btnTxt}>Desligar</Text></Pressable>
           )}
         </View>
-        {!posicao && <Text style={[k.mut, { fontSize: 12 }]}>Para definir, o vigilante precisa estar no posto com o turno iniciado.</Text>}
+        {!posicao && <Text style={[k.mut, { fontSize: 12 }]}>{familia ? 'Para definir, a pessoa precisa estar no lugar com o compartilhamento ligado.' : 'Para definir, o vigilante precisa estar no posto com o turno iniciado.'}</Text>}
       </CardK1>
 
       <View style={st.grade}>
@@ -163,9 +165,15 @@ export default function DetalheVigilante() {
             <Ionicons name="call" size={18} color="#fff" /><Text style={st.btnTxt}>Ligar</Text>
           </Pressable>
         )}
-        <Pressable style={st.btn} onPress={() => setTrocarSenha(true)}>
-          <Ionicons name="key" size={18} color="#fff" /><Text style={st.btnTxt}>Trocar senhas</Text>
-        </Pressable>
+        {familia ? (
+          <Pressable style={st.btn} onPress={() => router.push({ pathname: '/familia/nova-pessoa', params: { id: v.id, nome: v.nome } })}>
+            <Ionicons name="key" size={18} color="#fff" /><Text style={st.btnTxt}>Novo código de convite</Text>
+          </Pressable>
+        ) : (
+          <Pressable style={st.btn} onPress={() => setTrocarSenha(true)}>
+            <Ionicons name="key" size={18} color="#fff" /><Text style={st.btnTxt}>Trocar senhas</Text>
+          </Pressable>
+        )}
         {v.dispositivo_ativo && (
           <Pressable style={st.btn} onPress={() => Alert.alert('Desconectar celular?', 'Ele terá que entrar no app de novo.', [
             { text: 'Cancelar', style: 'cancel' }, { text: 'Desconectar', style: 'destructive', onPress: () => acao('desconectar') }])}>

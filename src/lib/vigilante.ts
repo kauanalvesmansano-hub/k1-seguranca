@@ -13,6 +13,8 @@ export type SessaoVigilante = {
   termo_aceito: boolean;
   intervalo_checkin_min: number;
   prazo_resposta_min: number;
+  /** 'familia' = pessoa protegida do K1 Família (entrou por código de convite) */
+  tipo?: 'familia';
 };
 
 export async function lerSessao(): Promise<SessaoVigilante | null> {
@@ -20,7 +22,7 @@ export async function lerSessao(): Promise<SessaoVigilante | null> {
   return s ? (JSON.parse(s) as SessaoVigilante) : null;
 }
 
-async function salvarSessao(s: SessaoVigilante) {
+export async function salvarSessao(s: SessaoVigilante) {
   await SecureStore.setItemAsync(CHAVE, JSON.stringify(s));
 }
 
@@ -28,7 +30,7 @@ export async function sairVigilante() {
   await SecureStore.deleteItemAsync(CHAVE);
 }
 
-async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+export async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(fn, args);
   if (error) {
     if (error.message.includes('dispositivo_nao_autorizado')) await sairVigilante();

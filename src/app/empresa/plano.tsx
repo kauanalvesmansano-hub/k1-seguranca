@@ -33,7 +33,7 @@ export default function PlanoEmpresa() {
     if (!p?.fatura) return;
     if (!renovar) {
       const ok = await new Promise<boolean>(res => Alert.alert('Não continuar o plano?',
-        'Todo o acesso (painel e app dos vigilantes) será encerrado no fim do mês.',
+        p?.tipo === 'familia' ? 'A proteção de todas as pessoas será encerrada no fim do mês.' : 'Todo o acesso (painel e app dos vigilantes) será encerrado no fim do mês.',
         [{ text: 'Voltar', style: 'cancel', onPress: () => res(false) }, { text: 'Não continuar', style: 'destructive', onPress: () => res(true) }]));
       if (!ok) return;
     }
@@ -103,10 +103,10 @@ export default function PlanoEmpresa() {
       <CardK1 style={{ gap: 6 }}>
         <Text style={k.mut}>Seu plano</Text>
         <Text style={[k.titulo, { fontSize: 20 }]}>
-          {p.vigilantes_contratados} vigilantes × {brl(p.valor_por_vigilante)} = {brl(p.previa_total)}/mês
+          {p.tipo === 'familia' ? `${p.vigilantes_contratados} pessoa(s) = ${brl(p.previa_total)}/mês` : `${p.vigilantes_contratados} vigilantes × ${brl(p.valor_por_vigilante)} = ${brl(p.previa_total)}/mês`}
         </Text>
         <Text style={k.mut}>{p.vigilantes_ativos} com acesso ativo no momento</Text>
-        <Text style={[k.mut, { fontSize: 12 }]}>Até 15 vigilantes: R$ 25,00 cada · mais de 15: R$ 20,00 cada.</Text>
+        <Text style={[k.mut, { fontSize: 12 }]}>{p.tipo === 'familia' ? 'R$ 15,00 a 1ª pessoa + R$ 7,00 cada pessoa a mais.' : 'Até 15 vigilantes: R$ 25,00 cada · mais de 15: R$ 20,00 cada.'}</Text>
       </CardK1>
 
       {!f ? (
@@ -118,7 +118,7 @@ export default function PlanoEmpresa() {
             <Text style={{ color: STATUS_FATURA[f.status].cor, fontWeight: '700' }}>{STATUS_FATURA[f.status].txt}</Text>
           </View>
           <View style={st.conta}>
-            <Text style={st.contaTxt}>{f.qtd_vigilantes} vigilantes × {brl(f.valor_unitario)}</Text>
+            <Text style={st.contaTxt}>{p.tipo === 'familia' ? `${f.qtd_vigilantes} pessoa(s)` : `${f.qtd_vigilantes} vigilantes × ${brl(f.valor_unitario)}`}</Text>
             <Text style={st.total}>{brl(f.valor_total)}</Text>
             <Text style={k.mut}>Vencimento: {dataBR(f.vencimento)}</Text>
           </View>
