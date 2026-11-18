@@ -79,8 +79,8 @@ class PanicoService : Service() {
     private const val JANELA_MS = 4000L
     private const val INTERVALO_ENTRE_PANICOS_MS = 30_000L
     private const val INTERVALO_TELEMETRIA_MS = 120_000L
-    private const val MIN_ENTRE_ENVIOS_MS = 15_000L
-    private const val MIN_DISTANCIA_M = 10f
+    private const val MIN_ENTRE_ENVIOS_MS = 5_000L
+    private const val MIN_DISTANCIA_M = 6f
     private const val FILA = "fila_panico"
     private const val CANAL_ALERTA = "k1_alerta"
     private const val NOTIF_HOMEM_CAIDO = 4411
@@ -379,7 +379,7 @@ class PanicoService : Service() {
     for (prov in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
       try {
         // GPS a cada 5 s / 5 m; rede a cada 10 s / 10 m -> mapa acompanha quem está andando
-        val (tempo, dist) = if (prov == LocationManager.GPS_PROVIDER) Pair(5_000L, 5f) else Pair(10_000L, 10f)
+        val (tempo, dist) = if (prov == LocationManager.GPS_PROVIDER) Pair(2_000L, 3f) else Pair(8_000L, 8f)
         if (lm.isProviderEnabled(prov)) lm.requestLocationUpdates(prov, tempo, dist, ouvinteLocal, Looper.getMainLooper())
       } catch (e: Exception) { Log.w(TAG, "Sem localização por $prov: ${e.message}") }
     }

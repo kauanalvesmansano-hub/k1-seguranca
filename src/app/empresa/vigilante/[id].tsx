@@ -1,22 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Linking, Modal, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { FundoK1, CardK1, K1, dataHora, horaCurta, s as k } from '../../../components/k1';
-import { MapaVigilante, type PontoMapa } from '../../../components/MapaVigilante';
+import { MapaVigilante } from '../../../components/MapaVigilante';
+import { useVigilanteAoVivo, percorrido, type VigilanteAoVivo } from '../../../lib/aoVivo';
 import { supabase, traduzErro } from '../../../lib/supabase';
-import { RESULTADO, type Checkin } from '../../../lib/empresa';
+import { RESULTADO } from '../../../lib/empresa';
 
-type Vigilante = {
-  id: string; nome: string; posto: string | null; telefone: string | null; matricula_acesso: string | null;
-  ativo: boolean; em_turno: boolean; dispositivo_ativo: boolean; turno_iniciado_em: string | null;
-  proximo_checkin: string | null; ultimo_checkin_ok: string | null;
-  ultima_lat: number | null; ultima_lng: number | null; ultima_precisao_m: number | null;
-  ultima_bateria: number | null; ultimo_carregando: boolean | null; ultimo_wifi: boolean | null; ultimo_wifi_nome: string | null;
-  ultima_atualizacao: string | null;
-  posto_lat: number | null; posto_lng: number | null; posto_raio_m: number; fora_do_posto: boolean;
-};
-type Ponto = { lat: number | null; lng: number | null; criado_em: string };
+type Vigilante = VigilanteAoVivo;
 
 const minutosDesde = (d: string | null) => (d ? Math.round((Date.now() - new Date(d).getTime()) / 60000) : null);
 const tempo = (min: number | null) =>
@@ -25,54 +17,10 @@ const tempo = (min: number | null) =>
 /** Informações de UM vigilante: mapa, bateria, Wi-Fi, confirmações e ações. */
 export default function DetalheVigilante() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [v, setV] = useState<Vigilante | null>(null);
-  const [trajeto, setTrajeto] = useState<PontoMapa[]>([]);
-  const [checkins, setCheckins] = useState<Checkin[]>([]);
-  const [alertaAberto, setAlertaAberto] = useState<string | null>(null);
-  const [atualizando, setAtualizando] = useState(false);
+  const { v, trajeto, pontos, rondaFeitos, rondaTotal, checkins, alertaAberto, atualizando, carregar } = useVigilanteAoVivo(id);
   const [, setRelogio] = useState(0);
   const [trocarSenha, setTrocarSenha] = useState(false);
-
-  const carregar = useCallback(async () => {
-    if (!id) return;
-    setAtualizando(true);
-    const desde = new Date(Date.now() - 3 * 3600000).toISOString();
-    const [vg, tl, ck, al] = await Promise.all([
-      supabase.from('vigilantes').select('*').eq('id', id).maybeSingle(),
-      supabase.from('telemetria').select('lat,lng,criado_em').eq('vigilante_id', id).gte('criado_em', desde).order('criado_em').limit(300),
-      supabase.from('checkins').select('id,vigilante_id,resultado,criado_em').eq('vigilante_id', id).order('criado_em', { ascending: false }).limit(6),
-      supabase.from('alertas').select('tipo').eq('vigilante_id', id).neq('status', 'resolvido').order('criado_em', { ascending: false }).limit(1),
-    ]);
-    setV(vg.data as Vigilante | null);
-    setTrajeto(((tl.data as Ponto[]) ?? []).filter(p => p.lat != null && p.lng != null).map(p => ({ lat: p.lat!, lng: p.lng! })));
-    setCheckins((ck.data as Checkin[]) ?? []);
-    setAlertaAberto((al.data?.[0] as { tipo: string } | undefined)?.tipo ?? null);
-    setAtualizando(false);
-  }, [id]);
-
-  useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
-
-  // Tempo real: posição, bateria e Wi-Fi deste vigilante
-  useEffect(() => {
-    if (!id) return;
-    const canal = supabase.channel(`k1-vig-${id}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'vigilantes', filter: `id=eq.${id}` }, p => {
-        const n = p.new as Vigilante;
-        setV(n);
-        if (n.ultima_lat != null && n.ultima_lng != null) {
-          setTrajeto(t => {
-            const ult = t[t.length - 1];
-            return ult && ult.lat === n.ultima_lat && ult.lng === n.ultima_lng ? t : [...t, { lat: n.ultima_lat!, lng: n.ultima_lng! }].slice(-300);
-          });
-        }
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'checkins', filter: `vigilante_id=eq.${id}` }, p =>
-        setCheckins(c => [p.new as Checkin, ...c].slice(0, 6)))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'alertas', filter: `vigilante_id=eq.${id}` }, () => carregar())
-      .subscribe();
-    const t = setInterval(() => setRelogio(x => x + 1), 30000);
-    return () => { supabase.removeChannel(canal); clearInterval(t); };
-  }, [id, carregar]);
+  useEffect(() => { const t = setInterval(() => setRelogio(x => x + 1), 30000); return () => clearInterval(t); }, []);
 
   if (!v) return <FundoK1><Text style={[k.mut, { marginTop: 40, textAlign: 'center' }]}>Carregando…</Text></FundoK1>;
 
@@ -125,7 +73,26 @@ export default function DetalheVigilante() {
       </View>
 
       <MapaVigilante posicao={v.em_turno ? posicao : null} precisao={v.ultima_precisao_m} trajeto={v.em_turno ? trajeto : []} cor={status.cor}
+        nome={v.nome} pontos={pontos}
         posto={v.posto_lat != null && v.posto_lng != null ? { lat: v.posto_lat, lng: v.posto_lng, raio: v.posto_raio_m } : null} />
+
+      <Pressable style={st.aoVivo} onPress={() => router.push({ pathname: '/empresa/ao-vivo/[id]', params: { id: v.id } })}>
+        <Ionicons name="expand" size={20} color="#fff" />
+        <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Acompanhar ao vivo (tela cheia)</Text>
+      </Pressable>
+
+      <View style={st.grade}>
+        <CardK1 style={st.item}>
+          <Ionicons name="walk" size={26} color="#fff" />
+          <Text style={[st.valor, { fontSize: 18 }]}>{v.em_turno ? `${(percorrido(trajeto) / 1000).toFixed(2)} km` : '—'}</Text>
+          <Text style={k.mut}>No turno</Text>
+        </CardK1>
+        <CardK1 style={st.item}>
+          <Ionicons name="qr-code" size={26} color={rondaTotal && rondaFeitos === rondaTotal ? K1.verde : '#fff'} />
+          <Text style={[st.valor, { fontSize: 18 }]}>{rondaTotal ? `${rondaFeitos}/${rondaTotal}` : '—'}</Text>
+          <Text style={k.mut}>Pontos de ronda</Text>
+        </CardK1>
+      </View>
 
       <CardK1 style={{ gap: 10 }}>
         <View style={st.linha}>
@@ -253,6 +220,7 @@ const st = StyleSheet.create({
   linha: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   forte: { color: '#fff', fontWeight: '700' },
   acoes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  aoVivo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 52, borderRadius: 12, backgroundColor: K1.vermelho },
   btn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#2a2d35', paddingHorizontal: 14, paddingVertical: 11, borderRadius: 10 },
   btnTxt: { color: '#fff', fontWeight: '700' },
   modalFundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: 24 },
