@@ -1,9 +1,67 @@
-import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, AppState, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { FundoK1, CardK1, K1, brl, s as k } from '../../../components/k1';
 import { supabase, traduzErro } from '../../../lib/supabase';
+import { ativarCentral, centralDisponivel, desativarCentral, pedirSemEconomia, pedirTelaCheia, statusCentral, testarCentral, type StatusCentral } from '../../../lib/central';
+
+function CardCentral() {
+  const [s, setS] = useState<StatusCentral>(statusCentral());
+  const [ocupado, setOcupado] = useState(false);
+  const atualizar = useCallback(() => setS(statusCentral()), []);
+  useFocusEffect(atualizar);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', st => { if (st === 'active') atualizar(); });
+    return () => sub.remove();
+  }, [atualizar]);
+
+  async function alternar(ligar: boolean) {
+    setOcupado(true);
+    try {
+      if (ligar) await ativarCentral('Celular da central'); else await desativarCentral();
+    } catch (err) { Alert.alert('Erro', traduzErro(err)); }
+    setOcupado(false);
+    setTimeout(atualizar, 600);
+  }
+
+  if (!centralDisponivel) return null;
+  return (
+    <CardK1 style={{ gap: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <Ionicons name="call" size={28} color={s.ativa ? K1.verde : K1.vermelho} />
+        <View style={{ flex: 1 }}>
+          <Text style={k.titulo}>Celular da central</Text>
+          <Text style={k.mut}>{s.ativa ? 'Ativo: este celular toca como ligação a cada alerta' : 'Desligado'}</Text>
+        </View>
+        <Switch value={s.ativa} disabled={ocupado} onValueChange={alternar} trackColor={{ true: K1.verde }} />
+      </View>
+      <Text style={[k.mut, { fontSize: 13 }]}>
+        Ligue no celular que fica com o monitoramento. Em pânico, coação ou homem caído ele toca alto, em tela cheia,
+        mesmo bloqueado e com o app fechado. Não custa nada.
+      </Text>
+      {s.ativa && (
+        <>
+          {!s.telaCheia && (
+            <Pressable style={st.aviso} onPress={pedirTelaCheia}>
+              <Ionicons name="warning" size={18} color={K1.amarelo} />
+              <Text style={st.avisoTxt}>Permitir tela cheia com o celular bloqueado (tocar aqui)</Text>
+            </Pressable>
+          )}
+          {!s.semEconomia && (
+            <Pressable style={st.aviso} onPress={pedirSemEconomia}>
+              <Ionicons name="battery-charging" size={18} color={K1.amarelo} />
+              <Text style={st.avisoTxt}>Tirar o K1 da economia de bateria, para nunca deixar de tocar (tocar aqui)</Text>
+            </Pressable>
+          )}
+          <Pressable style={st.botao} onPress={() => { if (!testarCentral()) Alert.alert('Aguarde', 'A central ainda está iniciando.'); }}>
+            <Text style={{ color: '#fff', fontWeight: '800' }}>Testar toque agora</Text>
+          </Pressable>
+        </>
+      )}
+    </CardK1>
+  );
+}
 
 type Empresa = {
   id: string; nome: string; cnpj: string | null; qtd_vigilantes_contratados: number;
@@ -71,6 +129,8 @@ export default function Configuracoes() {
         <Ionicons name="chevron-forward" size={22} color="#888" />
       </CardK1>
 
+      <CardCentral />
+
       <CardK1 style={{ gap: 16 }}>
         <Text style={k.titulo}>{e.nome}</Text>
         <View style={{ gap: 6 }}>
@@ -103,5 +163,8 @@ const st = StyleSheet.create({
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#444' },
   chipOn: { backgroundColor: K1.vermelho, borderColor: K1.vermelho },
   input: { height: 48, borderRadius: 8, borderWidth: 1, borderColor: '#444', color: '#fff', paddingHorizontal: 12, fontSize: 17, backgroundColor: '#111317' },
+  aviso: { flexDirection: 'row', gap: 8, alignItems: 'center', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: K1.amarelo },
+  avisoTxt: { color: K1.amarelo, flex: 1, fontSize: 13 },
+  botao: { height: 46, borderRadius: 10, backgroundColor: '#27272a', alignItems: 'center', justifyContent: 'center' },
   salvar: { height: 50, borderRadius: 10, backgroundColor: K1.vermelho, alignItems: 'center', justifyContent: 'center' },
 });

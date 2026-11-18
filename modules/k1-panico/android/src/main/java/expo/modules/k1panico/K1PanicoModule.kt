@@ -2,6 +2,11 @@ package expo.modules.k1panico
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
+import android.app.NotificationManager
 import androidx.core.content.ContextCompat
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
@@ -40,6 +45,70 @@ class K1PanicoModule : Module() {
 
     Function("ativo") {
       PanicoService.rodando
+    }
+
+    // ===== Celular da central: toca como ligação quando chega alerta =====
+    AsyncFunction("centralIniciar") { url: String, anonKey: String, token: String ->
+      context.getSharedPreferences(CentralService.PREFS, Context.MODE_PRIVATE).edit()
+        .putString("url", url)
+        .putString("anon", anonKey)
+        .putString("token", token)
+        .remove("desde")
+        .apply()
+      ContextCompat.startForegroundService(context, Intent(context, CentralService::class.java))
+    }
+
+    AsyncFunction("centralParar") {
+      context.stopService(Intent(context, CentralService::class.java))
+      context.getSharedPreferences(CentralService.PREFS, Context.MODE_PRIVATE).edit().clear().apply()
+    }
+
+    Function("centralAtiva") {
+      CentralService.rodando
+    }
+
+    Function("centralTestar") {
+      val s = CentralService.instancia
+      s?.testar()
+      s != null
+    }
+
+    Function("centralSilenciar") {
+      CentralService.instancia?.silenciar()
+      true
+    }
+
+    // Android 14+: tela cheia com o celular bloqueado precisa de autorização
+    Function("podeTelaCheia") {
+      if (Build.VERSION.SDK_INT >= 34)
+        (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).canUseFullScreenIntent()
+      else true
+    }
+
+    Function("abrirPermissaoTelaCheia") {
+      if (Build.VERSION.SDK_INT >= 34) {
+        try {
+          context.startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${context.packageName}"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (_: Exception) {}
+      }
+      true
+    }
+
+    Function("semEconomiaBateria") {
+      (context.getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(context.packageName)
+    }
+
+    Function("pedirSemEconomiaBateria") {
+      try {
+        context.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}"))
+          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+      } catch (_: Exception) {
+        try {
+          context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (_: Exception) {}
+      }
+      true
     }
   }
 }
