@@ -90,12 +90,23 @@ export default function PlanoEmpresa() {
         </CardK1>
       )}
 
+      {p.em_teste && p.teste_ate && (
+        <CardK1 style={{ borderColor: '#16a34a', backgroundColor: '#052e16', gap: 4 }}>
+          <Text style={{ color: '#4ade80', fontWeight: '900', fontSize: 16 }}>🎁 TESTE GRÁTIS</Text>
+          <Text style={{ color: '#d1fae5' }}>
+            {(() => { const d = Math.max(0, Math.ceil((new Date(p.teste_ate).getTime() - Date.now()) / 86400000)); return d <= 1 ? 'Último dia de teste' : `Faltam ${d} dias`; })()}
+            {' '}(até {new Date(p.teste_ate).toLocaleDateString('pt-BR')}). Depois, a 1ª fatura sai proporcional ao mês.
+          </Text>
+        </CardK1>
+      )}
+
       <CardK1 style={{ gap: 6 }}>
         <Text style={k.mut}>Seu plano</Text>
         <Text style={[k.titulo, { fontSize: 20 }]}>
           {p.vigilantes_contratados} vigilantes × {brl(p.valor_por_vigilante)} = {brl(p.previa_total)}/mês
         </Text>
         <Text style={k.mut}>{p.vigilantes_ativos} com acesso ativo no momento</Text>
+        <Text style={[k.mut, { fontSize: 12 }]}>Até 15 vigilantes: R$ 25,00 cada · mais de 15: R$ 20,00 cada.</Text>
       </CardK1>
 
       {!f ? (

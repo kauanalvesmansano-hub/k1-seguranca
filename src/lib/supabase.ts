@@ -21,7 +21,13 @@ export const supabase = createClient(
 
 const ERROS: Record<string, string> = {
   dados_invalidos: 'Matrícula ou senha incorretas.',
-  bloqueado_temporariamente: 'Muitas tentativas erradas. Aguarde 15 minutos ou procure sua empresa.',
+  bloqueado_temporariamente: 'Muitas tentativas erradas. O acesso foi bloqueado por um tempo. Procure sua empresa.',
+  muitas_tentativas: 'Muitas tentativas a partir desta rede. Aguarde 15 minutos.',
+  cnpj_ja_cadastrado: 'Este CNPJ já tem cadastro no K1 Segurança.',
+  cnpj_invalido: 'CNPJ inválido.',
+  desative_vigilantes_antes_de_reduzir: 'Desative vigilantes antes de reduzir a quantidade do plano.',
+  'Password should be': 'A senha precisa ter pelo menos 8 caracteres, com letras e números.',
+  'weak_password': 'Senha fraca: use pelo menos 8 caracteres, com letras e números.',
   empresa_inativa: 'Acesso suspenso. Procure sua empresa.',
   empresa_bloqueada: 'Acesso suspenso. Procure sua empresa.',
   fatura_nao_encontrada: 'Fatura não encontrada.',

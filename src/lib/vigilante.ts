@@ -38,7 +38,8 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
 }
 
 export async function entrar(matricula: string, senha: string) {
-  const r = await rpc<Omit<SessaoVigilante, 'matricula'>>('vig_entrar', { p_matricula: matricula, p_senha: senha });
+  const r = await rpc<Omit<SessaoVigilante, 'matricula'> & { erro?: string }>('vig_entrar', { p_matricula: matricula, p_senha: senha });
+  if (r.erro) throw new Error(r.erro); // senha errada: o servidor responde sem erro para registrar a tentativa
   const s: SessaoVigilante = { ...r, matricula };
   await salvarSessao(s);
   return s;

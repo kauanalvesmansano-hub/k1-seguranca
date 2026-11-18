@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https://unpkg.com https://*.openstreetmap.org https://tiles.openfreemap.org; font-src 'self' data: https://tiles.openfreemap.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://tiles.openfreemap.org https://*.openstreetmap.org; worker-src 'self' blob:; child-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <title>K1 Segurança — Painel da Empresa</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -108,7 +110,7 @@
 <section id="telaCadastro" class="center hidden">
   <div class="card auth" style="max-width:520px">
     <div class="brand">Cadastro da <span>empresa</span></div>
-    <p class="mut small">R$ 20,00 por vigilante/mês. Você pode alterar a quantidade depois.</p>
+    <p class="small" style="color:var(--ok);font-weight:700">🎁 7 dias grátis para testar. Depois: R$ 25,00 por vigilante/mês · mais de 15 vigilantes: R$ 20,00 cada.</p>
     <label>Nome da empresa</label><input id="cNome">
     <div class="grid2">
       <div><label>CNPJ</label><input id="cCnpj" placeholder="00.000.000/0000-00"></div>
@@ -296,7 +298,7 @@
     <p><b>6. Permissões do aparelho.</b> O aplicativo pede permissões de localização (inclusive em segundo plano), notificações e execução contínua. Elas são necessárias para o funcionamento dos alertas.</p>
     <p><b>7. Alertas.</b> Senha errada, senha de coação, falta de resposta no prazo e botão de pânico geram alertas para os contatos cadastrados pela EMPRESA CONTRATANTE. O K1 Segurança é uma ferramenta de apoio e <b>não substitui</b> o 190, a central de monitoramento nem os procedimentos de segurança da empresa. O funcionamento depende de bateria, sinal de internet e GPS do aparelho.</p>
     <p><b>8. Retenção.</b> Os dados de localização e telemetria são guardados por até 90 dias. Os alertas são guardados por até 5 anos ou pelo prazo exigido em lei.</p>
-    <p><b>9. Preço e pagamento.</b> R$ 20,00 por vigilante contratado, por mês. A fatura é gerada no fechamento do mês (a partir do dia 25) e paga por Pix até o dia 5 do mês seguinte. Sem pagamento até o vencimento, o acesso ao painel e ao aplicativo é bloqueado até a confirmação do pagamento. A cada fechamento, a EMPRESA CONTRATANTE informa se deseja continuar o plano no mês seguinte.</p>
+    <p><b>9. Preço e pagamento.</b> 7 (sete) dias de teste grátis a partir do cadastro. Depois, R$ 25,00 por vigilante contratado, por mês; com mais de 15 vigilantes contratados, R$ 20,00 por vigilante. A primeira fatura é gerada no fim do teste, proporcional aos dias restantes do mês, com vencimento em 3 dias. As seguintes são geradas no fechamento do mês (a partir do dia 25) e paga por Pix até o dia 5 do mês seguinte. Sem pagamento até o vencimento, o acesso ao painel e ao aplicativo é bloqueado até a confirmação do pagamento. A cada fechamento, a EMPRESA CONTRATANTE informa se deseja continuar o plano no mês seguinte.</p>
     <p><b>10. Direitos do titular.</b> O vigilante pode pedir acesso, correção ou exclusão dos seus dados por meio da EMPRESA CONTRATANTE, respeitadas as obrigações legais.</p>
     <p class="mut small">Modelo inicial. Revise com um advogado antes do uso comercial.</p>
   </div>
@@ -313,6 +315,11 @@ const hora = d => d ? new Date(d).toLocaleString('pt-BR', {day:'2-digit', month:
 const minutosAtras = d => d ? (Date.now() - new Date(d).getTime()) / 60000 : Infinity;
 
 const ERROS = {
+  cnpj_ja_cadastrado: 'Este CNPJ já tem cadastro no K1 Segurança.',
+  cnpj_invalido: 'CNPJ inválido.',
+  dados_invalidos: 'Confira os dados informados.',
+  desative_vigilantes_antes_de_reduzir: 'Desative vigilantes antes de reduzir a quantidade do plano.',
+  'Password should be': 'A senha precisa ter pelo menos 8 caracteres, com letras e números.',
   termo_nao_aceito: 'É preciso aceitar o termo.',
   usuario_ja_vinculado_a_empresa: 'Este usuário já tem uma empresa cadastrada.',
   sem_permissao: 'Você não tem permissão para isso.',
@@ -355,6 +362,7 @@ async function autenticar(){
     if (modo === 'entrar') {
       const { error } = await sb.auth.signInWithPassword({ email, password }); if (error) throw error;
     } else {
+      if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) throw new Error('Crie uma senha com 8 ou mais caracteres, com letras e números.');
       const { data, error } = await sb.auth.signUp({ email, password }); if (error) throw error;
       if (!data.session) { $('errAuth').style.color = 'var(--ok)'; $('errAuth').textContent = 'Conta criada! Confirme no seu e-mail e depois clique em Entrar.'; modoAuth('entrar'); return; }
     }
@@ -385,7 +393,8 @@ async function iniciar(){
 }
 
 // ================= CADASTRO EMPRESA =================
-function calcValor(){ $('cValor').textContent = brl(Math.max(1, +$('cQtd').value || 0) * 20); }
+const precoVig = q => q >= 16 ? 20 : 25;
+function calcValor(){ const q = Math.max(1, +$('cQtd').value || 0); $('cValor').textContent = brl(q * precoVig(q)) + ' após o teste'; }
 async function cadastrarEmpresa(){
   $('errCad').textContent = '';
   const nome = $('cNome').value.trim(), resp = $('cResp').value.trim(), qtd = parseInt($('cQtd').value, 10);
@@ -509,7 +518,7 @@ function renderOcorrencias(){
     const mapa = o.lat != null ? `<a href="https://www.google.com/maps?q=${o.lat},${o.lng}" target="_blank" rel="noopener">Ver no mapa</a>` : '—';
     return `<tr><td>${hora(o.criado_em)}</td><td><b>${esc(TIPO_OC[o.tipo] || o.tipo)}</b></td>
       <td>${esc(v?.nome || '—')}<div class="small mut">${esc(v?.posto || '')}</div></td>
-      <td style="max-width:380px;white-space:pre-wrap">${esc(o.descricao)}${o.foto_base64 ? `<div><img src="data:image/jpeg;base64,${o.foto_base64}" style="max-width:220px;border-radius:8px;margin-top:6px;cursor:zoom-in" onclick="window.open().document.write('<img src=&quot;'+this.src+'&quot; style=&quot;max-width:100%&quot;>')"></div>` : ''}</td><td>${mapa}</td>
+      <td style="max-width:380px;white-space:pre-wrap">${esc(o.descricao)}${o.foto_base64 && /^[A-Za-z0-9+/=\r\n]+$/.test(o.foto_base64) ? `<div><img src="data:image/jpeg;base64,${o.foto_base64}" style="max-width:220px;border-radius:8px;margin-top:6px;cursor:zoom-in" onclick="window.open().document.write('<img src=&quot;'+this.src+'&quot; style=&quot;max-width:100%&quot;>')"></div>` : ''}</td><td>${mapa}</td>
       <td><span class="badge ${sc}">${st}</span></td>
       <td class="row">${o.status === 'nova' ? `<button class="sm" onclick="statusOc('${o.id}','vista')">Marcar vista</button>` : ''}
         ${o.status !== 'resolvida' ? `<button class="sm sec" onclick="statusOc('${o.id}','resolvida')">Resolvida</button>` : ''}</td></tr>`;
@@ -526,7 +535,8 @@ function renderHeader(){
   const n = S.alertas.filter(a => a.status === 'aberto').length;
   const fat = S.plano?.fatura;
   const fech = fat && fat.status !== 'paga' && fat.renovar === null ? `<a href="#" onclick="aba('config');return false" class="badge b-warn" style="text-decoration:none">Fechamento do mês: ${brl(fat.valor_total)}</a> ` : '';
-  $('hAlertas').innerHTML = fech + (n ? `<span class="badge b-bad">${n} alerta(s) aberto(s)</span>` : `<span class="badge b-ok">Sem alertas abertos</span>`);
+  const teste = S.plano?.em_teste ? `<span class="badge b-ok">🎁 Teste grátis: ${Math.max(0, Math.ceil((new Date(S.plano.teste_ate) - Date.now()) / 86400000))} dia(s)</span> ` : '';
+  $('hAlertas').innerHTML = teste + fech + (n ? `<span class="badge b-bad">${n} alerta(s) aberto(s)</span>` : `<span class="badge b-ok">Sem alertas abertos</span>`);
 }
 
 // ================= AO VIVO =================
@@ -844,7 +854,9 @@ function renderPlano(){
          ${f.renovar ? '' : ' <a href="#" onclick="renovar(true);return false">Mudei de ideia</a>'}</p>`;
   }
   $('cardPlano').innerHTML = `<h3 style="margin-top:0">Plano e pagamento</h3>
-    <p>${p.vigilantes_contratados} vigilantes × ${brl(p.valor_por_vigilante)} = <b>${brl(p.previa_total)}/mês</b></p>${htmlFatura(p)}${pergunta}`;
+    ${p.em_teste ? `<div style="border:1.5px solid var(--ok);border-radius:10px;padding:10px;margin-bottom:10px"><b style="color:var(--ok)">🎁 Teste grátis até ${new Date(p.teste_ate).toLocaleDateString('pt-BR')}</b><br><span class="small mut">Depois, a 1ª fatura sai proporcional aos dias restantes do mês.</span></div>` : ''}
+    <p>${p.vigilantes_contratados} vigilantes × ${brl(p.valor_por_vigilante)} = <b>${brl(p.previa_total)}/mês</b></p>
+    <p class="small mut">Até 15 vigilantes: R$ 25,00 cada · mais de 15: R$ 20,00 cada.</p>${htmlFatura(p)}${pergunta}`;
 }
 async function renovar(sim){
   if (!S.plano?.fatura) return;
@@ -865,7 +877,7 @@ function renderConfig(){
   $('cfTent').value = String(e.tentativas_senha); $('cfCaido').value = String(e.homem_caido_min ?? 0); $('cfTermo').textContent = hora(e.termo_aceito_em) + ' (' + e.termo_versao + ')';
   calcPlano();
 }
-function calcPlano(){ $('cfValor').value = brl((+$('cfQtd').value || 0) * Number(S.empresa.valor_por_vigilante)) + ' / mês'; }
+function calcPlano(){ const q = +$('cfQtd').value || 0; $('cfValor').value = brl(q * precoVig(q)) + ' / mês (' + brl(precoVig(q)) + ' cada)'; }
 async function salvarConfig(){
   $('errCf').textContent = '';
   const qtd = parseInt($('cfQtd').value, 10);

@@ -4,6 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { FundoK1, CardK1, K1, brl, s as k } from '../../../components/k1';
 import { supabase, traduzErro } from '../../../lib/supabase';
+import { precoVigilante } from '../../../lib/empresa';
 import { ativarCentral, centralDisponivel, desativarCentral, pedirSemEconomia, pedirTelaCheia, statusCentral, testarCentral, type StatusCentral } from '../../../lib/central';
 
 function CardCentral() {
@@ -134,9 +135,9 @@ export default function Configuracoes() {
       <CardK1 style={{ gap: 16 }}>
         <Text style={k.titulo}>{e.nome}</Text>
         <View style={{ gap: 6 }}>
-          <Text style={k.mut}>Vigilantes contratados (R$ 20,00 cada)</Text>
+          <Text style={k.mut}>Vigilantes contratados (R$ 25,00 cada · mais de 15: R$ 20,00 cada)</Text>
           <TextInput value={qtd} onChangeText={setQtd} keyboardType="number-pad" style={st.input} />
-          <Text style={k.mut}>Valor mensal estimado: {brl((parseInt(qtd, 10) || 0) * 20)}</Text>
+          <Text style={k.mut}>Valor mensal estimado: {brl((parseInt(qtd, 10) || 0) * precoVigilante(parseInt(qtd, 10) || 0))}</Text>
         </View>
         <Opcao rotulo="Pedir senha a cada" valor={e.intervalo_checkin_min} onChange={v => setE({ ...e, intervalo_checkin_min: v })}
           opcoes={[{ v: 30, t: '30 min' }, { v: 60, t: '1 hora' }, { v: 90, t: '1h30' }, { v: 120, t: '2 horas' }]} />

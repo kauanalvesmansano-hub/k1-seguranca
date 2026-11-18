@@ -5,8 +5,16 @@ export type Fatura = {
   vencimento: string; status: 'aberta' | 'paga' | 'vencida' | 'cancelada'; renovar: boolean | null;
   pix_chave: string; pix_copia_cola: string; paga_em: string | null;
 };
+/** Tabela de preço: R$ 25,00 por vigilante; a partir de 16 vigilantes (mais de 15), R$ 20,00 cada. */
+export const PRECO_PADRAO = 25;
+export const PRECO_VOLUME = 20;
+export const VOLUME_A_PARTIR = 16;
+export const DIAS_TESTE = 7;
+export const precoVigilante = (qtd: number) => (qtd >= VOLUME_A_PARTIR ? PRECO_VOLUME : PRECO_PADRAO);
+
 export type Plano = {
   plano_status: 'ativo' | 'bloqueado' | 'encerrado';
+  em_teste?: boolean; teste_ate?: string | null;
   vigilantes_contratados: number; vigilantes_ativos: number; valor_por_vigilante: number; previa_total: number;
   pix_nome: string; whatsapp_k1: string | null; fatura: Fatura | null;
 };

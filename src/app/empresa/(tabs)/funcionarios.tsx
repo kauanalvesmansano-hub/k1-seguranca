@@ -4,6 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { FundoK1, CardK1, K1, brl, horaCurta, s as k } from '../../../components/k1';
 import { supabase } from '../../../lib/supabase';
+import { precoVigilante } from '../../../lib/empresa';
 
 type Vigilante = {
   id: string; nome: string; posto: string | null; matricula_acesso: string | null; ativo: boolean; em_turno: boolean;
@@ -50,7 +51,7 @@ export default function Funcionarios() {
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={k.mut}>Prévia do mês</Text>
-            <Text style={[k.titulo, { fontSize: 22 }]}>{brl(contratados * 20)}</Text>
+            <Text style={[k.titulo, { fontSize: 22 }]}>{brl(contratados * precoVigilante(contratados))}</Text>
           </View>
         </CardK1>
 

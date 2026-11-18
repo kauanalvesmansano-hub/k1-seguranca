@@ -71,6 +71,13 @@ export default function PainelEmpresa() {
         <Online online={online} />
       </CardK1>
 
+      {plano?.em_teste && plano.teste_ate && (
+        <CardK1 onPress={() => router.push('/empresa/plano')} style={{ borderColor: '#16a34a', backgroundColor: '#052e16', gap: 2 }}>
+          <Text style={{ color: '#4ade80', fontWeight: '900' }}>🎁 TESTE GRÁTIS · faltam {Math.max(0, Math.ceil((new Date(plano.teste_ate).getTime() - Date.now()) / 86400000))} dia(s)</Text>
+          <Text style={k.mut}>Toque para ver o plano e o valor depois do teste.</Text>
+        </CardK1>
+      )}
+
       {perguntarRenovacao && (
         <CardK1 onPress={() => router.push('/empresa/plano')} style={{ borderColor: K1.amarelo, gap: 4 }}>
           <Text style={[k.titulo, { color: K1.amarelo }]}>Fechamento do mês: {brl(f.valor_total)}</Text>
