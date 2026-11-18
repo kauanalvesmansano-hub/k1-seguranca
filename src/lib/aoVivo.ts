@@ -32,7 +32,7 @@ export function limparCaminho(lista: Leit[]): PontoMapa[] {
   const ok: { lat: number; lng: number; t: number }[] = [];
   for (const p of lista) {
     if (p.lat == null || p.lng == null) continue;
-    if (p.precisao_m != null && p.precisao_m > 60) continue;
+    if (p.precisao_m != null && p.precisao_m > 40) continue;
     const t = new Date(p.criado_em).getTime();
     const ant = ok[ok.length - 1];
     if (ant) {
@@ -43,7 +43,25 @@ export function limparCaminho(lista: Leit[]): PontoMapa[] {
     }
     ok.push({ lat: p.lat, lng: p.lng, t });
   }
-  return ok.map(({ lat, lng }) => ({ lat, lng }));
+  return tirarPicos(ok.map(({ lat, lng }) => ({ lat, lng })));
+}
+/** Remove "vai e volta" do GPS: um ponto que foge e o seguinte volta para perto do anterior. */
+export function tirarPicos(t: PontoMapa[]): PontoMapa[] {
+  let lista = t;
+  for (let volta = 0; volta < 3; volta++) {
+    const out: PontoMapa[] = [];
+    for (let i = 0; i < lista.length; i++) {
+      const a = out[out.length - 1], p = lista[i], b = lista[i + 1];
+      if (a && b) {
+        const ida = distancia(a, p), vinda = distancia(p, b), atalho = distancia(a, b);
+        if (ida > 12 && vinda > 12 && atalho < 0.4 * Math.min(ida, vinda)) continue;
+      }
+      out.push(p);
+    }
+    if (out.length === lista.length) break;
+    lista = out;
+  }
+  return lista;
 }
 
 /** Soma do caminho, ignorando "pulos" do GPS. */
