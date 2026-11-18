@@ -420,6 +420,7 @@ async function carregarTudo(){
     if (p.precisao_m != null && p.precisao_m > 60) return; // GPS ruim
     const tr = (S.trilhas[p.vigilante_id] ||= []), ms = new Date(p.criado_em).getTime(), u = tr[tr.length - 1];
     if (u && distM(u, [p.lat, p.lng]) / Math.max(1, (ms - ultT[p.vigilante_id]) / 1000) > 35) return; // pulo impossível
+    if (u && distM(u, [p.lat, p.lng]) < Math.max(8, (p.precisao_m ?? 10) * 0.8)) return; // parado: tremidinha do GPS
     tr.push([p.lat, p.lng]); ultT[p.vigilante_id] = ms;
   });
 }

@@ -39,6 +39,7 @@ export function limparCaminho(lista: Leit[]): PontoMapa[] {
       const d = distancia(ant, { lat: p.lat, lng: p.lng });
       const seg = Math.max(1, (t - ant.t) / 1000);
       if (d / seg > 35) continue; // mais de ~125 km/h: leitura errada
+      if (d < Math.max(8, (p.precisao_m ?? 10) * 0.8)) continue; // parado: tremidinha do GPS
     }
     ok.push({ lat: p.lat, lng: p.lng, t });
   }
