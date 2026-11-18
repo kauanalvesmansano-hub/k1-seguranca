@@ -26,6 +26,25 @@ export function distancia(a: PontoMapa, b: PontoMapa) {
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
+type Leit = { lat: number | null; lng: number | null; precisao_m?: number | null; criado_em: string };
+/** Tira do caminho as leituras ruins do GPS (pouca precisão ou "pulos" impossíveis a pé/de moto). */
+export function limparCaminho(lista: Leit[]): PontoMapa[] {
+  const ok: { lat: number; lng: number; t: number }[] = [];
+  for (const p of lista) {
+    if (p.lat == null || p.lng == null) continue;
+    if (p.precisao_m != null && p.precisao_m > 60) continue;
+    const t = new Date(p.criado_em).getTime();
+    const ant = ok[ok.length - 1];
+    if (ant) {
+      const d = distancia(ant, { lat: p.lat, lng: p.lng });
+      const seg = Math.max(1, (t - ant.t) / 1000);
+      if (d / seg > 35) continue; // mais de ~125 km/h: leitura errada
+    }
+    ok.push({ lat: p.lat, lng: p.lng, t });
+  }
+  return ok.map(({ lat, lng }) => ({ lat, lng }));
+}
+
 /** Soma do caminho, ignorando "pulos" do GPS. */
 export function percorrido(t: PontoMapa[]) {
   let m = 0;
@@ -56,15 +75,14 @@ export function useVigilanteAoVivo(id: string | undefined) {
     const inicio = vig?.em_turno && vig.turno_iniciado_em ? Math.max(new Date(vig.turno_iniciado_em).getTime(), limite) : Date.now() - 3 * 3600000;
     const desde = new Date(inicio).toISOString();
     const [tl, ck, al, pr, rr] = await Promise.all([
-      supabase.from('telemetria').select('lat,lng,criado_em').eq('vigilante_id', id).gte('criado_em', desde).order('criado_em').limit(5000),
+      supabase.from('telemetria').select('lat,lng,precisao_m,criado_em').eq('vigilante_id', id).gte('criado_em', desde).order('criado_em').limit(5000),
       supabase.from('checkins').select('id,vigilante_id,resultado,criado_em').eq('vigilante_id', id).order('criado_em', { ascending: false }).limit(6),
       supabase.from('alertas').select('tipo').eq('vigilante_id', id).neq('status', 'resolvido').order('criado_em', { ascending: false }).limit(1),
       supabase.from('pontos_ronda').select('id,nome,lat,lng').eq('ativo', true).order('nome'),
       supabase.from('rondas_registros').select('ponto_id,criado_em').eq('vigilante_id', id).gte('criado_em', desde).order('criado_em'),
     ]);
     setV(vig);
-    setTrajeto(((tl.data as { lat: number | null; lng: number | null }[]) ?? [])
-      .filter(p => p.lat != null && p.lng != null).map(p => ({ lat: p.lat!, lng: p.lng! })));
+    setTrajeto(limparCaminho((tl.data as Leit[]) ?? []));
     setCheckins((ck.data as Checkin[]) ?? []);
     setAlertaAberto((al.data?.[0] as { tipo: string } | undefined)?.tipo ?? null);
     setPontosBanco((pr.data as PontoBanco[]) ?? []);
@@ -83,10 +101,12 @@ export function useVigilanteAoVivo(id: string | undefined) {
           if (antes && !antes.em_turno && n.em_turno) setTimeout(carregar, 300); // turno começou: caminho novo
           return n;
         });
-        if (n.ultima_lat != null && n.ultima_lng != null) {
+        if (n.em_turno && n.ultima_lat != null && n.ultima_lng != null && (n.ultima_precisao_m ?? 0) <= 60) {
           setTrajeto(t => {
             const ult = t[t.length - 1];
-            return ult && ult.lat === n.ultima_lat && ult.lng === n.ultima_lng ? t : [...t, { lat: n.ultima_lat!, lng: n.ultima_lng! }].slice(-5000);
+            if (ult && ult.lat === n.ultima_lat && ult.lng === n.ultima_lng) return t;
+            if (ult && distancia(ult, { lat: n.ultima_lat!, lng: n.ultima_lng! }) > 1500) return t; // pulo do GPS
+            return [...t, { lat: n.ultima_lat!, lng: n.ultima_lng! }].slice(-5000);
           });
         }
       })

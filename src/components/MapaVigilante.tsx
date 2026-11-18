@@ -26,6 +26,9 @@ export function MapaVigilante({
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js"></script>
 <style>
 html,body,#m{margin:0;height:100%;background:#eef0f3;font-family:-apple-system,Roboto,Arial,sans-serif}
 .leaflet-control-attribution{font-size:8px;opacity:.7}
@@ -52,9 +55,13 @@ html,body,#m{margin:0;height:100%;background:#eef0f3;font-family:-apple-system,R
 <button class="btn" id="tudo" title="Ver o caminho todo">⤢</button>
 <script>
 var mapa = L.map('m', { zoomControl: false, attributionControl: true }).setView([-15.78, -47.93], 4);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-  maxZoom: 20, subdomains: 'abcd', attribution: '© OpenStreetMap © CARTO'
-}).addTo(mapa);
+// Mapa limpo no estilo de app de entrega (OpenFreeMap: grátis, sem chave). Sem WebGL, usa o OpenStreetMap comum.
+try {
+  if (!window.maplibregl || !maplibregl.supported()) throw 0;
+  L.maplibreGL({ style: 'https://tiles.openfreemap.org/styles/liberty', attribution: '© OpenFreeMap © OpenStreetMap' }).addTo(mapa);
+} catch (e) {
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
+}
 
 var vig = null, precisaoC = null, contorno = null, linha = null, inicio = null, cerca = null, grupoPontos = L.layerGroup().addTo(mapa);
 var atual = null, anim = null, seguir = true, primeiro = true, ultimoDados = null;

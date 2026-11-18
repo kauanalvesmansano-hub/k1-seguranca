@@ -6,6 +6,9 @@
 <title>K1 Segurança — Painel da Empresa</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <style>
@@ -403,7 +406,7 @@ async function carregarTudo(){
     sb.from('alertas').select('*').order('criado_em', { ascending:false }).limit(200),
     sb.from('contatos_alerta').select('*').order('tipo'),
     sb.from('ocorrencias').select('*').order('criado_em', { ascending:false }).limit(200),
-    sb.from('telemetria').select('vigilante_id,lat,lng,criado_em').gte('criado_em', desde).order('criado_em').limit(20000),
+    sb.from('telemetria').select('vigilante_id,lat,lng,precisao_m,criado_em').gte('criado_em', desde).order('criado_em').limit(20000),
     sb.from('pontos_ronda').select('*').order('nome'),
     sb.from('rondas_registros').select('*').order('criado_em', { ascending:false }).limit(300)
   ]);
@@ -411,7 +414,14 @@ async function carregarTudo(){
   S.empresa = e.data; S.vigilantes = v.data || []; S.alertas = a.data || []; S.contatos = c.data || []; S.ocorrencias = o.data || [];
   S.trilhas = {};
   const inicioTurno = {}; S.vigilantes.forEach(v => { if (v.em_turno && v.turno_iniciado_em) inicioTurno[v.id] = v.turno_iniciado_em; });
-  (t.data || []).forEach(p => { if (p.lat != null && inicioTurno[p.vigilante_id] && p.criado_em >= inicioTurno[p.vigilante_id]) (S.trilhas[p.vigilante_id] ||= []).push([p.lat, p.lng]); });
+  const ultT = {};
+  (t.data || []).forEach(p => {
+    if (p.lat == null || !inicioTurno[p.vigilante_id] || p.criado_em < inicioTurno[p.vigilante_id]) return;
+    if (p.precisao_m != null && p.precisao_m > 60) return; // GPS ruim
+    const tr = (S.trilhas[p.vigilante_id] ||= []), ms = new Date(p.criado_em).getTime(), u = tr[tr.length - 1];
+    if (u && distM(u, [p.lat, p.lng]) / Math.max(1, (ms - ultT[p.vigilante_id]) / 1000) > 35) return; // pulo impossível
+    tr.push([p.lat, p.lng]); ultT[p.vigilante_id] = ms;
+  });
 }
 const vigPorId = id => S.vigilantes.find(v => v.id === id);
 
@@ -429,9 +439,9 @@ function assinarTempoReal(){
         const i = S.vigilantes.findIndex(v => v.id === p.new.id); if (i >= 0) S.vigilantes[i] = p.new; else S.vigilantes.push(p.new);
         // trajeto ao vivo: acrescenta o ponto novo
         const n = p.new;
-        if (n.em_turno && n.ultima_lat != null) {
+        if (n.em_turno && n.ultima_lat != null && (n.ultima_precisao_m ?? 0) <= 60) {
           const tr = (S.trilhas[n.id] ||= []); const u = tr[tr.length - 1];
-          if (!u || u[0] !== n.ultima_lat || u[1] !== n.ultima_lng) { tr.push([n.ultima_lat, n.ultima_lng]); if (tr.length > 2000) tr.shift(); }
+          if (!u || ((u[0] !== n.ultima_lat || u[1] !== n.ultima_lng) && distM(u, [n.ultima_lat, n.ultima_lng]) < 1500)) { tr.push([n.ultima_lat, n.ultima_lng]); if (tr.length > 20000) tr.shift(); }
         }
         if (!n.em_turno) delete S.trilhas[n.id];
       }
@@ -533,7 +543,10 @@ const COR = { ok:'#22c55e', warn:'#f59e0b', bad:'#ef4444', '':'#64748b' };
 function iniciarMapa(){
   if (S.map) return;
   S.map = L.map('map').setView([-15.78, -47.93], 4);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:20, subdomains:'abcd', attribution:'© OpenStreetMap © CARTO' }).addTo(S.map);
+  try {
+    if (!window.maplibregl || !maplibregl.supported()) throw 0;
+    L.maplibreGL({ style:'https://tiles.openfreemap.org/styles/liberty', attribution:'© OpenFreeMap © OpenStreetMap' }).addTo(S.map);
+  } catch { L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(S.map); }
   S.map.on('dragstart', () => { if (S.seguir) { S.seguir = null; renderVivo(); } });
 }
 function renderVivo(){
@@ -606,6 +619,7 @@ function renderVivo(){
   });
   if (bounds.length && !S.mapaAjustado) { S.map.fitBounds(bounds, { padding:[60, 60], maxZoom:17 }); S.mapaAjustado = true; }
 }
+function distM(a, b){ const r = Math.PI/180, dLa = (b[0]-a[0])*r, dLo = (b[1]-a[1])*r, h = Math.sin(dLa/2)**2 + Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLo/2)**2; return 12742000*Math.asin(Math.sqrt(h)); }
 function iniciais(n){ const p = (n || '').trim().split(/\s+/); return ((p[0] || 'V')[0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase(); }
 function rumo(a, b){ const r = Math.PI/180, y = Math.sin((b[1]-a[1])*r)*Math.cos(b[0]*r), x = Math.cos(a[0]*r)*Math.sin(b[0]*r) - Math.sin(a[0]*r)*Math.cos(b[0]*r)*Math.cos((b[1]-a[1])*r); return (Math.atan2(y, x)*180/Math.PI + 360) % 360; }
 // desliza o vigilante até a nova posição em vez de "pular"
