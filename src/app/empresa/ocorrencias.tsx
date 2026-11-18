@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Linking, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { FundoK1, CardK1, K1, dataHora, s as k } from '../../components/k1';
@@ -7,7 +7,7 @@ import { supabase, traduzErro } from '../../lib/supabase';
 
 type Ocorrencia = {
   id: string; tipo: string; descricao: string; status: 'nova' | 'vista' | 'resolvida';
-  lat: number | null; lng: number | null; criado_em: string;
+  lat: number | null; lng: number | null; criado_em: string; foto_base64?: string | null;
   vigilantes?: { nome: string; posto: string | null } | null;
 };
 const TIPO: Record<string, string> = {
@@ -55,6 +55,9 @@ export default function OcorrenciasEmpresa() {
           </View>
           <Text style={k.mut}>{o.vigilantes?.nome ?? 'Vigilante'} · {o.vigilantes?.posto ?? 'Sem posto'} · {dataHora(o.criado_em)}</Text>
           <Text style={{ color: '#e5e5e5', fontSize: 15, lineHeight: 21 }}>{o.descricao}</Text>
+          {!!o.foto_base64 && (
+            <Image source={{ uri: 'data:image/jpeg;base64,' + o.foto_base64 }} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 10 }} resizeMode="cover" />
+          )}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
             {o.lat != null && (
               <Pressable style={st.btn} onPress={() => Linking.openURL(`https://www.google.com/maps?q=${o.lat},${o.lng}`)}>

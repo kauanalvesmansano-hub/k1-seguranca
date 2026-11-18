@@ -7,7 +7,7 @@ import { supabase, traduzErro } from '../../../lib/supabase';
 
 type Empresa = {
   id: string; nome: string; cnpj: string | null; qtd_vigilantes_contratados: number;
-  intervalo_checkin_min: number; prazo_resposta_min: number; tentativas_senha: number;
+  intervalo_checkin_min: number; prazo_resposta_min: number; tentativas_senha: number; homem_caido_min: number;
 };
 
 function Opcao<T extends number>({ rotulo, valor, opcoes, onChange }: {
@@ -45,7 +45,7 @@ export default function Configuracoes() {
     setSalvando(true);
     const { error } = await supabase.from('empresas').update({
       qtd_vigilantes_contratados: n, intervalo_checkin_min: e.intervalo_checkin_min,
-      prazo_resposta_min: e.prazo_resposta_min, tentativas_senha: e.tentativas_senha,
+      prazo_resposta_min: e.prazo_resposta_min, tentativas_senha: e.tentativas_senha, homem_caido_min: e.homem_caido_min,
     }).eq('id', e.id);
     setSalvando(false);
     if (error) Alert.alert('Erro', traduzErro(error)); else Alert.alert('Salvo!');
@@ -84,6 +84,9 @@ export default function Configuracoes() {
           opcoes={[{ v: 3, t: '3 min' }, { v: 5, t: '5 min' }, { v: 10, t: '10 min' }]} />
         <Opcao rotulo="Senha errada gera alerta" valor={e.tentativas_senha} onChange={v => setE({ ...e, tentativas_senha: v })}
           opcoes={[{ v: 1, t: 'No 1º erro' }, { v: 2, t: 'No 2º erro' }]} />
+        <Opcao rotulo="Homem caído: alertar se o celular ficar parado por" valor={e.homem_caido_min ?? 0} onChange={v => setE({ ...e, homem_caido_min: v })}
+          opcoes={[{ v: 0, t: 'Desligado' }, { v: 5, t: '5 min' }, { v: 10, t: '10 min' }, { v: 15, t: '15 min' }, { v: 30, t: '30 min' }]} />
+        <Text style={[k.mut, { fontSize: 12 }]}>Antes do alerta, o celular vibra e pergunta "Você está bem?" por 30 s. Vale a partir do próximo início de turno.</Text>
         <Pressable onPress={salvar} disabled={salvando} style={st.salvar}>
           <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>{salvando ? 'Salvando…' : 'Salvar'}</Text>
         </Pressable>

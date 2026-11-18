@@ -52,7 +52,7 @@ export async function aceitarTermo(s: SessaoVigilante) {
 }
 
 export function status(s: SessaoVigilante) {
-  return rpc<{ em_turno: boolean; proximo_checkin: string | null; termo_aceito: boolean }>('vig_status', { p_token: s.token });
+  return rpc<{ em_turno: boolean; proximo_checkin: string | null; termo_aceito: boolean; homem_caido_min?: number }>('vig_status', { p_token: s.token });
 }
 
 export function turno(s: SessaoVigilante, iniciar: boolean) {
@@ -65,10 +65,22 @@ export function checkin(s: SessaoVigilante, senha: string, lat: number | null, l
   );
 }
 
-export type Ocorrencia = { id: string; tipo: string; descricao: string; status: 'nova' | 'vista' | 'resolvida'; criado_em: string };
+export type Ocorrencia = { id: string; tipo: string; descricao: string; status: 'nova' | 'vista' | 'resolvida'; criado_em: string; tem_foto?: boolean };
 
-export function registrarOcorrencia(s: SessaoVigilante, tipo: string, descricao: string) {
-  return rpc<{ id: string }>('vig_ocorrencia', { p_token: s.token, p_tipo: tipo, p_descricao: descricao, p_lat: null, p_lng: null });
+export function registrarOcorrencia(s: SessaoVigilante, tipo: string, descricao: string, fotoBase64?: string | null) {
+  return rpc<{ id: string }>('vig_ocorrencia', {
+    p_token: s.token, p_tipo: tipo, p_descricao: descricao, p_lat: null, p_lng: null, p_foto_base64: fotoBase64 ?? null,
+  });
+}
+
+export type PontoRonda = { id: string; nome: string; ultima_leitura: string | null };
+
+export function pontosRonda(s: SessaoVigilante) {
+  return rpc<PontoRonda[]>('vig_pontos_ronda', { p_token: s.token });
+}
+
+export function registrarPonto(s: SessaoVigilante, codigo: string) {
+  return rpc<{ ponto: string; hora: string }>('vig_registrar_ponto', { p_token: s.token, p_codigo: codigo, p_lat: null, p_lng: null });
 }
 
 export function minhasOcorrencias(s: SessaoVigilante) {

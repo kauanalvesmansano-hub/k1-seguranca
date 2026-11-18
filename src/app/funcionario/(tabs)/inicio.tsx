@@ -48,7 +48,7 @@ export default function InicioVigilante() {
       setEmTurno(st.em_turno);
       setProximo(st.proximo_checkin ? new Date(st.proximo_checkin) : null);
       // Garante que a vigilância do botão Power está ligada durante o turno
-      if (st.em_turno) setPowerAtivo(await ativarPanicoPower(s.token).catch(() => false));
+      if (st.em_turno) setPowerAtivo(await ativarPanicoPower(s.token, st.homem_caido_min ?? 0).catch(() => false));
       else { await desativarPanicoPower(); setPowerAtivo(false); }
     } catch (e) { tratarErro(e); }
   }, [tratarErro]);
@@ -91,7 +91,10 @@ export default function InicioVigilante() {
     try {
       const r = await turno(sessao, !emTurno);
       setEmTurno(r.em_turno); setProximo(r.proximo_checkin ? new Date(r.proximo_checkin) : null); setOnline(true);
-      if (r.em_turno) setPowerAtivo(await ativarPanicoPower(sessao.token).catch(() => false));
+      if (r.em_turno) {
+        const st = await status(sessao).catch(() => null);
+        setPowerAtivo(await ativarPanicoPower(sessao.token, st?.homem_caido_min ?? 0).catch(() => false));
+      }
       else { await desativarPanicoPower(); setPowerAtivo(false); }
     } catch (e) { tratarErro(e); }
   }

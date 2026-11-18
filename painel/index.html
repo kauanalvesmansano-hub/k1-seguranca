@@ -138,6 +138,7 @@
     <button data-tab="vivo" class="on" onclick="aba('vivo')">Ao vivo</button>
     <button data-tab="alertas" onclick="aba('alertas')">Alertas</button>
     <button data-tab="ocorrencias" onclick="aba('ocorrencias')">Ocorrências <span id="ocBadge"></span></button>
+    <button data-tab="rondas" onclick="aba('rondas')">Rondas (QR)</button>
     <button data-tab="vigilantes" onclick="aba('vigilantes')">Vigilantes</button>
     <button data-tab="contatos" onclick="aba('contatos')">Contatos de alerta</button>
     <button data-tab="config" onclick="aba('config')">Configurações e plano</button>
@@ -174,6 +175,24 @@
       <div class="card" style="padding:0;overflow:auto"><table>
         <thead><tr><th>Quando</th><th>Tipo</th><th>Vigilante</th><th>Descrição</th><th>Local</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody id="tbOc"></tbody></table></div>
+    </div>
+
+    <!-- RONDAS -->
+    <div id="aba-rondas" class="hidden">
+      <div class="section-title"><h2>Pontos de ronda</h2><button class="sec" onclick="imprimirQRs()">Imprimir QR codes</button></div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="grid2">
+          <div><label>Nome do ponto (ex.: Condomínio X — Portão 2)</label><input id="prNome"></div>
+        </div>
+        <button style="margin-top:14px" onclick="addPonto()">Criar ponto</button> <span id="errPr" class="err"></span>
+        <p class="small mut">Imprima o QR de cada ponto e cole no local. Na ronda, o vigilante abre a aba "Ronda" do app e lê o QR: a empresa vê aqui quem passou, onde e quando.</p>
+      </div>
+      <div class="live" style="grid-template-columns:1fr 1fr">
+        <div class="card" style="padding:0;overflow:auto"><table>
+          <thead><tr><th>Ponto</th><th>Código</th><th>QR</th><th></th></tr></thead><tbody id="tbPontos"></tbody></table></div>
+        <div class="card" style="padding:0;overflow:auto"><table>
+          <thead><tr><th>Quando</th><th>Vigilante</th><th>Ponto</th><th>Local</th></tr></thead><tbody id="tbRondas"></tbody></table></div>
+      </div>
     </div>
 
     <!-- VIGILANTES -->
@@ -220,6 +239,8 @@
             <option value="3">3 minutos</option><option value="5">5 minutos</option><option value="10">10 minutos</option></select></div>
           <div><label>Senha errada gera alerta</label><select id="cfTent">
             <option value="1">No 1º erro</option><option value="2">No 2º erro</option></select></div>
+          <div><label>Homem caído (celular parado)</label><select id="cfCaido">
+            <option value="0">Desligado</option><option value="5">5 minutos</option><option value="10">10 minutos</option><option value="15">15 minutos</option><option value="30">30 minutos</option></select></div>
         </div>
         <button style="margin-top:16px" onclick="salvarConfig()">Salvar</button>
         <div id="errCf" class="err"></div>
@@ -295,8 +316,10 @@ const traduz = e => { const m = e?.message || String(e); for (const k in ERROS) 
 
 const TIPOS = {
   panico: ['PÂNICO', 'b-bad'], coacao: ['COAÇÃO', 'b-bad'],
-  senha_errada: ['SENHA ERRADA', 'b-warn'], sem_resposta: ['SEM RESPOSTA', 'b-warn']
+  senha_errada: ['SENHA ERRADA', 'b-warn'], sem_resposta: ['SEM RESPOSTA', 'b-warn'],
+  sem_movimento: ['HOMEM CAÍDO / SEM MOVIMENTO', 'b-bad'], fora_do_posto: ['FORA DO POSTO', 'b-warn'], bateria_baixa: ['BATERIA BAIXA', 'b-warn']
 };
+const tipoTxt = t => (TIPOS[t] || [t, 'b-warn']);
 const ST_ALERTA = { aberto: ['Aberto', 'b-bad'], em_atendimento: ['Em atendimento', 'b-acc'], resolvido: ['Resolvido', 'b-ok'] };
 
 let S = { user:null, empresa:null, papel:null, vigilantes:[], alertas:[], contatos:[], ocorrencias:[], trilhas:{}, linhas:{}, map:null, markers:{}, canal:null, editVig:null };
@@ -366,14 +389,17 @@ async function cadastrarEmpresa(){
 // ================= DADOS =================
 async function carregarTudo(){
   const desde = new Date(Date.now() - 60 * 60000).toISOString();
-  const [e, v, a, c, o, t] = await Promise.all([
+  const [e, v, a, c, o, t, pr, rr] = await Promise.all([
     sb.from('empresas').select('*').single(),
     sb.from('vigilantes').select('*').order('nome'),
     sb.from('alertas').select('*').order('criado_em', { ascending:false }).limit(200),
     sb.from('contatos_alerta').select('*').order('tipo'),
     sb.from('ocorrencias').select('*').order('criado_em', { ascending:false }).limit(200),
-    sb.from('telemetria').select('vigilante_id,lat,lng,criado_em').gte('criado_em', desde).order('criado_em').limit(5000)
+    sb.from('telemetria').select('vigilante_id,lat,lng,criado_em').gte('criado_em', desde).order('criado_em').limit(5000),
+    sb.from('pontos_ronda').select('*').order('nome'),
+    sb.from('rondas_registros').select('*').order('criado_em', { ascending:false }).limit(300)
   ]);
+  S.pontos = pr.data || []; S.rondas = rr.data || [];
   S.empresa = e.data; S.vigilantes = v.data || []; S.alertas = a.data || []; S.contatos = c.data || []; S.ocorrencias = o.data || [];
   S.trilhas = {};
   (t.data || []).forEach(p => { if (p.lat != null) (S.trilhas[p.vigilante_id] ||= []).push([p.lat, p.lng]); });
@@ -402,6 +428,9 @@ function assinarTempoReal(){
       }
       renderVivo(); renderVigilantes();
     })
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'rondas_registros' }, p => {
+      S.rondas.unshift(p.new); renderRondas();
+    })
     .on('postgres_changes', { event:'INSERT', schema:'public', table:'ocorrencias' }, p => {
       S.ocorrencias.unshift(p.new); renderOcorrencias(); bip();
       $('bannerTxt').textContent = `📋 Nova ocorrência: ${TIPO_OC[p.new.tipo] || p.new.tipo} — ${vigPorId(p.new.vigilante_id)?.nome || 'Vigilante'}`;
@@ -429,10 +458,10 @@ function bip(){
 function dispararAlarme(a){
   const v = vigPorId(a.vigilante_id);
   $('banner').style.background = '';
-  $('bannerTxt').textContent = `⚠ ${TIPOS[a.tipo][0]} — ${v ? v.nome : 'Vigilante'}${v?.posto ? ' (' + v.posto + ')' : ''} — ${hora(a.criado_em)}`;
+  $('bannerTxt').textContent = `⚠ ${tipoTxt(a.tipo)[0]} — ${v ? v.nome : 'Vigilante'}${v?.posto ? ' (' + v.posto + ')' : ''} — ${hora(a.criado_em)}`;
   $('banner').classList.remove('hidden');
   clearInterval(alarmeTimer); bip(); alarmeTimer = setInterval(bip, 1500);
-  if (window.Notification && Notification.permission === 'granted') new Notification('K1 Segurança — ' + TIPOS[a.tipo][0], { body: v ? v.nome : '' });
+  if (window.Notification && Notification.permission === 'granted') new Notification('K1 Segurança — ' + tipoTxt(a.tipo)[0], { body: v ? v.nome : '' });
 }
 function silenciar(){ clearInterval(alarmeTimer); $('banner').classList.add('hidden'); const oc = $('banner').style.background; $('banner').style.background = ''; aba(oc ? 'ocorrencias' : 'alertas'); }
 document.addEventListener('click', () => { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); }, { once:true });
@@ -440,13 +469,13 @@ document.addEventListener('click', () => { if (window.Notification && Notificati
 // ================= NAVEGAÇÃO =================
 function aba(t){
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
-  ['vivo','alertas','ocorrencias','vigilantes','contatos','config'].forEach(x => $('aba-' + x).classList.toggle('hidden', x !== t));
+  ['vivo','alertas','ocorrencias','rondas','vigilantes','contatos','config'].forEach(x => $('aba-' + x).classList.toggle('hidden', x !== t));
   if (t === 'vivo' && S.map) setTimeout(() => S.map.invalidateSize(), 50);
 }
 function fechar(id){ $(id).classList.add('hidden'); }
 function abrirTermo(){ $('mTermo').classList.remove('hidden'); }
 
-function renderTudo(){ renderHeader(); renderVivo(); renderAlertas(); renderOcorrencias(); renderVigilantes(); renderContatos(); renderConfig(); renderPlano(); }
+function renderTudo(){ renderHeader(); renderVivo(); renderAlertas(); renderOcorrencias(); renderRondas(); renderVigilantes(); renderContatos(); renderConfig(); renderPlano(); }
 
 // ================= OCORRÊNCIAS =================
 function renderOcorrencias(){
@@ -457,7 +486,7 @@ function renderOcorrencias(){
     const mapa = o.lat != null ? `<a href="https://www.google.com/maps?q=${o.lat},${o.lng}" target="_blank" rel="noopener">Ver no mapa</a>` : '—';
     return `<tr><td>${hora(o.criado_em)}</td><td><b>${esc(TIPO_OC[o.tipo] || o.tipo)}</b></td>
       <td>${esc(v?.nome || '—')}<div class="small mut">${esc(v?.posto || '')}</div></td>
-      <td style="max-width:380px;white-space:pre-wrap">${esc(o.descricao)}</td><td>${mapa}</td>
+      <td style="max-width:380px;white-space:pre-wrap">${esc(o.descricao)}${o.foto_base64 ? `<div><img src="data:image/jpeg;base64,${o.foto_base64}" style="max-width:220px;border-radius:8px;margin-top:6px;cursor:zoom-in" onclick="window.open().document.write('<img src=&quot;'+this.src+'&quot; style=&quot;max-width:100%&quot;>')"></div>` : ''}</td><td>${mapa}</td>
       <td><span class="badge ${sc}">${st}</span></td>
       <td class="row">${o.status === 'nova' ? `<button class="sm" onclick="statusOc('${o.id}','vista')">Marcar vista</button>` : ''}
         ${o.status !== 'resolvida' ? `<button class="sm sec" onclick="statusOc('${o.id}','resolvida')">Resolvida</button>` : ''}</td></tr>`;
@@ -480,10 +509,11 @@ function renderHeader(){
 // ================= AO VIVO =================
 function statusVig(v){
   const aberto = S.alertas.find(a => a.vigilante_id === v.id && a.status !== 'resolvido');
-  if (aberto) return { cls:'bad', txt:TIPOS[aberto.tipo][0], badge:'b-bad' };
+  if (aberto) return { cls:'bad', txt:tipoTxt(aberto.tipo)[0], badge:'b-bad' };
   if (!v.ativo) return { cls:'', txt:'Desativado', badge:'b-off' };
   if (!v.em_turno) return { cls:'', txt:'Fora de turno', badge:'b-off' };
   if (minutosAtras(v.ultima_atualizacao) > 10) return { cls:'warn', txt:'Sem sinal', badge:'b-warn' };
+  if (v.fora_do_posto) return { cls:'warn', txt:'Fora do posto', badge:'b-warn' };
   if ((v.ultima_bateria ?? 100) < 20) return { cls:'warn', txt:'Bateria baixa', badge:'b-warn' };
   return { cls:'ok', txt:'OK', badge:'b-ok' };
 }
@@ -545,7 +575,7 @@ function renderAlertas(){
   const f = $('fAlerta').value;
   const lista = f === 'todos' ? S.alertas : S.alertas.filter(a => a.status !== 'resolvido');
   $('tbAlertas').innerHTML = lista.length ? lista.map(a => {
-    const v = vigPorId(a.vigilante_id); const [tt, tc] = TIPOS[a.tipo]; const [st, sc] = ST_ALERTA[a.status];
+    const v = vigPorId(a.vigilante_id); const [tt, tc] = tipoTxt(a.tipo); const [st, sc] = ST_ALERTA[a.status];
     const mapa = a.lat != null ? `<a href="https://www.google.com/maps?q=${a.lat},${a.lng}" target="_blank" rel="noopener">Ver no mapa</a>` : '—';
     return `<tr>
       <td>${hora(a.criado_em)}</td><td><span class="badge ${tc}">${tt}</span></td>
@@ -582,6 +612,7 @@ function renderVigilantes(){
     <td>${v.ativo ? '<span class="badge b-ok">Ativo</span>' : '<span class="badge b-off">Desativado</span>'}</td>
     <td class="row">${adm ? `
       <button class="sm sec" onclick="abrirSenhas('${v.id}')">Trocar senhas</button>
+      <button class="sm sec" onclick="cercaPosto('${v.id}')">${v.posto_lat != null ? 'Cerca: ' + v.posto_raio_m + ' m' : 'Definir cerca do posto'}</button>
       ${v.dispositivo_ativo ? `<button class="sm sec" onclick="revogar('${v.id}')">Desconectar celular</button>` : ''}
       <button class="sm ${v.ativo ? 'danger' : ''}" onclick="alternarAtivo('${v.id}', ${!v.ativo})">${v.ativo ? 'Desativar' : 'Reativar'}</button>` : ''}
     </td></tr>`).join('') : '<tr><td colspan="8" class="mut">Nenhum vigilante. Clique em "+ Novo vigilante".</td></tr>';
@@ -624,6 +655,52 @@ async function alternarAtivo(id, ativo){
   if (ativo && S.vigilantes.filter(v => v.ativo).length >= S.empresa.qtd_vigilantes_contratados) return alert(ERROS.limite_de_vigilantes_do_plano_atingido);
   const { error } = await sb.from('vigilantes').update({ ativo }).eq('id', id); if (error) return alert(traduz(error));
   vigPorId(id).ativo = ativo; renderTudo();
+}
+
+async function cercaPosto(id){
+  const v = vigPorId(id);
+  const raio = prompt(`Cerca virtual de ${v.nome}.\nO centro será a posição ATUAL do vigilante (ele precisa estar no posto com o turno iniciado).\n\nRaio em metros (50 a 5000). Deixe vazio e OK para DESLIGAR:`, v.posto_raio_m || 150);
+  if (raio === null) return;
+  const r = parseInt(raio, 10);
+  if (r && (v.ultima_lat == null || !v.em_turno)) return alert('O vigilante precisa estar em turno com localização para definir o posto.');
+  const { error } = await sb.rpc('definir_posto', { p_vigilante_id:id, p_lat: r ? v.ultima_lat : null, p_lng: r ? v.ultima_lng : null, p_raio_m: r || 150 });
+  if (error) return alert(traduz(error));
+  Object.assign(v, r ? { posto_lat:v.ultima_lat, posto_lng:v.ultima_lng, posto_raio_m:r, fora_do_posto:false } : { posto_lat:null, posto_lng:null, fora_do_posto:false });
+  renderTudo();
+}
+
+// ================= RONDAS =================
+function renderRondas(){
+  const adm = S.papel === 'admin', pts = S.pontos || [];
+  $('tbPontos').innerHTML = pts.length ? pts.map(p => `<tr><td><b>${esc(p.nome)}</b></td>
+    <td class="small">${esc(p.codigo)}</td><td><div style="background:#fff;width:max-content;padding:4px;border-radius:6px">${qrSvg(p.codigo)}</div></td>
+    <td>${adm ? `<button class="sm danger" onclick="delPonto('${p.id}')">Excluir</button>` : ''}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="mut">Nenhum ponto de ronda ainda.</td></tr>';
+  const nomePonto = id => pts.find(p => p.id === id)?.nome || '—';
+  $('tbRondas').innerHTML = (S.rondas || []).length ? S.rondas.map(r => `<tr><td>${hora(r.criado_em)}</td><td>${esc(vigPorId(r.vigilante_id)?.nome || '—')}</td>
+    <td>${esc(nomePonto(r.ponto_id))}</td><td>${r.lat != null ? `<a target="_blank" rel="noopener" href="https://www.google.com/maps?q=${r.lat},${r.lng}">Mapa</a>` : '—'}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="mut">Nenhuma leitura ainda.</td></tr>';
+}
+async function addPonto(){
+  $('errPr').textContent = '';
+  const nome = $('prNome').value.trim(); if (!nome) { $('errPr').textContent = 'Informe o nome do ponto.'; return; }
+  const { data, error } = await sb.from('pontos_ronda').insert({ empresa_id:S.empresa.id, nome }).select().single();
+  if (error) { $('errPr').textContent = traduz(error); return; }
+  S.pontos.push(data); $('prNome').value = ''; renderRondas();
+}
+async function delPonto(id){
+  if (!confirm('Excluir este ponto de ronda? O QR impresso deixa de valer.')) return;
+  const { error } = await sb.from('pontos_ronda').delete().eq('id', id); if (error) return alert(traduz(error));
+  S.pontos = S.pontos.filter(p => p.id !== id); renderRondas();
+}
+function imprimirQRs(){
+  if (!(S.pontos || []).length) return alert('Crie pelo menos um ponto de ronda.');
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><title>QR de ronda — ${esc(S.empresa.nome)}</title><style>body{font-family:Arial;display:flex;flex-wrap:wrap;gap:16px}
+    .q{border:2px dashed #999;padding:14px;text-align:center;width:230px}.q svg{width:200px;height:200px}h3{margin:6px 0}</style></head><body>` +
+    S.pontos.map(p => `<div class="q"><b>K1 SEGURANÇA · RONDA</b>${qrSvg(p.codigo)}<h3>${esc(p.nome)}</h3><small>${esc(p.codigo)}</small></div>`).join('') +
+    `<script>setTimeout(()=>print(),400)<\/script></body></html>`);
+  w.document.close();
 }
 
 // ================= CONTATOS =================
@@ -706,7 +783,7 @@ function renderConfig(){
   const e = S.empresa;
   $('cfNome').value = e.nome; $('cfCnpj').value = e.cnpj || ''; $('cfQtd').value = e.qtd_vigilantes_contratados;
   $('cfIntervalo').value = String(e.intervalo_checkin_min); $('cfPrazo').value = String(e.prazo_resposta_min);
-  $('cfTent').value = String(e.tentativas_senha); $('cfTermo').textContent = hora(e.termo_aceito_em) + ' (' + e.termo_versao + ')';
+  $('cfTent').value = String(e.tentativas_senha); $('cfCaido').value = String(e.homem_caido_min ?? 0); $('cfTermo').textContent = hora(e.termo_aceito_em) + ' (' + e.termo_versao + ')';
   calcPlano();
 }
 function calcPlano(){ $('cfValor').value = brl((+$('cfQtd').value || 0) * Number(S.empresa.valor_por_vigilante)) + ' / mês'; }
@@ -717,7 +794,7 @@ async function salvarConfig(){
   if (!(qtd >= 1)) { $('errCf').textContent = 'Quantidade inválida.'; return; }
   if (qtd < ativos) { $('errCf').textContent = `Você tem ${ativos} vigilantes ativos. Desative alguns antes de reduzir o plano.`; return; }
   const upd = { nome:$('cfNome').value.trim(), cnpj:$('cfCnpj').value.trim() || null, qtd_vigilantes_contratados:qtd,
-    intervalo_checkin_min:+$('cfIntervalo').value, prazo_resposta_min:+$('cfPrazo').value, tentativas_senha:+$('cfTent').value };
+    intervalo_checkin_min:+$('cfIntervalo').value, prazo_resposta_min:+$('cfPrazo').value, tentativas_senha:+$('cfTent').value, homem_caido_min:+$('cfCaido').value };
   const { error } = await sb.from('empresas').update(upd).eq('id', S.empresa.id);
   if (error) { $('errCf').textContent = traduz(error); return; }
   Object.assign(S.empresa, upd); renderTudo();

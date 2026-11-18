@@ -6,6 +6,7 @@ export default function AbasFuncionario() {
   return (
     <Tabs screenOptions={opcoes}>
       <Tabs.Screen name="inicio" options={{ title: 'Início', tabBarIcon: icone('home') }} />
+      <Tabs.Screen name="ronda" options={{ title: 'Ronda', tabBarIcon: icone('qr-code-outline') }} />
       <Tabs.Screen name="ocorrencias" options={{ title: 'Ocorrências', tabBarIcon: icone('clipboard-outline') }} />
       <Tabs.Screen name="sos" options={{ title: 'SOS', tabBarIcon: icone('shield-outline') }} />
     </Tabs>

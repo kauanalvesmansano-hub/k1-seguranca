@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { FundoK1, CabecalhoK1, CardK1, K1, dataHora, s as k } from '../../../components/k1';
@@ -26,6 +28,7 @@ export default function Ocorrencias() {
   const [enviando, setEnviando] = useState(false);
   const [msg, setMsg] = useState<{ txt: string; cor: string } | null>(null);
   const [lista, setLista] = useState<Ocorrencia[]>([]);
+  const [foto, setFoto] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
 
   const carregar = useCallback(async () => {
@@ -36,13 +39,24 @@ export default function Ocorrencias() {
   }, []);
   useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
 
+  async function tirarFoto() {
+    setMsg(null);
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) { setMsg({ txt: 'Permita o uso da câmera para anexar foto.', cor: '#ff6b66' }); return; }
+    const r = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 });
+    if (r.canceled || !r.assets?.[0]) return;
+    // reduz para ~1000 px e JPEG 50% (fica leve para enviar mesmo com sinal fraco)
+    const img = await manipulateAsync(r.assets[0].uri, [{ resize: { width: 1000 } }], { compress: 0.5, format: SaveFormat.JPEG, base64: true });
+    setFoto(img.base64 ?? null);
+  }
+
   async function enviar() {
     if (descricao.trim().length < 3) { setMsg({ txt: 'Descreva o que aconteceu.', cor: '#ff6b66' }); return; }
     const s = await lerSessao(); if (!s) return;
     setEnviando(true); setMsg(null);
     try {
-      await registrarOcorrencia(s, tipo, descricao.trim());
-      setDescricao('');
+      await registrarOcorrencia(s, tipo, descricao.trim(), foto);
+      setDescricao(''); setFoto(null);
       setMsg({ txt: 'Ocorrência enviada para a empresa ✓', cor: K1.verde });
       carregar();
     } catch (e) { setMsg({ txt: traduzErro(e), cor: '#ff6b66' }); }
@@ -71,6 +85,16 @@ export default function Ocorrencias() {
           placeholder="O que aconteceu? Onde? Quem estava envolvido?" placeholderTextColor="#8d939c"
           style={st.texto} textAlignVertical="top"
         />
+        {foto ? (
+          <View style={{ gap: 6 }}>
+            <Image source={{ uri: 'data:image/jpeg;base64,' + foto }} style={st.foto} resizeMode="cover" />
+            <Pressable onPress={() => setFoto(null)}><Text style={{ color: '#ff6b66', textAlign: 'center' }}>Remover foto</Text></Pressable>
+          </View>
+        ) : (
+          <Pressable onPress={tirarFoto} style={st.anexo}>
+            <Ionicons name="camera" size={20} color="#fff" /><Text style={{ color: '#fff', fontWeight: '600' }}>Adicionar foto</Text>
+          </Pressable>
+        )}
         <Text style={[k.mut, { fontSize: 12 }]}>A hora e a sua localização vão junto automaticamente.</Text>
         <Pressable onPress={enviar} disabled={enviando} style={st.botao}>
           {enviando ? <ActivityIndicator color="#fff" /> : <>
@@ -90,7 +114,7 @@ export default function Ocorrencias() {
               <Text style={k.mut}>{dataHora(o.criado_em)}</Text>
             </View>
             <Text style={{ color: '#d0d4da' }} numberOfLines={3}>{o.descricao}</Text>
-            <Text style={{ color: STATUS[o.status].cor, fontSize: 12, fontWeight: '700' }}>{STATUS[o.status].txt}</Text>
+            <Text style={{ color: STATUS[o.status].cor, fontSize: 12, fontWeight: '700' }}>{STATUS[o.status].txt}{o.tem_foto ? '  ·  📷 com foto' : ''}</Text>
           </View>
         ))}
       </CardK1>
@@ -106,5 +130,7 @@ const st = StyleSheet.create({
   texto: { minHeight: 110, borderRadius: 10, borderWidth: 1, borderColor: '#5a5d65', backgroundColor: '#111317', color: '#fff', padding: 12, fontSize: 16 },
   botao: { height: 52, borderRadius: 10, backgroundColor: K1.vermelho, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   botaoTxt: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  anexo: { height: 46, borderRadius: 10, borderWidth: 1, borderColor: '#5a5d65', borderStyle: 'dashed', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  foto: { width: '100%', aspectRatio: 4 / 3, borderRadius: 10 },
   item: { borderTopWidth: 1, borderTopColor: '#222', paddingTop: 10, gap: 4 },
 });

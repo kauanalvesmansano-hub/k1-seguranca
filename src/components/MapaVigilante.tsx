@@ -9,8 +9,9 @@ export type PontoMapa = { lat: number; lng: number };
  * Mapa (OpenStreetMap + Leaflet dentro de uma WebView) com a posição do
  * vigilante, o raio de precisão do GPS e o trajeto recente.
  */
-export function MapaVigilante({ posicao, precisao, trajeto, cor = '#22c55e', altura = 300 }: {
+export function MapaVigilante({ posicao, precisao, trajeto, cor = '#22c55e', altura = 300, posto }: {
   posicao: PontoMapa | null; precisao?: number | null; trajeto: PontoMapa[]; cor?: string; altura?: number;
+  posto?: { lat: number; lng: number; raio: number } | null;
 }) {
   const ref = useRef<ComponentRef<typeof WebView>>(null);
   const pronto = useRef(false);
@@ -23,8 +24,10 @@ export function MapaVigilante({ posicao, precisao, trajeto, cor = '#22c55e', alt
 </head><body><div id="m"></div><script>
 var mapa = L.map('m', { zoomControl: true }).setView([-15.78, -47.93], 4);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
-var marcador = null, circulo = null, linha = null, primeiro = true;
+var marcador = null, circulo = null, linha = null, cerca = null, primeiro = true;
 window.atualizar = function (d) {
+  if (cerca) { cerca.remove(); cerca = null; }
+  if (d.posto) cerca = L.circle([d.posto.lat, d.posto.lng], { radius: d.posto.raio, color: '#3b82f6', weight: 2, dashArray: '4 6', fillOpacity: 0.06 }).addTo(mapa);
   if (linha) { linha.remove(); linha = null; }
   if (d.trajeto && d.trajeto.length > 1) {
     linha = L.polyline(d.trajeto.map(function (p) { return [p.lat, p.lng]; }), { color: '#e10600', weight: 3, opacity: 0.7, dashArray: '6 6' }).addTo(mapa);
@@ -40,7 +43,7 @@ window.atualizar = function (d) {
 };
 </script></body></html>`, []);
 
-  const dados = JSON.stringify({ posicao, precisao: precisao ?? null, trajeto, cor });
+  const dados = JSON.stringify({ posicao, precisao: precisao ?? null, trajeto, cor, posto: posto ?? null });
   useEffect(() => {
     if (pronto.current) ref.current?.injectJavaScript(`window.atualizar(${dados}); true;`);
   }, [dados]);

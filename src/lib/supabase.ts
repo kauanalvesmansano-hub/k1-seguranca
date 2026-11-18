@@ -25,6 +25,8 @@ const ERROS: Record<string, string> = {
   empresa_inativa: 'Acesso suspenso. Procure sua empresa.',
   empresa_bloqueada: 'Acesso suspenso. Procure sua empresa.',
   fatura_nao_encontrada: 'Fatura não encontrada.',
+  ponto_invalido: 'QR code não é um ponto de ronda desta empresa.',
+  inicie_o_turno: 'Inicie o turno antes de fazer a ronda.',
   dispositivo_nao_autorizado: 'Seu acesso foi encerrado pela empresa. Entre novamente.',
   termo_nao_aceito: 'É preciso aceitar o termo.',
   sem_permissao: 'Você não tem permissão para isso.',

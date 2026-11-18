@@ -6,13 +6,16 @@ import { FundoK1, CardK1, K1, dataHora, s as k } from '../../components/k1';
 import { supabase, traduzErro } from '../../lib/supabase';
 
 type Alerta = {
-  id: string; tipo: 'panico' | 'coacao' | 'senha_errada' | 'sem_resposta'; lat: number | null; lng: number | null;
+  id: string; tipo: 'panico' | 'coacao' | 'senha_errada' | 'sem_resposta' | 'bateria_baixa' | 'fora_do_posto' | 'sem_movimento';
+  lat: number | null; lng: number | null; observacao?: string | null;
   bateria: number | null; status: 'aberto' | 'em_atendimento' | 'resolvido'; criado_em: string;
   vigilantes?: { nome: string; posto: string | null; telefone: string | null } | null;
 };
-const TIPO = {
+const TIPO: Record<Alerta['tipo'], { txt: string; cor: string }> = {
   panico: { txt: 'PÂNICO', cor: '#ef4444' }, coacao: { txt: 'COAÇÃO', cor: '#ef4444' },
   senha_errada: { txt: 'SENHA ERRADA', cor: K1.amarelo }, sem_resposta: { txt: 'SEM RESPOSTA', cor: K1.amarelo },
+  sem_movimento: { txt: 'HOMEM CAÍDO / SEM MOVIMENTO', cor: '#ef4444' }, fora_do_posto: { txt: 'FORA DO POSTO', cor: K1.amarelo },
+  bateria_baixa: { txt: 'BATERIA BAIXA', cor: K1.amarelo },
 };
 
 /** Alertas em aberto (sino do painel). */
@@ -55,6 +58,7 @@ export default function Alertas() {
           </View>
           <Text style={k.titulo}>{a.vigilantes?.nome ?? 'Vigilante'}</Text>
           <Text style={k.mut}>{a.vigilantes?.posto ?? 'Sem posto'} · 🔋 {a.bateria ?? '—'}% · {a.status === 'em_atendimento' ? 'Em atendimento' : 'Aberto'}</Text>
+          {!!a.observacao && <Text style={{ color: '#e5e5e5' }}>{a.observacao}</Text>}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
             {a.lat != null && <Pressable style={st.btn} onPress={() => Linking.openURL(`https://www.google.com/maps?q=${a.lat},${a.lng}`)}><Text style={st.btnTxt}>MAPA</Text></Pressable>}
             {!!a.vigilantes?.telefone && <Pressable style={st.btn} onPress={() => Linking.openURL(`tel:${a.vigilantes?.telefone}`)}><Text style={st.btnTxt}>LIGAR</Text></Pressable>}

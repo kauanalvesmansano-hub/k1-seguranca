@@ -14,6 +14,7 @@ type Vigilante = {
   ultima_lat: number | null; ultima_lng: number | null; ultima_precisao_m: number | null;
   ultima_bateria: number | null; ultimo_carregando: boolean | null; ultimo_wifi: boolean | null; ultimo_wifi_nome: string | null;
   ultima_atualizacao: string | null;
+  posto_lat: number | null; posto_lng: number | null; posto_raio_m: number; fora_do_posto: boolean;
 };
 type Ponto = { lat: number | null; lng: number | null; criado_em: string };
 
@@ -81,11 +82,20 @@ export default function DetalheVigilante() {
     : !v.ativo ? { txt: 'Desativado', cor: '#64748b' }
     : !v.em_turno ? { txt: 'Fora de turno', cor: '#64748b' }
     : semSinal ? { txt: 'Sem sinal', cor: K1.amarelo }
+    : v.fora_do_posto ? { txt: 'Fora do posto', cor: K1.amarelo }
     : { txt: 'Em turno — OK', cor: K1.verde };
   const posicao = v.ultima_lat != null && v.ultima_lng != null ? { lat: v.ultima_lat, lng: v.ultima_lng } : null;
   const bat = v.ultima_bateria;
   const corBat = bat == null ? K1.mutado : bat < 20 ? '#ef4444' : bat < 50 ? K1.amarelo : K1.verde;
   const iconeBat = bat == null ? 'battery-dead-outline' : v.ultimo_carregando ? 'battery-charging' : bat < 20 ? 'battery-dead' : bat < 60 ? 'battery-half' : 'battery-full';
+
+  async function definirPosto(raio: number | null) {
+    if (!v) return;
+    const { error } = await supabase.rpc('definir_posto', {
+      p_vigilante_id: v.id, p_lat: raio ? v.ultima_lat : null, p_lng: raio ? v.ultima_lng : null, p_raio_m: raio ?? 150,
+    });
+    if (error) Alert.alert('Erro', traduzErro(error)); else carregar();
+  }
 
   async function acao(nome: 'desconectar' | 'ativo') {
     if (!v) return;
@@ -114,7 +124,29 @@ export default function DetalheVigilante() {
         {v.em_turno && v.turno_iniciado_em && <Text style={[k.mut, { marginLeft: 'auto' }]}>desde {horaCurta(v.turno_iniciado_em)}</Text>}
       </View>
 
-      <MapaVigilante posicao={v.em_turno ? posicao : null} precisao={v.ultima_precisao_m} trajeto={v.em_turno ? trajeto : []} cor={status.cor} />
+      <MapaVigilante posicao={v.em_turno ? posicao : null} precisao={v.ultima_precisao_m} trajeto={v.em_turno ? trajeto : []} cor={status.cor}
+        posto={v.posto_lat != null && v.posto_lng != null ? { lat: v.posto_lat, lng: v.posto_lng, raio: v.posto_raio_m } : null} />
+
+      <CardK1 style={{ gap: 10 }}>
+        <View style={st.linha}>
+          <Text style={[k.titulo, { fontSize: 16 }]}>Cerca virtual do posto</Text>
+          <Text style={{ color: v.posto_lat == null ? K1.mutado : v.fora_do_posto ? K1.amarelo : K1.verde, fontWeight: '700' }}>
+            {v.posto_lat == null ? 'Desligada' : v.fora_do_posto ? 'FORA' : `${v.posto_raio_m} m`}
+          </Text>
+        </View>
+        <Text style={k.mut}>Se o vigilante sair da área do posto, a empresa recebe o alerta "Fora do posto".</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {[100, 200, 500].map(r => (
+            <Pressable key={r} style={st.btn} disabled={!posicao} onPress={() => definirPosto(r)}>
+              <Text style={[st.btnTxt, !posicao && { opacity: 0.4 }]}>Posto aqui · {r} m</Text>
+            </Pressable>
+          ))}
+          {v.posto_lat != null && (
+            <Pressable style={[st.btn, { backgroundColor: '#3f3f46' }]} onPress={() => definirPosto(null)}><Text style={st.btnTxt}>Desligar</Text></Pressable>
+          )}
+        </View>
+        {!posicao && <Text style={[k.mut, { fontSize: 12 }]}>Para definir, o vigilante precisa estar no posto com o turno iniciado.</Text>}
+      </CardK1>
 
       <View style={st.grade}>
         <CardK1 style={st.item}>

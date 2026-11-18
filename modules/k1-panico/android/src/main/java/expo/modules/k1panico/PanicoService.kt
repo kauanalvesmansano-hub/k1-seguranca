@@ -13,6 +13,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -57,6 +61,10 @@ import kotlin.concurrent.thread
  * cada [MIN_ENTRE_ENVIOS_MS] (se andou pelo menos [MIN_DISTANCIA_M]); parado,
  * manda um "sinal de vida" a cada [INTERVALO_TELEMETRIA_MS] com bateria e Wi-Fi.
  *
+ * Homem caído (opcional, definido pela empresa): se o celular ficar parado além
+ * do limite, ele vibra e avisa "Você está bem?" por 30 s; sem resposta (sem
+ * mexer o celular), a empresa recebe o alerta "sem movimento".
+ *
  * Pânico sem internet: o alerta é guardado no celular (fila) com a hora real do
  * aperto e enviado sozinho assim que a internet voltar. Nada aparece na tela.
  */
@@ -74,6 +82,10 @@ class PanicoService : Service() {
     private const val MIN_ENTRE_ENVIOS_MS = 15_000L
     private const val MIN_DISTANCIA_M = 10f
     private const val FILA = "fila_panico"
+    private const val CANAL_ALERTA = "k1_alerta"
+    private const val NOTIF_HOMEM_CAIDO = 4411
+    private const val LIMIAR_MOVIMENTO = 1.2f      // m/s² de variação em relação à gravidade
+    private const val TEMPO_RESPOSTA_MS = 30_000L
 
     @Volatile var rodando = false
   }
@@ -87,6 +99,27 @@ class PanicoService : Service() {
   private val enviandoTelemetria = AtomicBoolean(false)
   private val filaExecutor = Executors.newSingleThreadExecutor()
   private var ouvinteRede: ConnectivityManager.NetworkCallback? = null
+  @Volatile private var ultimoMovimento = SystemClock.elapsedRealtime()
+  @Volatile private var preAlarmeDesde = 0L
+
+  private val ouvinteMovimento = object : SensorEventListener {
+    override fun onSensorChanged(e: SensorEvent) {
+      val (x, y, z) = Triple(e.values[0], e.values[1], e.values[2])
+      val modulo = Math.sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+      if (Math.abs(modulo - SensorManager.GRAVITY_EARTH) > LIMIAR_MOVIMENTO) {
+        ultimoMovimento = SystemClock.elapsedRealtime()
+        if (preAlarmeDesde > 0) cancelarPreAlarme()
+      }
+    }
+    override fun onAccuracyChanged(s: Sensor?, a: Int) {}
+  }
+
+  private val verificaHomemCaido = object : Runnable {
+    override fun run() {
+      verificarHomemCaido()
+      handler.postDelayed(this, 15_000L)
+    }
+  }
 
   private val ouvinteLocal = LocationListener { loc ->
     val atual = localAtual
@@ -136,7 +169,9 @@ class PanicoService : Service() {
     rodando = true
     iniciarLocalizacao()
     observarInternet()
+    iniciarSensorMovimento()
     handler.postDelayed(cicloTelemetria, 5_000L)
+    handler.postDelayed(verificaHomemCaido, 15_000L)
     if (temPanicoNaFila()) handler.post(reenvioFila)
     Log.i(TAG, "Monitoramento do botão Power ativo")
   }
@@ -147,6 +182,9 @@ class PanicoService : Service() {
     try { unregisterReceiver(receptor) } catch (_: Exception) {}
     handler.removeCallbacks(cicloTelemetria)
     handler.removeCallbacks(reenvioFila)
+    handler.removeCallbacks(verificaHomemCaido)
+    try { (getSystemService(Context.SENSOR_SERVICE) as SensorManager).unregisterListener(ouvinteMovimento) } catch (_: Exception) {}
+    cancelarPreAlarme()
     ouvinteRede?.let { try { (getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).unregisterNetworkCallback(it) } catch (_: Exception) {} }
     try { (getSystemService(Context.LOCATION_SERVICE) as LocationManager).removeUpdates(ouvinteLocal) } catch (_: Exception) {}
     rodando = false
@@ -243,6 +281,72 @@ class PanicoService : Service() {
 
   private fun isoAgora(): String =
     SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date())
+
+  // ---------- Homem caído / sem movimento ----------
+  private fun minutosHomemCaido(): Int = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt("homem_caido_min", 0)
+
+  private fun iniciarSensorMovimento() {
+    try {
+      val sm = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+      sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { sm.registerListener(ouvinteMovimento, it, SensorManager.SENSOR_DELAY_NORMAL) }
+    } catch (e: Exception) { Log.w(TAG, "Sem acelerômetro: ${e.message}") }
+  }
+
+  private fun verificarHomemCaido() {
+    val minutos = minutosHomemCaido()
+    if (minutos <= 0) return
+    val agora = SystemClock.elapsedRealtime()
+    if (preAlarmeDesde == 0L) {
+      if (agora - ultimoMovimento >= minutos * 60_000L) iniciarPreAlarme()
+    } else if (agora - preAlarmeDesde >= TEMPO_RESPOSTA_MS) {
+      // Não respondeu: avisa a empresa e recomeça a contagem
+      cancelarPreAlarme()
+      ultimoMovimento = agora
+      val token = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("token", null) ?: return
+      val loc = melhorLocalizacao()
+      thread(name = "k1-sem-movimento") {
+        val corpo = JSONObject().apply {
+          put("p_token", token)
+          put("p_lat", loc?.latitude ?: JSONObject.NULL)
+          put("p_lng", loc?.longitude ?: JSONObject.NULL)
+          put("p_minutos", minutos)
+        }
+        for (espera in longArrayOf(0, 5_000, 15_000, 30_000, 60_000)) {
+          if (espera > 0) Thread.sleep(espera)
+          if (chamarRpc("vig_sem_movimento", corpo)) break
+        }
+      }
+    }
+  }
+
+  private fun iniciarPreAlarme() {
+    preAlarmeDesde = SystemClock.elapsedRealtime()
+    Log.w(TAG, "Sem movimento: pré-alarme")
+    try {
+      val v = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+      val padrao = longArrayOf(0, 800, 400, 800, 400, 800, 400, 800)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) v.vibrate(VibrationEffect.createWaveform(padrao, -1))
+      else @Suppress("DEPRECATION") v.vibrate(padrao, -1)
+    } catch (_: Exception) {}
+    try {
+      val notif = NotificationCompat.Builder(this, CANAL_ALERTA)
+        .setSmallIcon(applicationInfo.icon)
+        .setContentTitle("K1 Segurança: você está bem?")
+        .setContentText("Celular parado há muito tempo. Mexa o celular em 30 s para cancelar o alerta.")
+        .setPriority(NotificationCompat.PRIORITY_MAX)
+        .setCategory(NotificationCompat.CATEGORY_ALARM)
+        .setAutoCancel(true)
+        .build()
+      (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIF_HOMEM_CAIDO, notif)
+    } catch (_: Exception) {}
+  }
+
+  private fun cancelarPreAlarme() {
+    if (preAlarmeDesde == 0L) return
+    preAlarmeDesde = 0L
+    try { (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(NOTIF_HOMEM_CAIDO) } catch (_: Exception) {}
+    try { (getSystemService(Context.VIBRATOR_SERVICE) as Vibrator).cancel() } catch (_: Exception) {}
+  }
 
   // ---------- Telemetria: localização, bateria, Wi-Fi ----------
   private fun enviarTelemetria() {
@@ -367,7 +471,11 @@ class PanicoService : Service() {
         description = "Mostra que o monitoramento do turno está ativo"
         setShowBadge(false)
       }
+      val alerta = NotificationChannel(CANAL_ALERTA, "Alertas K1 Segurança", NotificationManager.IMPORTANCE_HIGH).apply {
+        description = "Aviso de celular parado (homem caído)"
+      }
       (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(canal)
+      (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(alerta)
     }
   }
 

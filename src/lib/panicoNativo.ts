@@ -12,10 +12,10 @@ async function pedirPermissoes() {
 }
 
 /** Início do turno: começa a vigiar 4 toques no Power, mesmo com o app fechado. */
-export async function ativarPanicoPower(token: string) {
+export async function ativarPanicoPower(token: string, homemCaidoMin = 0) {
   if (!panicoPowerDisponivel || !K1Panico) return false;
   await pedirPermissoes();
-  await K1Panico.iniciar(SUPABASE_URL, SUPABASE_ANON_KEY, token);
+  await K1Panico.iniciar(SUPABASE_URL, SUPABASE_ANON_KEY, token, homemCaidoMin);
   return true;
 }
 

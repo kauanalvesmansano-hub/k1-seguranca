@@ -1,7 +1,7 @@
 import { NativeModule, requireOptionalNativeModule } from 'expo';
 
 declare class K1PanicoModule extends NativeModule<{}> {
-  iniciar(url: string, anonKey: string, token: string): Promise<void>;
+  iniciar(url: string, anonKey: string, token: string, homemCaidoMin: number): Promise<void>;
   parar(): Promise<void>;
   ativo(): boolean;
 }
