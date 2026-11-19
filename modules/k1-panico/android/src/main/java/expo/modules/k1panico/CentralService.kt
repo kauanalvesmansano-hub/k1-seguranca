@@ -49,7 +49,8 @@ class CentralService : Service() {
     const val ACAO_ATENDER = "expo.modules.k1panico.CENTRAL_ATENDER"
     const val ACAO_SILENCIAR = "expo.modules.k1panico.CENTRAL_SILENCIAR"
     const val INTERVALO_MS = 8_000L
-    const val TOQUE_MAX_MS = 180_000L
+    // O alarme NÃO para sozinho: só quando o alerta é resolvido (no painel/app) ou alguém toca em Silenciar/Atender.
+    const val WAKE_MS = 30 * 60_000L
 
     @Volatile var rodando = false
     @Volatile var instancia: CentralService? = null
@@ -82,6 +83,8 @@ class CentralService : Service() {
   private var falhas = 0
   private val vistos = LinkedHashSet<String>()
   private var primeira = true
+  /** Alertas que estão tocando agora (param quando forem resolvidos em qualquer lugar). */
+  private val tocando = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
   private val prefs: SharedPreferences get() = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -91,7 +94,6 @@ class CentralService : Service() {
       handler.postDelayed(this, INTERVALO_MS)
     }
   }
-  private val pararToque = Runnable { silenciar() }
 
   override fun onBind(intent: Intent?): IBinder? = null
 
@@ -177,6 +179,22 @@ class CentralService : Service() {
     } catch (e: Exception) {
       Log.w(TAG, "Resposta inválida: ${e.message}")
     }
+    conferirResolvidos(token)
+  }
+
+  /** Para o toque quando TODOS os alertas que estão tocando já foram resolvidos (no painel ou no app). */
+  private fun conferirResolvidos(token: String) {
+    val ids = tocando.filter { !it.startsWith("teste") }
+    if (ids.isEmpty()) return
+    val (c, t) = rpc("central_situacao", JSONObject().put("p_token", token).put("p_ids", org.json.JSONArray(ids)))
+    if (c !in 200..299) return
+    try {
+      val abertos = org.json.JSONArray(t.ifBlank { "[]" })
+      val set = HashSet<String>(); for (i in 0 until abertos.length()) set.add(abertos.getString(i))
+      val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+      ids.filter { it !in set }.forEach { tocando.remove(it); nm.cancel(notifId(it)) }
+      if (tocando.isEmpty()) handler.post { silenciar() }
+    } catch (_: Exception) {}
   }
 
   private fun rpc(funcao: String, corpo: JSONObject): Pair<Int, String> {
@@ -250,10 +268,11 @@ class CentralService : Service() {
       .setPriority(if (critico) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_HIGH)
       .setCategory(if (critico) NotificationCompat.CATEGORY_CALL else NotificationCompat.CATEGORY_ALARM)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-    if (critico) {
-      b.setFullScreenIntent(piTela, true).setOngoing(true)
-      tocar()
-    }
+    if (critico) b.setFullScreenIntent(piTela, true)
+    // Todo alerta toca sem parar até ser resolvido ou silenciado
+    b.setOngoing(true)
+    tocando.add(id)
+    tocar()
     try {
       (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(notifId(id), b.build())
     } catch (e: Exception) {
@@ -262,9 +281,7 @@ class CentralService : Service() {
   }
 
   private fun tocar() {
-    handler.removeCallbacks(pararToque)
-    handler.postDelayed(pararToque, TOQUE_MAX_MS)
-    if (player != null) return
+    if (player != null) { renovarWake(); return }
     try {
       val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
       volumeAntes = am.getStreamVolume(AudioManager.STREAM_ALARM)
@@ -300,12 +317,14 @@ class CentralService : Service() {
     } catch (_: Exception) {}
     try {
       val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-      wake = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "K1:CentralToque").apply { acquire(TOQUE_MAX_MS + 5_000) }
+      wake = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "K1:CentralToque").apply { setReferenceCounted(false); acquire(WAKE_MS) }
     } catch (_: Exception) {}
   }
 
+  private fun renovarWake() { try { wake?.acquire(WAKE_MS) } catch (_: Exception) {} }
+
   fun silenciar() {
-    handler.removeCallbacks(pararToque)
+    tocando.clear()
     try { player?.stop() } catch (_: Exception) {}
     try { player?.release() } catch (_: Exception) {}
     player = null
