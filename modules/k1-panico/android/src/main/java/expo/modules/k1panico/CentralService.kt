@@ -15,6 +15,7 @@ import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -43,7 +44,7 @@ class CentralService : Service() {
     const val TAG = "K1Central"
     const val PREFS = "k1_central"
     const val CANAL_FIXO = "k1_central_fixo"
-    const val CANAL_CHAMADA = "k1_central_chamada_v1"
+    const val CANAL_CHAMADA = "k1_central_chamada_v2"
     const val CANAL_AVISO = "k1_central_aviso_v1"
     const val NOTIF_FIXA = 7101
     const val ACAO_ATENDER = "expo.modules.k1panico.CENTRAL_ATENDER"
@@ -73,12 +74,16 @@ class CentralService : Service() {
     }
 
     fun notifId(id: String) = 8000 + (id.hashCode() and 0xFFFF)
+    const val NOTIF_SEM_REDE = 7102
   }
 
   private val handler = Handler(Looper.getMainLooper())
   private lateinit var executor: ExecutorService
   private var player: MediaPlayer? = null
   private var volumeAntes: Int? = null
+  private var filtroAntes: Int? = null
+  private var campainhaAntes: Int? = null
+  private var avisouSemRede = false
   private var wake: PowerManager.WakeLock? = null
   private var falhas = 0
   private val vistos = LinkedHashSet<String>()
@@ -157,10 +162,17 @@ class CentralService : Service() {
     }
     if (codigo !in 200..299) {
       falhas++
-      if (falhas == 3) atualizarFixa("Sem internet — tentando reconectar…")
+      if (falhas == 3) {
+        atualizarFixa("SEM INTERNET — você NÃO está recebendo alertas")
+        handler.post { avisarSemRede() }
+      }
       return
     }
-    if (falhas >= 3) atualizarFixa("Aguardando alertas dos vigilantes")
+    if (falhas >= 3) {
+      atualizarFixa("Aguardando alertas dos vigilantes")
+      (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(NOTIF_SEM_REDE)
+      avisouSemRede = false
+    }
     falhas = 0
 
     try {
@@ -280,8 +292,54 @@ class CentralService : Service() {
     }
   }
 
+  /**
+   * O Android não deixa nenhum app desligar o modo avião (só o próprio sistema).
+   * Então, se o celular da central ficar sem internet (modo avião, sem sinal, Wi-Fi caiu),
+   * ele avisa alto UMA vez para a pessoa saber que não está recebendo os alertas.
+   */
+  private fun avisarSemRede() {
+    if (avisouSemRede) return
+    avisouSemRede = true
+    val aviao = try { Settings.Global.getInt(contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) != 0 } catch (_: Exception) { false }
+    val abrir = PendingIntent.getActivity(this, 7102,
+      Intent(if (aviao) Settings.ACTION_AIRPLANE_MODE_SETTINGS else Settings.ACTION_WIRELESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+      PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+    val n = NotificationCompat.Builder(this, CANAL_AVISO)
+      .setSmallIcon(applicationInfo.icon)
+      .setContentTitle(if (aviao) "⚠ MODO AVIÃO LIGADO — central sem alertas" else "⚠ CENTRAL SEM INTERNET")
+      .setContentText(if (aviao) "Desligue o modo avião (ou ligue o Wi-Fi) para voltar a receber os disparos." else "Você não está recebendo os disparos. Verifique a internet.")
+      .setPriority(NotificationCompat.PRIORITY_MAX)
+      .setCategory(NotificationCompat.CATEGORY_ALARM)
+      .setOngoing(true)
+      .setContentIntent(abrir)
+      .build()
+    try { (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIF_SEM_REDE, n) } catch (_: Exception) {}
+    // bipe curto de aviso (não fica tocando: a pessoa pode ter ligado o modo avião de propósito)
+    try {
+      val tg = android.media.ToneGenerator(AudioManager.STREAM_ALARM, 100)
+      tg.startTone(android.media.ToneGenerator.TONE_CDMA_EMERGENCY_RINGBACK, 2500)
+      handler.postDelayed({ try { tg.release() } catch (_: Exception) {} }, 3000)
+    } catch (_: Exception) {}
+  }
+
   private fun tocar() {
     if (player != null) { renovarWake(); return }
+    // Fura o "Não Perturbe" e o modo silencioso/vibrar (precisa da permissão "Não Perturbe" dada em Configurações)
+    try {
+      val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+      if (nm.isNotificationPolicyAccessGranted) {
+        if (nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL) {
+          filtroAntes = nm.currentInterruptionFilter
+          nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+        }
+        val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        if (am.ringerMode != AudioManager.RINGER_MODE_NORMAL) {
+          campainhaAntes = am.ringerMode
+          am.ringerMode = AudioManager.RINGER_MODE_NORMAL
+        }
+      }
+    } catch (e: Exception) { Log.w(TAG, "Não deu para furar o silencioso: ${e.message}") }
+    // Volume do alarme no máximo (o som sai pelo canal de ALARME, que toca mesmo no silencioso)
     try {
       val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
       volumeAntes = am.getStreamVolume(AudioManager.STREAM_ALARM)
@@ -333,6 +391,14 @@ class CentralService : Service() {
       try { (getSystemService(Context.AUDIO_SERVICE) as AudioManager).setStreamVolume(AudioManager.STREAM_ALARM, it, 0) } catch (_: Exception) {}
     }
     volumeAntes = null
+    // devolve o modo silencioso / Não Perturbe como a pessoa tinha deixado
+    try {
+      val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+      campainhaAntes?.let { am.ringerMode = it }
+      val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+      filtroAntes?.let { if (nm.isNotificationPolicyAccessGranted) nm.setInterruptionFilter(it) }
+    } catch (_: Exception) {}
+    campainhaAntes = null; filtroAntes = null
     try { if (wake?.isHeld == true) wake?.release() } catch (_: Exception) {}
     wake = null
   }
@@ -346,6 +412,7 @@ class CentralService : Service() {
       setShowBadge(false)
     })
     nm.createNotificationChannel(NotificationChannel(CANAL_CHAMADA, "Chamada de emergência", NotificationManager.IMPORTANCE_HIGH).apply {
+      setBypassDnd(true)
       description = "Pânico, coação e homem caído: toca como ligação"
       setSound(null, null) // o som é tocado pelo próprio serviço, em volume de alarme
       enableVibration(false)

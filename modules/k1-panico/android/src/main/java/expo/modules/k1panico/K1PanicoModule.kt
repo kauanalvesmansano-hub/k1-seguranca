@@ -111,6 +111,18 @@ class K1PanicoModule : Module() {
       true
     }
 
+    // "Não Perturbe": com esta permissão o alarme fura o modo silencioso/Não Perturbe
+    Function("podeFurarSilencio") {
+      (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted
+    }
+
+    Function("pedirFurarSilencio") {
+      try {
+        context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+      } catch (_: Exception) {}
+      true
+    }
+
     Function("semEconomiaBateria") {
       (context.getSystemService(Context.POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(context.packageName)
     }

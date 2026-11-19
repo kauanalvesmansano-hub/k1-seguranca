@@ -9,11 +9,11 @@ const CHAVE = 'k1_central_token';
 /** O alarme tipo ligação só existe no Android, no APK do K1 (não no Expo Go). */
 export const centralDisponivel = Platform.OS === 'android' && K1Panico != null;
 
-export type StatusCentral = { ativa: boolean; telaCheia: boolean; semEconomia: boolean };
+export type StatusCentral = { ativa: boolean; telaCheia: boolean; semEconomia: boolean; furaSilencio: boolean };
 
 export function statusCentral(): StatusCentral {
-  if (!centralDisponivel || !K1Panico) return { ativa: false, telaCheia: false, semEconomia: false };
-  return { ativa: K1Panico.centralAtiva(), telaCheia: K1Panico.podeTelaCheia(), semEconomia: K1Panico.semEconomiaBateria() };
+  if (!centralDisponivel || !K1Panico) return { ativa: false, telaCheia: false, semEconomia: false, furaSilencio: false };
+  return { ativa: K1Panico.centralAtiva(), telaCheia: K1Panico.podeTelaCheia(), semEconomia: K1Panico.semEconomiaBateria(), furaSilencio: K1Panico.podeFurarSilencio() };
 }
 
 /** Transforma este celular na central: ele toca como ligação a cada pânico, coação ou homem caído. */
@@ -46,3 +46,4 @@ export function testarCentral() {
 }
 export function pedirTelaCheia() { K1Panico?.abrirPermissaoTelaCheia(); }
 export function pedirSemEconomia() { K1Panico?.pedirSemEconomiaBateria(); }
+export function pedirFurarSilencio() { K1Panico?.pedirFurarSilencio(); }

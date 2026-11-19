@@ -7,7 +7,7 @@ import { supabase, traduzErro } from '../../../lib/supabase';
 import { useTipoConta } from '../../../lib/conta';
 import { precoFamilia } from '../../../lib/familia';
 import { precoVigilante } from '../../../lib/empresa';
-import { ativarCentral, centralDisponivel, desativarCentral, pedirSemEconomia, pedirTelaCheia, statusCentral, testarCentral, type StatusCentral } from '../../../lib/central';
+import { ativarCentral, centralDisponivel, desativarCentral, pedirFurarSilencio, pedirSemEconomia, pedirTelaCheia, statusCentral, testarCentral, type StatusCentral } from '../../../lib/central';
 
 function CardCentral() {
   const [s, setS] = useState<StatusCentral>(statusCentral());
@@ -40,8 +40,9 @@ function CardCentral() {
         <Switch value={s.ativa} disabled={ocupado} onValueChange={alternar} trackColor={{ true: K1.verde }} />
       </View>
       <Text style={[k.mut, { fontSize: 13 }]}>
-        Ligue no celular que fica com o monitoramento. Em pânico, coação ou homem caído ele toca alto, em tela cheia,
-        mesmo bloqueado e com o app fechado. Não custa nada.
+        Ligue no celular que fica com o monitoramento. A cada disparo ele toca no volume máximo, em tela cheia, mesmo bloqueado,
+        no silencioso e com o app fechado — e só para quando o alerta for resolvido ou alguém tocar em Silenciar.
+        Se o celular ficar sem internet (modo avião), ele avisa que não está recebendo os disparos.
       </Text>
       {s.ativa && (
         <>
@@ -49,6 +50,12 @@ function CardCentral() {
             <Pressable style={st.aviso} onPress={pedirTelaCheia}>
               <Ionicons name="warning" size={18} color={K1.amarelo} />
               <Text style={st.avisoTxt}>Permitir tela cheia com o celular bloqueado (tocar aqui)</Text>
+            </Pressable>
+          )}
+          {!s.furaSilencio && (
+            <Pressable style={st.aviso} onPress={pedirFurarSilencio}>
+              <Ionicons name="volume-high" size={18} color={K1.amarelo} />
+              <Text style={st.avisoTxt}>Tocar mesmo no silencioso e no "Não Perturbe": ative o K1 na lista que vai abrir (tocar aqui)</Text>
             </Pressable>
           )}
           {!s.semEconomia && (
