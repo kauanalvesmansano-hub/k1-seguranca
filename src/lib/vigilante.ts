@@ -42,12 +42,14 @@ export async function rpc<T>(fn: string, args: Record<string, unknown>): Promise
 export async function entrar(matricula: string, senha: string) {
   const r = await rpc<Omit<SessaoVigilante, 'matricula'> & { erro?: string }>('vig_entrar', { p_matricula: matricula, p_senha: senha });
   if (r.erro) throw new Error(r.erro); // senha errada: o servidor responde sem erro para registrar a tentativa
+  if (!r.token) throw new Error('Não foi possível ativar este celular. Tente entrar de novo.');
   const s: SessaoVigilante = { ...r, matricula };
   await salvarSessao(s);
   return s;
 }
 
 export async function aceitarTermo(s: SessaoVigilante) {
+  if (!s.token) { await sairVigilante(); throw new Error('sessao_invalida'); }
   await rpc('vig_aceitar_termo', { p_token: s.token });
   const nova = { ...s, termo_aceito: true };
   await salvarSessao(nova);

@@ -35,6 +35,7 @@ export async function entrarComCodigo(codigo: string) {
 }
 
 export async function aceitarTermoFamilia(s: SessaoVigilante) {
+  if (!s.token) { await sairVigilante(); throw new Error('Entre de novo com o código de convite.'); }
   await rpc('vig_aceitar_termo', { p_token: s.token });
   const nova = { ...s, termo_aceito: true };
   await salvarSessao(nova);

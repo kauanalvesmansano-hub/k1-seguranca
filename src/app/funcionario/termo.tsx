@@ -18,7 +18,11 @@ export default function TermoFuncionario() {
       if (!s) { router.replace('/'); return; }
       await aceitarTermo(s);
       router.replace('/funcionario/inicio');
-    } catch (e) { setErro(traduzErro(e)); } finally { setCarregando(false); }
+    } catch (e) {
+      // sessão antiga/incompleta neste celular: volta para o login para ativar de novo
+      if (e instanceof Error && e.message === 'sessao_invalida') { router.replace('/funcionario/login'); return; }
+      setErro(traduzErro(e));
+    } finally { setCarregando(false); }
   }
 
   async function recusar() {
