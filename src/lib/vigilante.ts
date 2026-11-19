@@ -19,7 +19,13 @@ export type SessaoVigilante = {
 
 export async function lerSessao(): Promise<SessaoVigilante | null> {
   const s = await SecureStore.getItemAsync(CHAVE);
-  return s ? (JSON.parse(s) as SessaoVigilante) : null;
+  if (!s) return null;
+  try {
+    const v = JSON.parse(s) as SessaoVigilante;
+    // sessão incompleta (versão antiga do app ou login que não terminou): descarta e pede login de novo
+    if (!v?.token || typeof v.token !== 'string') { await SecureStore.deleteItemAsync(CHAVE); return null; }
+    return v;
+  } catch { await SecureStore.deleteItemAsync(CHAVE); return null; }
 }
 
 export async function salvarSessao(s: SessaoVigilante) {
