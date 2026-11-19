@@ -6,7 +6,8 @@ import { FundoK1, CardK1, K1, dataHora, s as k } from '../../components/k1';
 import { supabase, traduzErro } from '../../lib/supabase';
 
 type Alerta = {
-  id: string; tipo: 'panico' | 'coacao' | 'senha_errada' | 'sem_resposta' | 'bateria_baixa' | 'fora_do_posto' | 'sem_movimento' | 'atraso_chegada' | 'batida';
+  id: string; tipo: 'panico' | 'coacao' | 'senha_errada' | 'sem_resposta' | 'bateria_baixa' | 'fora_do_posto' | 'sem_movimento' | 'atraso_chegada' | 'batida' | 'ronda_perdida';
+  detalhe?: string | null;
   lat: number | null; lng: number | null; observacao?: string | null;
   bateria: number | null; sos_gravando?: boolean; sos_encerrado_em?: string | null; status: 'aberto' | 'em_atendimento' | 'resolvido'; criado_em: string;
   vigilantes?: { nome: string; posto: string | null; telefone: string | null } | null;
@@ -17,6 +18,7 @@ const TIPO: Record<Alerta['tipo'], { txt: string; cor: string }> = {
   sem_movimento: { txt: 'HOMEM CAÍDO / SEM MOVIMENTO', cor: '#ef4444' }, fora_do_posto: { txt: 'FORA DO POSTO', cor: K1.amarelo },
   bateria_baixa: { txt: 'BATERIA BAIXA', cor: K1.amarelo },
   atraso_chegada: { txt: 'NÃO CHEGOU NO HORÁRIO', cor: '#ef4444' },
+  ronda_perdida: { txt: 'RONDA NÃO CONCLUÍDA', cor: '#f59e0b' },
   batida: { txt: 'POSSÍVEL BATIDA DE CARRO/MOTO', cor: '#ef4444' },
 };
 
@@ -53,13 +55,14 @@ export default function Alertas() {
         </CardK1>
       )}
       {lista.map(a => (
-        <CardK1 key={a.id} style={{ gap: 6, borderColor: TIPO[a.tipo].cor }}>
+        <CardK1 key={a.id} style={{ gap: 6, borderColor: (TIPO[a.tipo] ?? TIPO.sem_resposta).cor }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={[st.tag, { backgroundColor: TIPO[a.tipo].cor }]}>{TIPO[a.tipo].txt}</Text>
+            <Text style={[st.tag, { backgroundColor: (TIPO[a.tipo] ?? TIPO.sem_resposta).cor }]}>{(TIPO[a.tipo] ?? TIPO.sem_resposta).txt}</Text>
             <Text style={k.mut}>{dataHora(a.criado_em)}</Text>
           </View>
           <Text style={k.titulo}>{a.vigilantes?.nome ?? 'Vigilante'}</Text>
           <Text style={k.mut}>{a.vigilantes?.posto ?? 'Sem posto'} · 🔋 {a.bateria ?? '—'}% · {a.status === 'em_atendimento' ? 'Em atendimento' : 'Aberto'}</Text>
+          {!!a.detalhe && <Text style={{ color: '#fbbf24' }}>{a.detalhe}</Text>}
           {!!a.observacao && <Text style={{ color: '#e5e5e5' }}>{a.observacao}</Text>}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
             {a.lat != null && <Pressable style={st.btn} onPress={() => Linking.openURL(`https://www.google.com/maps?q=${a.lat},${a.lng}`)}><Text style={st.btnTxt}>MAPA</Text></Pressable>}

@@ -101,3 +101,32 @@ export function minhasOcorrencias(s: SessaoVigilante) {
 export function panico(s: SessaoVigilante, lat: number | null, lng: number | null, bateria: number | null) {
   return rpc('vig_panico', { p_token: s.token, p_lat: lat, p_lng: lng, p_bateria: bateria });
 }
+
+// ---------- Ronda programada ----------
+export type RondaSituacao = {
+  local: string; intervalo_min: number; tolerancia_min: number; inicio: string; prazo: string;
+  pontos: { nome: string; feito_em: string | null }[];
+} | null;
+export function rondaSituacao(s: SessaoVigilante) {
+  return rpc<RondaSituacao>('vig_ronda_situacao', { p_token: s.token });
+}
+
+// ---------- Visitantes (portaria) ----------
+export type Visitante = {
+  id: string; nome: string; documento: string | null; destino: string | null; placa: string | null;
+  observacao: string | null; entrada_em: string; saida_em: string | null; tem_foto: boolean;
+};
+export function listarVisitantes(s: SessaoVigilante) {
+  return rpc<Visitante[]>('vig_visitantes', { p_token: s.token });
+}
+export function registrarEntradaVisitante(s: SessaoVigilante, v: {
+  nome: string; documento?: string; destino?: string; placa?: string; observacao?: string; fotoBase64?: string | null;
+}) {
+  return rpc<{ id: string }>('vig_visitante_entrada', {
+    p_token: s.token, p_nome: v.nome, p_documento: v.documento ?? null, p_destino: v.destino ?? null,
+    p_placa: v.placa ?? null, p_observacao: v.observacao ?? null, p_foto_base64: v.fotoBase64 ?? null,
+  });
+}
+export function registrarSaidaVisitante(s: SessaoVigilante, id: string) {
+  return rpc<void>('vig_visitante_saida', { p_token: s.token, p_id: id });
+}

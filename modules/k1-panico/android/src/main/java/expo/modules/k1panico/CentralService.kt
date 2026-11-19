@@ -65,6 +65,7 @@ class CentralService : Service() {
       "fora_do_posto" -> "FORA DO POSTO"
       "bateria_baixa" -> "BATERIA BAIXA"
       "atraso_chegada" -> "NÃO CHEGOU NO HORÁRIO"
+      "ronda_perdida" -> "RONDA NÃO CONCLUÍDA"
       "batida" -> "POSSÍVEL BATIDA DE CARRO/MOTO"
       "teste" -> "TESTE DE ALARME"
       else -> tipo.uppercase()

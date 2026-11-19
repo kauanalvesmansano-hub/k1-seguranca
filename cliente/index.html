@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https://unpkg.com https://*.tile.openstreetmap.org; connect-src 'self' https://*.supabase.co; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex,nofollow">
+<title>K1 Segurança — Relatório do cliente</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--bg:#f4f6f9;--card:#fff;--line:#e3e8ef;--txt:#14202e;--mut:#5f6f82;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--acc:#1d4ed8;--k1:#c1121f}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+  header{background:#0b0f14;color:#fff;padding:16px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  header .logo{font-weight:900;letter-spacing:.5px;font-size:18px}
+  header .logo span{color:var(--k1)}
+  header .local{flex:1;min-width:200px}
+  header .local b{display:block;font-size:17px}
+  header .local small{color:#9fb0c3}
+  .acoes{display:flex;gap:8px;align-items:center}
+  input[type=date]{font:inherit;padding:7px 9px;border-radius:8px;border:1px solid #334155;background:#121821;color:#fff}
+  button{font:inherit;cursor:pointer;border:0;border-radius:8px;padding:8px 14px;background:var(--k1);color:#fff;font-weight:700}
+  main{max-width:1100px;margin:0 auto;padding:18px}
+  .resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+  .res{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .res small{color:var(--mut)} .res b{display:block;font-size:26px;margin-top:4px}
+  .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px}
+  @media (max-width:800px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  #map{height:300px;border-radius:10px}
+  table{width:100%;border-collapse:collapse}
+  td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{font-size:12px;color:var(--mut);font-weight:600}
+  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
+  .ok{background:#dcfce7;color:var(--ok)} .warn{background:#fef3c7;color:var(--warn)} .bad{background:#fee2e2;color:var(--bad)} .off{background:#e2e8f0;color:#475569}
+  .mut{color:var(--mut)} .small{font-size:12px}
+  .pessoa{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .pessoa:last-child{border:0}
+  .av{width:34px;height:34px;border-radius:50%;background:#0b0f14;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px}
+  .foto{max-width:160px;border-radius:8px;margin-top:6px;cursor:zoom-in}
+  #erro{max-width:520px;margin:80px auto;text-align:center}
+  .hidden{display:none!important}
+  footer{text-align:center;color:var(--mut);font-size:12px;padding:20px}
+  @media print{
+    header{background:#fff;color:#000;border-bottom:2px solid #000} header .local small{color:#333}
+    .acoes button,.acoes input{display:none} #map{display:none} body{background:#fff}
+    .card,.res{break-inside:avoid;border-color:#bbb}
+  }
+</style>
+</head>
+<body>
+<script>
+  const SUPABASE_URL = "https://ftswxxdhxjkwufdagkzd.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0c3d4eGRoeGprd3VmZGFna3pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4ODQxMTksImV4cCI6MjExMDQ2MDExOX0.VD2-2rIO9mjgQ0YzJgMRTkn3YvUv0W5VM7qFDvv8jWA";
+</script>
+
+<header>
+  <div class="logo">K1 <span>SEGURANÇA</span></div>
+  <div class="local"><b id="hLocal">Carregando…</b><small id="hEmpresa"></small></div>
+  <div class="acoes">
+    <input type="date" id="dia" onchange="carregar()">
+    <button onclick="window.print()">Baixar relatório (PDF)</button>
+  </div>
+</header>
+
+<div id="erro" class="hidden"><h2 style="justify-content:center">Link inválido ou desativado</h2>
+  <p class="mut">Peça um novo link para a empresa de segurança responsável pelo seu local.</p></div>
+
+<main id="conteudo" class="hidden">
+  <div class="resumo">
+    <div class="res"><small>De serviço agora</small><b id="rServico">0</b></div>
+    <div class="res"><small>Passagens em pontos de ronda</small><b id="rRondas">0</b></div>
+    <div class="res"><small>Rondas incompletas</small><b id="rPerdidas">0</b></div>
+    <div class="res"><small>Ocorrências</small><b id="rOc">0</b></div>
+    <div class="res"><small>Visitantes</small><b id="rVis">0</b></div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card"><h2>🗺️ Mapa do local</h2><div id="map"></div>
+        <p class="small mut" style="margin:8px 0 0">Pontos de ronda (●) e vigilantes de serviço (posição atual).</p></div>
+      <div class="card"><h2>🚶 Rondas do dia</h2><div id="ronda"></div></div>
+    </div>
+    <div>
+      <div class="card"><h2>👮 Equipe no local</h2><div id="equipe"></div></div>
+      <div class="card"><h2>📋 Ocorrências</h2><div id="oc"></div></div>
+      <div class="card"><h2>🚪 Visitantes</h2><div id="vis"></div></div>
+      <div class="card"><h2>🚨 Emergências</h2><div id="emerg"></div></div>
+    </div>
+  </div>
+</main>
+<footer>Relatório gerado pelo K1 Segurança · <span id="geradoEm"></span></footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const hh = t => t ? new Date(t).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : '—';
+const hoje = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
+const TIPO_OC = { furto:'Furto', invasao:'Invasão', dano:'Dano', suspeito:'Atitude suspeita', acidente:'Acidente', incendio:'Incêndio', ronda:'Ronda', outros:'Outros' };
+const TIPO_EM = { panico:'Botão de pânico', sem_movimento:'Vigilante sem movimento', batida:'Possível acidente' };
+const ST = { aberto:['Em aberto','bad'], em_atendimento:['Em atendimento','warn'], resolvido:['Resolvido','ok'] };
+const token = decodeURIComponent((location.hash || '').slice(1));
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ persistSession:false } });
+let mapa, camada, timer;
+$('dia').value = hoje(); $('dia').max = hoje();
+
+async function carregar(){
+  if (!token || token.length < 20) return falhou();
+  const { data:d, error } = await sb.rpc('cliente_portal', { p_token:token, p_dia:$('dia').value || null });
+  if (error) return falhou();
+  $('erro').classList.add('hidden'); $('conteudo').classList.remove('hidden');
+  document.title = 'K1 Segurança — ' + d.local;
+  $('hLocal').textContent = d.local;
+  $('hEmpresa').textContent = 'Segurança: ' + d.empresa + (d.endereco ? ' · ' + d.endereco : '') + ' · ' + new Date(d.dia + 'T12:00').toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+  $('geradoEm').textContent = new Date().toLocaleString('pt-BR');
+
+  const servico = d.equipe.filter(p => p.em_servico);
+  $('rServico').textContent = servico.length; $('rRondas').textContent = d.rondas.length;
+  $('rPerdidas').textContent = d.rondas_perdidas.length; $('rPerdidas').style.color = d.rondas_perdidas.length ? 'var(--warn)' : '';
+  $('rOc').textContent = d.ocorrencias.length; $('rVis').textContent = d.visitantes.length;
+
+  $('equipe').innerHTML = d.equipe.length ? d.equipe.map(p => `<div class="pessoa"><div class="av">${esc(ini(p.nome))}</div>
+      <div style="flex:1"><b>${esc(p.nome)}</b><div class="small mut">${p.em_servico ? 'De serviço desde ' + hh(p.desde) : 'Fora de serviço'}</div></div>
+      ${p.em_servico ? '<span class="badge ok">De serviço</span>' : '<span class="badge off">Folga</span>'}</div>`).join('')
+    : '<p class="mut">Nenhum vigilante designado.</p>';
+
+  const intervalo = d.ronda_intervalo_min ? `<p class="small mut" style="margin-top:0">Ronda programada: passar em todos os ${d.pontos.length} pontos a cada ${d.ronda_intervalo_min} minutos.</p>` : '';
+  const perdidas = d.rondas_perdidas.map(r => `<tr><td>${hh(r.hora)}</td><td colspan="2"><span class="badge warn">Ronda incompleta</span> ${esc(r.vigilante)}<div class="small mut">${esc(r.detalhe || '')}</div></td></tr>`);
+  const linhas = d.rondas.map(r => `<tr><td>${hh(r.hora)}</td><td>${esc(r.ponto)}</td><td class="mut">${esc(r.vigilante)}</td></tr>`);
+  const todas = [...d.rondas.map((r, i) => [r.hora, linhas[i]]), ...d.rondas_perdidas.map((r, i) => [r.hora, perdidas[i]])].sort((a, b) => b[0] < a[0] ? -1 : 1);
+  $('ronda').innerHTML = intervalo + (todas.length ? `<table><thead><tr><th>Hora</th><th>Ponto</th><th>Vigilante</th></tr></thead><tbody>${todas.map(x => x[1]).join('')}</tbody></table>`
+    : '<p class="mut">Nenhuma ronda registrada neste dia.</p>');
+
+  $('oc').innerHTML = d.ocorrencias.length ? d.ocorrencias.map(o => `<div style="padding:8px 0;border-bottom:1px solid var(--line)">
+      <b>${esc(TIPO_OC[o.tipo] || o.tipo)}</b> <span class="small mut">· ${hh(o.hora)} · ${esc(o.vigilante)}</span>
+      <div style="white-space:pre-wrap">${esc(o.descricao)}</div>
+      ${o.foto && /^[A-Za-z0-9+/=\r\n]+$/.test(o.foto) ? `<img class="foto" src="data:image/jpeg;base64,${o.foto}" onclick="window.open().document.write('<img style=max-width:100% src='+this.src+'>')">` : ''}</div>`).join('')
+    : '<p class="mut">Nenhuma ocorrência neste dia. 👍</p>';
+
+  $('vis').innerHTML = d.visitantes.length ? `<table><thead><tr><th>Entrada</th><th>Saída</th><th>Visitante</th></tr></thead><tbody>${d.visitantes.map(x =>
+      `<tr><td>${hh(x.entrada)}</td><td>${x.saida ? hh(x.saida) : '<span class="badge warn">Dentro</span>'}</td><td><b>${esc(x.nome)}</b><div class="small mut">${esc([x.destino, x.placa].filter(Boolean).join(' · '))}</div></td></tr>`).join('')}</tbody></table>`
+    : '<p class="mut">Nenhum visitante registrado neste dia.</p>';
+
+  $('emerg').innerHTML = d.emergencias.length ? d.emergencias.map(a => `<div class="pessoa"><div style="flex:1"><b>${esc(TIPO_EM[a.tipo] || a.tipo)}</b><div class="small mut">${hh(a.hora)}</div></div>
+      <span class="badge ${ST[a.status]?.[1] || 'off'}">${ST[a.status]?.[0] || a.status}</span></div>`).join('')
+    : '<p class="mut">Nenhuma emergência neste dia.</p>';
+
+  desenharMapa(d, servico);
+  clearTimeout(timer); if ($('dia').value === hoje()) timer = setTimeout(carregar, 60000);
+}
+function ini(n){ const p = (n || '').trim().split(/\s+/); return ((p[0] || 'V')[0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase(); }
+function desenharMapa(d, servico){
+  const pts = d.pontos.filter(p => p.lat != null), pes = servico.filter(p => p.lat != null);
+  if (!mapa) {
+    mapa = L.map('map', { zoomControl:true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(mapa);
+    camada = L.layerGroup().addTo(mapa);
+  }
+  camada.clearLayers();
+  const todos = [];
+  pts.forEach(p => { todos.push([p.lat, p.lng]); L.circleMarker([p.lat, p.lng], { radius:7, color:'#1d4ed8', fillColor:'#3b82f6', fillOpacity:.9 }).bindTooltip(p.nome).addTo(camada); });
+  pes.forEach(p => { todos.push([p.lat, p.lng]); L.marker([p.lat, p.lng], { icon:L.divIcon({ className:'', html:`<div class="av" style="background:#c1121f;border:2px solid #fff">${esc(ini(p.nome))}</div>`, iconSize:[34,34], iconAnchor:[17,17] }) }).bindTooltip(p.nome).addTo(camada); });
+  if (todos.length) mapa.fitBounds(todos, { padding:[30, 30], maxZoom:18 }); else mapa.setView([-14.2, -51.9], 4);
+  setTimeout(() => mapa.invalidateSize(), 60);
+}
+function falhou(){ $('conteudo').classList.add('hidden'); $('erro').classList.remove('hidden'); $('hLocal').textContent = 'K1 Segurança'; $('hEmpresa').textContent = ''; }
+carregar();
+</script>
+</body>
+</html>

@@ -4,7 +4,7 @@ import { useFocusEffect } from 'expo-router';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { FundoK1, CabecalhoK1, CardK1, K1, horaCurta, s as k } from '../../../components/k1';
-import { lerSessao, pontosRonda, registrarPonto, type PontoRonda } from '../../../lib/vigilante';
+import { lerSessao, pontosRonda, registrarPonto, rondaSituacao, type PontoRonda, type RondaSituacao } from '../../../lib/vigilante';
 import { traduzErro } from '../../../lib/supabase';
 
 /** Ronda: o vigilante lê o QR code de cada ponto; a empresa vê hora e local de cada leitura. */
@@ -15,11 +15,17 @@ export default function Ronda() {
   const [carregando, setCarregando] = useState(false);
   const [msg, setMsg] = useState<{ txt: string; cor: string } | null>(null);
   const travado = useRef(false);
+  const [prog, setProg] = useState<RondaSituacao>(null);
+  const [agora, setAgora] = useState(Date.now());
+  useFocusEffect(useCallback(() => { const t = setInterval(() => setAgora(Date.now()), 30000); return () => clearInterval(t); }, []));
 
   const carregar = useCallback(async () => {
     const s = await lerSessao(); if (!s) return;
     setCarregando(true);
-    try { setPontos(await pontosRonda(s)); } catch (e) { setMsg({ txt: traduzErro(e), cor: '#ff6b66' }); }
+    try {
+      const [p, r] = await Promise.all([pontosRonda(s), rondaSituacao(s).catch(() => null)]);
+      setPontos(p); setProg(r); setAgora(Date.now());
+    } catch (e) { setMsg({ txt: traduzErro(e), cor: '#ff6b66' }); }
     setCarregando(false);
   }, []);
   useFocusEffect(useCallback(() => { carregar(); return () => setLendo(false); }, [carregar]));
@@ -73,6 +79,25 @@ export default function Ronda() {
         </Pressable>
       )}
       {msg && <Text style={{ color: msg.cor, textAlign: 'center', fontWeight: '700', fontSize: 15 }}>{msg.txt}</Text>}
+
+      {prog && (() => {
+        const falta = prog.pontos.filter(p => !p.feito_em);
+        const min = Math.round((new Date(prog.prazo).getTime() - agora) / 60000);
+        const atrasado = min < 0 && falta.length > 0;
+        const cor = !falta.length ? K1.verde : atrasado ? '#ff6b66' : min <= 15 ? K1.amarelo : '#fff';
+        return (
+          <CardK1 style={{ gap: 6, borderColor: cor }}>
+            <Text style={[k.titulo, { fontSize: 16 }]}>Ronda programada · {prog.local}</Text>
+            <Text style={{ color: cor, fontWeight: '800', fontSize: 18 }}>
+              {!falta.length ? '✓ Volta completa' : atrasado ? `Atrasada ${-min} min — faltam ${falta.length} ponto(s)` : `Faltam ${falta.length} ponto(s) · prazo em ${min} min`}
+            </Text>
+            <Text style={k.mut}>
+              Passe em todos os pontos a cada {prog.intervalo_min} min (prazo {horaCurta(prog.prazo)}). Se não completar, o monitoramento é avisado.
+            </Text>
+            {falta.length > 0 && <Text style={{ color: '#ddd' }}>Falta: {falta.map(p => p.nome).join(', ')}</Text>}
+          </CardK1>
+        );
+      })()}
 
       <CardK1 style={{ gap: 10 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -153,6 +153,8 @@
     <button data-tab="ocorrencias" onclick="aba('ocorrencias')">Ocorrências <span id="ocBadge"></span></button>
     <button data-tab="rondas" onclick="aba('rondas')">Rondas (QR)</button>
     <button data-tab="vigilantes" onclick="aba('vigilantes')">Vigilantes</button>
+    <button data-tab="locais" onclick="aba('locais')">Locais / Clientes</button>
+    <button data-tab="visitantes" onclick="aba('visitantes')">Visitantes <span id="visBadge"></span></button>
     <button data-tab="contatos" onclick="aba('contatos')">Contatos de alerta</button>
     <button data-tab="config" onclick="aba('config')">Configurações e plano</button>
   </nav>
@@ -202,7 +204,7 @@
       </div>
       <div class="live" style="grid-template-columns:1fr 1fr">
         <div class="card" style="padding:0;overflow:auto"><table>
-          <thead><tr><th>Ponto</th><th>Código</th><th>QR</th><th></th></tr></thead><tbody id="tbPontos"></tbody></table></div>
+          <thead><tr><th>Ponto</th><th>Local</th><th>Código</th><th>QR</th><th></th></tr></thead><tbody id="tbPontos"></tbody></table></div>
         <div class="card" style="padding:0;overflow:auto"><table>
           <thead><tr><th>Quando</th><th>Vigilante</th><th>Ponto</th><th>Local</th></tr></thead><tbody id="tbRondas"></tbody></table></div>
       </div>
@@ -213,8 +215,40 @@
       <div class="section-title"><h2>Vigilantes <span id="vQtd" class="mut small"></span></h2>
         <button onclick="abrirNovoVig()">+ Novo vigilante</button></div>
       <div class="card" style="padding:0;overflow:auto"><table>
-        <thead><tr><th>Nome</th><th>Matrícula de acesso (app)</th><th>Matrícula interna</th><th>Posto</th><th>Celular</th><th>Termo</th><th>Situação</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Nome</th><th>Matrícula de acesso (app)</th><th>Matrícula interna</th><th>Posto / Local</th><th>Celular</th><th>Termo</th><th>Situação</th><th>Ações</th></tr></thead>
         <tbody id="tbVig"></tbody></table></div>
+    </div>
+
+    <!-- LOCAIS / CLIENTES -->
+    <div id="aba-locais" class="hidden">
+      <div class="section-title"><h2>Locais / Clientes</h2></div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="grid2">
+          <div><label>Nome do local (ex.: Condomínio Jardim das Flores)</label><input id="clNome" maxlength="120"></div>
+          <div><label>Endereço (opcional)</label><input id="clEnd" maxlength="200"></div>
+          <div><label>Ronda programada: passar em TODOS os pontos a cada (minutos)</label>
+            <select id="clInt"><option value="">Sem ronda programada</option><option>30</option><option>60</option><option>90</option><option value="120">120 (2 h)</option><option value="180">180 (3 h)</option><option value="240">240 (4 h)</option></select></div>
+          <div><label>Tolerância de atraso (minutos)</label><input id="clTol" type="number" min="0" max="120" value="10"></div>
+        </div>
+        <button style="margin-top:14px" id="clBtn" onclick="salvarLocal()">Criar local</button>
+        <button style="margin-top:14px" class="sec hidden" id="clCancel" onclick="limparLocal()">Cancelar edição</button>
+        <span id="errCl" class="err"></span>
+        <p class="small mut">Depois de criar o local: na aba <b>Vigilantes</b> escolha o local de cada vigilante e na aba <b>Rondas (QR)</b> o local de cada ponto.
+          Com ronda programada, se o vigilante não passar em todos os pontos dentro do prazo, chega o alerta <b>RONDA NÃO CONCLUÍDA</b> dizendo quais pontos faltaram.
+          O <b>link do cliente</b> mostra para o contratante (sem senha) as rondas, ocorrências, visitantes e quem está de serviço — só do local dele.</p>
+      </div>
+      <div class="card" style="padding:0;overflow:auto"><table>
+        <thead><tr><th>Local</th><th>Ronda programada</th><th>Vigilantes</th><th>Pontos</th><th>Link do cliente</th><th>Ações</th></tr></thead>
+        <tbody id="tbLocais"></tbody></table></div>
+    </div>
+
+    <!-- VISITANTES -->
+    <div id="aba-visitantes" class="hidden">
+      <div class="section-title"><h2>Visitantes (portaria)</h2>
+        <select id="fVis" style="width:auto" onchange="renderVisitantes()"><option value="">Todos os locais</option></select></div>
+      <div class="card" style="padding:0;overflow:auto"><table>
+        <thead><tr><th>Entrada</th><th>Saída</th><th>Visitante</th><th>Destino</th><th>Placa</th><th>Local</th><th>Vigilante</th><th>Foto</th></tr></thead>
+        <tbody id="tbVis"></tbody></table></div>
     </div>
 
     <!-- CONTATOS -->
@@ -332,6 +366,8 @@ const hora = d => d ? new Date(d).toLocaleString('pt-BR', {day:'2-digit', month:
 const minutosAtras = d => d ? (Date.now() - new Date(d).getTime()) / 60000 : Infinity;
 
 const ERROS = {
+  intervalo_de_ronda_invalido: 'O intervalo da ronda deve ser de 15 a 720 minutos.',
+  nao_encontrado: 'Registro não encontrado. Atualize a página.',
   cnpj_ja_cadastrado: 'Este CNPJ já tem cadastro no K1 Segurança.',
   cnpj_invalido: 'CNPJ inválido.',
   dados_invalidos: 'Confira os dados informados.',
@@ -352,7 +388,7 @@ const traduz = e => { const m = e?.message || String(e); for (const k in ERROS) 
 const TIPOS = {
   panico: ['PÂNICO', 'b-bad'], coacao: ['COAÇÃO', 'b-bad'],
   senha_errada: ['SENHA ERRADA', 'b-warn'], sem_resposta: ['SEM RESPOSTA', 'b-warn'],
-  sem_movimento: ['HOMEM CAÍDO / SEM MOVIMENTO', 'b-bad'], fora_do_posto: ['FORA DO POSTO', 'b-warn'], bateria_baixa: ['BATERIA BAIXA', 'b-warn'], atraso_chegada: ['NÃO CHEGOU NO HORÁRIO', 'b-bad'], batida: ['POSSÍVEL BATIDA', 'b-bad']
+  sem_movimento: ['HOMEM CAÍDO / SEM MOVIMENTO', 'b-bad'], fora_do_posto: ['FORA DO POSTO', 'b-warn'], bateria_baixa: ['BATERIA BAIXA', 'b-warn'], atraso_chegada: ['NÃO CHEGOU NO HORÁRIO', 'b-bad'], batida: ['POSSÍVEL BATIDA', 'b-bad'], ronda_perdida: ['RONDA NÃO CONCLUÍDA', 'b-warn']
 };
 const tipoTxt = t => (TIPOS[t] || [t, 'b-warn']);
 const ST_ALERTA = { aberto: ['Aberto', 'b-bad'], em_atendimento: ['Em atendimento', 'b-acc'], resolvido: ['Resolvido', 'b-ok'] };
@@ -426,7 +462,7 @@ async function cadastrarEmpresa(){
 // ================= DADOS =================
 async function carregarTudo(){
   const desde = new Date(Date.now() - 8 * 3600000).toISOString();
-  const [e, v, a, c, o, t, pr, rr] = await Promise.all([
+  const [e, v, a, c, o, t, pr, rr, cl, vi] = await Promise.all([
     sb.from('empresas').select('*').single(),
     sb.from('vigilantes').select('*').order('nome'),
     sb.from('alertas').select('*').order('criado_em', { ascending:false }).limit(200),
@@ -434,8 +470,11 @@ async function carregarTudo(){
     sb.from('ocorrencias').select('*').order('criado_em', { ascending:false }).limit(200),
     sb.from('telemetria').select('vigilante_id,lat,lng,precisao_m,criado_em').gte('criado_em', desde).order('criado_em').limit(20000),
     sb.from('pontos_ronda').select('*').order('nome'),
-    sb.from('rondas_registros').select('*').order('criado_em', { ascending:false }).limit(300)
+    sb.from('rondas_registros').select('*').order('criado_em', { ascending:false }).limit(300),
+    sb.from('clientes').select('id,nome,endereco,ronda_intervalo_min,ronda_tolerancia_min,portal_criado_em,ativo').order('nome'),
+    sb.from('visitantes').select('id,cliente_id,vigilante_id,nome,documento,destino,placa,observacao,entrada_em,saida_em').order('entrada_em', { ascending:false }).limit(300)
   ]);
+  S.clientes = cl.data || []; S.visitantes = vi.data || [];
   S.pontos = pr.data || []; S.rondas = rr.data || [];
   S.empresa = e.data; S.vigilantes = v.data || []; S.alertas = a.data || []; S.contatos = c.data || []; S.ocorrencias = o.data || [];
   S.trilhas = {};
@@ -474,6 +513,11 @@ function assinarTempoReal(){
         if (!n.em_turno) delete S.trilhas[n.id];
       }
       renderVivo(); renderVigilantes();
+    })
+    .on('postgres_changes', { event:'*', schema:'public', table:'visitantes' }, p => {
+      if (!p.new?.id) return; const x = { ...p.new }; delete x.foto_base64;
+      const i = (S.visitantes ||= []).findIndex(y => y.id === x.id); if (i >= 0) S.visitantes[i] = x; else S.visitantes.unshift(x);
+      renderVisitantes();
     })
     .on('postgres_changes', { event:'INSERT', schema:'public', table:'rondas_registros' }, p => {
       S.rondas.unshift(p.new); renderRondas();
@@ -518,13 +562,13 @@ document.addEventListener('click', () => { if (window.Notification && Notificati
 // ================= NAVEGAÇÃO =================
 function aba(t){
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
-  ['vivo','alertas','ocorrencias','rondas','vigilantes','contatos','config'].forEach(x => $('aba-' + x).classList.toggle('hidden', x !== t));
+  ['vivo','alertas','ocorrencias','rondas','vigilantes','locais','visitantes','contatos','config'].forEach(x => $('aba-' + x).classList.toggle('hidden', x !== t));
   if (t === 'vivo' && S.map) setTimeout(() => S.map.invalidateSize(), 50);
 }
 function fechar(id){ $(id).classList.add('hidden'); }
 function abrirTermo(){ $('mTermo').classList.remove('hidden'); }
 
-function renderTudo(){ renderHeader(); renderVivo(); renderAlertas(); renderOcorrencias(); renderRondas(); renderVigilantes(); renderContatos(); renderConfig(); renderPlano(); }
+function renderTudo(){ renderHeader(); renderVivo(); renderAlertas(); renderOcorrencias(); renderRondas(); renderVigilantes(); renderLocais(); renderVisitantes(); renderContatos(); renderConfig(); renderPlano(); }
 
 // ================= OCORRÊNCIAS =================
 function renderOcorrencias(){
@@ -684,7 +728,7 @@ function renderAlertas(){
     const v = vigPorId(a.vigilante_id); const [tt, tc] = tipoTxt(a.tipo); const [st, sc] = ST_ALERTA[a.status];
     const mapa = a.lat != null ? `<a href="https://www.google.com/maps?q=${a.lat},${a.lng}" target="_blank" rel="noopener">Ver no mapa</a>` : '—';
     return `<tr>
-      <td>${hora(a.criado_em)}</td><td><span class="badge ${tc}">${tt}</span></td>
+      <td>${hora(a.criado_em)}</td><td><span class="badge ${tc}">${tt}</span>${a.detalhe ? `<div class="small mut" style="max-width:260px">${esc(a.detalhe)}</div>` : ''}</td>
       <td>${esc(v?.nome || '—')}<div class="small mut">${esc(v?.posto || '')}${v?.telefone ? ' · ' + esc(v.telefone) : ''}</div></td>
       <td>${mapa}</td><td>${a.bateria ?? '—'}%</td>
       <td><span class="badge ${sc}">${st}</span>${a.observacao ? `<div class="small mut">${esc(a.observacao)}</div>` : ''}</td>
@@ -759,7 +803,7 @@ function renderVigilantes(){
   $('vQtd').textContent = `(${ativos} de ${S.empresa.qtd_vigilantes_contratados} do plano)`;
   const adm = S.papel === 'admin';
   $('tbVig').innerHTML = S.vigilantes.length ? S.vigilantes.map(v => `<tr>
-    <td>${esc(v.nome)}<div class="small mut">${esc(v.telefone || '')}</div></td><td><b style="font-size:16px;letter-spacing:1px">${esc(v.matricula_acesso || '—')}</b></td><td>${esc(v.matricula)}</td><td>${esc(v.posto || '—')}</td>
+    <td>${esc(v.nome)}<div class="small mut">${esc(v.telefone || '')}</div></td><td><b style="font-size:16px;letter-spacing:1px">${esc(v.matricula_acesso || '—')}</b></td><td>${esc(v.matricula)}</td><td>${esc(v.posto || '—')}<div>${seletorLocal(v.cliente_id, `vincularLocal('${v.id}', null, this.value)`, adm)}</div></td>
     <td>${v.dispositivo_ativo ? '<span class="badge b-ok">Conectado</span>' : '<span class="badge b-off">Não ativado</span>'}</td>
     <td>${v.termo_aceito_em ? hora(v.termo_aceito_em) : '<span class="badge b-warn">Pendente</span>'}</td>
     <td>${v.ativo ? '<span class="badge b-ok">Ativo</span>' : '<span class="badge b-off">Desativado</span>'}</td>
@@ -826,9 +870,10 @@ async function cercaPosto(id){
 function renderRondas(){
   const adm = S.papel === 'admin', pts = S.pontos || [];
   $('tbPontos').innerHTML = pts.length ? pts.map(p => `<tr><td><b>${esc(p.nome)}</b></td>
+    <td>${seletorLocal(p.cliente_id, `vincularLocal(null, '${p.id}', this.value)`, adm)}</td>
     <td class="small">${esc(p.codigo)}</td><td><div style="background:#fff;width:max-content;padding:4px;border-radius:6px">${qrSvg(p.codigo)}</div></td>
     <td>${adm ? `<button class="sm danger" onclick="delPonto('${p.id}')">Excluir</button>` : ''}</td></tr>`).join('')
-    : '<tr><td colspan="4" class="mut">Nenhum ponto de ronda ainda.</td></tr>';
+    : '<tr><td colspan="5" class="mut">Nenhum ponto de ronda ainda.</td></tr>';
   const nomePonto = id => pts.find(p => p.id === id)?.nome || '—';
   $('tbRondas').innerHTML = (S.rondas || []).length ? S.rondas.map(r => `<tr><td>${hora(r.criado_em)}</td><td>${esc(vigPorId(r.vigilante_id)?.nome || '—')}</td>
     <td>${esc(nomePonto(r.ponto_id))}</td><td>${r.lat != null ? `<a target="_blank" rel="noopener" href="https://www.google.com/maps?q=${r.lat},${r.lng}">Mapa</a>` : '—'}</td></tr>`).join('')
@@ -854,6 +899,98 @@ function imprimirQRs(){
     S.pontos.map(p => `<div class="q"><b>K1 SEGURANÇA · RONDA</b>${qrSvg(p.codigo)}<h3>${esc(p.nome)}</h3><small>${esc(p.codigo)}</small></div>`).join('') +
     `<script>setTimeout(()=>print(),400)<\/script></body></html>`);
   w.document.close();
+}
+
+// ================= LOCAIS / CLIENTES =================
+const nomeLocal = id => (S.clientes || []).find(c => c.id === id)?.nome || '';
+function seletorLocal(atual, acao, adm){
+  if (!(S.clientes || []).length) return '<span class="small mut">—</span>';
+  if (!adm) return `<span class="small">${esc(nomeLocal(atual) || 'Sem local')}</span>`;
+  return `<select class="sm" style="width:auto;max-width:200px;padding:4px" onchange="${acao}"><option value="">Sem local</option>` +
+    S.clientes.map(c => `<option value="${c.id}" ${c.id === atual ? 'selected' : ''}>${esc(c.nome)}</option>`).join('') + '</select>';
+}
+async function vincularLocal(vigId, pontoId, cliId){
+  const { error } = await sb.rpc('vincular_cliente', { p_vigilante_id:vigId, p_ponto_id:pontoId, p_cliente_id:cliId || null });
+  if (error) return alert(traduz(error));
+  if (vigId) vigPorId(vigId).cliente_id = cliId || null;
+  if (pontoId) S.pontos.find(p => p.id === pontoId).cliente_id = cliId || null;
+  renderTudo();
+}
+function renderLocais(){
+  const adm = S.papel === 'admin', ls = S.clientes || [];
+  $('tbLocais').innerHTML = ls.length ? ls.map(c => {
+    const nv = S.vigilantes.filter(v => v.cliente_id === c.id && v.ativo).length, np = (S.pontos || []).filter(p => p.cliente_id === c.id && p.ativo).length;
+    return `<tr><td><b>${esc(c.nome)}</b><div class="small mut">${esc(c.endereco || '')}</div></td>
+      <td>${c.ronda_intervalo_min ? `A cada ${c.ronda_intervalo_min} min<div class="small mut">tolerância ${c.ronda_tolerancia_min} min</div>` : '<span class="mut">Não</span>'}</td>
+      <td>${nv}</td><td>${np}${c.ronda_intervalo_min && !np ? '<div class="small" style="color:var(--warn)">Ligue pontos a este local</div>' : ''}</td>
+      <td>${c.portal_criado_em ? `<span class="badge b-ok">Ativo</span><div class="small mut">desde ${hora(c.portal_criado_em)}</div>` : '<span class="badge b-off">Sem link</span>'}</td>
+      <td class="row">${adm ? `<button class="sm" onclick="linkLocal('${c.id}')">${c.portal_criado_em ? 'Novo link' : 'Gerar link do cliente'}</button>
+        ${c.portal_criado_em ? `<button class="sm sec" onclick="revogarLinkLocal('${c.id}')">Desativar link</button>` : ''}
+        <button class="sm sec" onclick="editarLocal('${c.id}')">Editar</button>
+        <button class="sm danger" onclick="excluirLocal('${c.id}')">Excluir</button>` : ''}</td></tr>`;
+  }).join('') : '<tr><td colspan="6" class="mut">Nenhum local ainda. Crie um para cada cliente/contrato.</td></tr>';
+  const f = $('fVis'), atual = f.value;
+  f.innerHTML = '<option value="">Todos os locais</option>' + ls.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+  f.value = atual;
+}
+function limparLocal(){ S.editLocal = null; ['clNome','clEnd'].forEach(i => $(i).value = ''); $('clInt').value = ''; $('clTol').value = 10;
+  $('clBtn').textContent = 'Criar local'; $('clCancel').classList.add('hidden'); $('errCl').textContent = ''; }
+function editarLocal(id){
+  const c = S.clientes.find(x => x.id === id); S.editLocal = id;
+  $('clNome').value = c.nome; $('clEnd').value = c.endereco || ''; $('clTol').value = c.ronda_tolerancia_min;
+  $('clInt').value = c.ronda_intervalo_min || '';
+  if (c.ronda_intervalo_min && $('clInt').value === '') { $('clInt').insertAdjacentHTML('beforeend', `<option>${c.ronda_intervalo_min}</option>`); $('clInt').value = c.ronda_intervalo_min; }
+  $('clBtn').textContent = 'Salvar alterações'; $('clCancel').classList.remove('hidden'); $('clNome').focus();
+}
+async function salvarLocal(){
+  $('errCl').textContent = '';
+  const nome = $('clNome').value.trim(); if (nome.length < 2) { $('errCl').textContent = 'Informe o nome do local.'; return; }
+  const { error } = await sb.rpc('salvar_cliente', { p_id:S.editLocal || null, p_nome:nome, p_endereco:$('clEnd').value,
+    p_intervalo: $('clInt').value ? parseInt($('clInt').value, 10) : null, p_tolerancia: parseInt($('clTol').value, 10) || 0 });
+  if (error) { $('errCl').textContent = traduz(error); return; }
+  const { data } = await sb.from('clientes').select('id,nome,endereco,ronda_intervalo_min,ronda_tolerancia_min,portal_criado_em,ativo').order('nome');
+  S.clientes = data || []; limparLocal(); renderTudo();
+}
+async function excluirLocal(id){
+  if (!confirm('Excluir este local? Vigilantes e pontos ficam "sem local" e o link do cliente para de funcionar. O histórico continua guardado.')) return;
+  const { error } = await sb.rpc('excluir_cliente', { p_id:id }); if (error) return alert(traduz(error));
+  S.clientes = S.clientes.filter(c => c.id !== id);
+  S.vigilantes.forEach(v => { if (v.cliente_id === id) v.cliente_id = null; }); (S.pontos || []).forEach(p => { if (p.cliente_id === id) p.cliente_id = null; });
+  renderTudo();
+}
+async function linkLocal(id){
+  const c = S.clientes.find(x => x.id === id);
+  if (c.portal_criado_em && !confirm('Gerar um NOVO link? O link antigo deste cliente para de funcionar.')) return;
+  const { data:token, error } = await sb.rpc('gerar_link_cliente', { p_cliente_id:id }); if (error) return alert(traduz(error));
+  const url = new URL('../cliente/index.html', location.href).href.split('#')[0] + '#' + token;
+  c.portal_criado_em = new Date().toISOString(); renderLocais();
+  try { await navigator.clipboard.writeText(url); } catch (_) {}
+  prompt(`Link do cliente "${c.nome}" (já copiado). Envie para o síndico/gestor do contrato.\nGuarde: ele só aparece agora — se perder, gere um novo.`, url);
+}
+async function revogarLinkLocal(id){
+  if (!confirm('Desativar o link deste cliente? Quem tiver o link não verá mais nada.')) return;
+  const { error } = await sb.rpc('revogar_link_cliente', { p_cliente_id:id }); if (error) return alert(traduz(error));
+  S.clientes.find(x => x.id === id).portal_criado_em = null; renderLocais();
+}
+
+// ================= VISITANTES =================
+function renderVisitantes(){
+  const f = $('fVis').value, lista = (S.visitantes || []).filter(x => !f || x.cliente_id === f);
+  const dentro = (S.visitantes || []).filter(x => !x.saida_em).length;
+  $('visBadge').innerHTML = dentro ? `<span class="badge b-acc">${dentro}</span>` : '';
+  $('tbVis').innerHTML = lista.length ? lista.map(x => `<tr>
+    <td>${hora(x.entrada_em)}</td><td>${x.saida_em ? hora(x.saida_em) : '<span class="badge b-acc">Dentro</span>'}</td>
+    <td><b>${esc(x.nome)}</b><div class="small mut">${esc(x.documento || '')}</div>${x.observacao ? `<div class="small mut">${esc(x.observacao)}</div>` : ''}</td>
+    <td>${esc(x.destino || '—')}</td><td>${esc(x.placa || '—')}</td><td>${esc(nomeLocal(x.cliente_id) || '—')}</td>
+    <td>${esc(vigPorId(x.vigilante_id)?.nome || '—')}</td>
+    <td><button class="sm sec" onclick="fotoVisitante('${x.id}')">Ver foto</button></td></tr>`).join('')
+    : '<tr><td colspan="8" class="mut">Nenhum visitante registrado.</td></tr>';
+}
+async function fotoVisitante(id){
+  const { data, error } = await sb.from('visitantes').select('foto_base64').eq('id', id).single();
+  if (error) return alert(traduz(error));
+  if (!data.foto_base64 || !/^[A-Za-z0-9+/=\r\n]+$/.test(data.foto_base64)) return alert('Este visitante foi registrado sem foto.');
+  const w = window.open(''); w.document.write('<img style="max-width:100%" src="data:image/jpeg;base64,' + data.foto_base64 + '">');
 }
 
 // ================= CONTATOS =================
