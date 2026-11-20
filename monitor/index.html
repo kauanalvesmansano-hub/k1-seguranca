@@ -260,6 +260,12 @@
         <div class="linha"><button onclick="testarAlarme()">Testar alarme</button><button class="sec" onclick="carregarTudo()">Atualizar tudo</button><button class="sec" onclick="sair()">Sair</button></div>
       </div>
       <div class="card" style="max-width:640px;margin-top:12px">
+        <h3 style="margin-top:0">🔑 Senha do login (e-mail)</h3>
+        <p class="mut small">Só dá para trocar depois de confirmar o código de 6 dígitos do e-mail.</p>
+        <label>Nova senha do login (8+, letras e números)</label><input id="cfLogin" type="password" style="width:100%">
+        <button style="margin-top:10px" onclick="trocarSenhaLogin()">Trocar senha do login</button> <span id="cfLoginMsg" class="small"></span>
+      </div>
+      <div class="card" style="max-width:640px;margin-top:12px">
         <h3 style="margin-top:0">🔒 Senha do monitoramento</h3>
         <label>Senha atual</label><input id="cfAtual" type="password" style="width:100%">
         <label>Nova senha (8+, letras e números)</label><input id="cfNova" type="password" style="width:100%">
@@ -346,7 +352,8 @@ const mapsUrl = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
 const bat = b => b == null ? '<span class="mut">—</span>' : `<span style="color:${b < 20 ? 'var(--bad)' : b < 40 ? 'var(--warn)' : 'var(--ok)'}">${b}%</span>`;
 const semSinal = p => p.em_turno && (!p.atualizado || Date.now() - new Date(p.atualizado) > 10 * 60000);
 const ERROS = { sem_permissao:'Esta conta não é do dono do K1.', 'Invalid login credentials':'E-mail ou senha incorretos.' };
-const traduz = e => { const m = e?.message || String(e); for (const k in ERROS) if (m.includes(k)) return ERROS[k]; return m; };
+const traduzBase = e => { const m = e?.message || String(e); for (const k in ERROS) if (m.includes(k)) return ERROS[k]; return m; };
+const traduz = traduzBase;
 
 // ================= LOGIN =================
 async function entrar(){
@@ -380,6 +387,18 @@ async function mostrarTrava(){
   const { data:st, error } = await sb.rpc('mon_status', { p_chave_aparelho:CHAVE });
   if (error) return $('eTrava').textContent = traduz(error);
   if (st.destravado) return abrirApp();
+  if (!st.codigo_ok) {
+    const { data:{ user } } = await sb.auth.getUser();
+    EMAIL_DONO = user?.email || '';
+    const oculto = EMAIL_DONO.replace(/^(.{2}).*(@.*)$/, '$1•••••$2');
+    $('travaCorpo').innerHTML = `<p>Para sua segurança, enviamos um <b>código de 6 dígitos</b> para o e-mail <b>${esc(oculto)}</b>. Veja também a caixa de Spam.</p>
+      <label>Código de 6 dígitos</label><input id="tCod" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="width:100%;font-size:26px;letter-spacing:10px;text-align:center" onkeydown="if(event.key==='Enter')confirmarCodigo()">
+      <button id="btnTrava" style="width:100%;margin-top:14px" onclick="confirmarCodigo()">Confirmar código</button>
+      <button id="btnReenviar" class="sec sm" style="margin-top:10px" onclick="enviarCodigo()">Reenviar código</button>`;
+    setTimeout(() => $('tCod')?.focus(), 50);
+    if (!CODIGO_ENVIADO) enviarCodigo();
+    return;
+  }
   if (!st.tem_senha) {
     $('travaCorpo').innerHTML = `<p>Primeira vez: crie a <b>senha do monitoramento</b>. Ela é diferente da senha do e-mail e será pedida sempre que abrir a central. Este computador fica autorizado.</p>
       ${campoSenha('tS1', 'Nova senha do monitoramento (8+, letras e números)')}${campoSenha('tS2', 'Repita a senha')}
@@ -392,6 +411,30 @@ async function mostrarTrava(){
       ${campoSenha('tS1', 'Senha do monitoramento')}<button id="btnTrava" style="width:100%;margin-top:14px" onclick="destravar()">Destravar</button>`;
   }
   setTimeout(() => $('tS1')?.focus(), 50);
+}
+let EMAIL_DONO = '', CODIGO_ENVIADO = false, ESPERA = 0;
+async function enviarCodigo(){
+  if (Date.now() < ESPERA) return $('eTrava').textContent = `Espere ${Math.ceil((ESPERA - Date.now()) / 1000)} s para pedir outro código.`;
+  const { error } = await sb.auth.signInWithOtp({ email:EMAIL_DONO, options:{ shouldCreateUser:false } });
+  if (error) return $('eTrava').textContent = /rate|security purposes/i.test(error.message) ? 'Espere um pouco para pedir outro código.' : traduz(error);
+  CODIGO_ENVIADO = true; ESPERA = Date.now() + 60000;
+  $('eTrava').style.color = 'var(--ok)'; $('eTrava').textContent = 'Código enviado para o seu e-mail.';
+  setTimeout(() => { $('eTrava').style.color = ''; }, 4000);
+}
+async function confirmarCodigo(){
+  const cod = ($('tCod').value || '').replace(/\D/g, '');
+  if (cod.length !== 6) return $('eTrava').textContent = 'Digite os 6 números do código.';
+  const { error } = await sb.auth.verifyOtp({ email:EMAIL_DONO, token:cod, type:'email' });
+  if (error) return $('eTrava').textContent = /expired|invalid/i.test(error.message) ? 'Código errado ou vencido. Peça outro.' : traduz(error);
+  CODIGO_ENVIADO = false; mostrarTrava();
+}
+async function trocarSenhaLogin(){
+  const n = $('cfLogin').value;
+  if (n.length < 8 || !/[A-Za-z]/.test(n) || !/[0-9]/.test(n)) { $('cfLoginMsg').style.color = 'var(--bad)'; return $('cfLoginMsg').textContent = 'Use 8+ caracteres com letras e números.'; }
+  const { error } = await sb.auth.updateUser({ password:n });
+  $('cfLoginMsg').style.color = error ? 'var(--bad)' : 'var(--ok)';
+  $('cfLoginMsg').textContent = error ? traduz(error) : 'Senha do login trocada.';
+  if (!error) $('cfLogin').value = '';
 }
 async function criarSenha(){
   if ($('tS1').value !== $('tS2').value) return $('eTrava').textContent = 'As duas senhas não são iguais.';
@@ -485,7 +528,7 @@ async function carregarAlertas(){
   const t0 = Date.now();
   const { data, error } = await sb.rpc('mon_alertas', { p_todos:false, p_empresa_id:null, p_limite:300 });
   conexao(!error, Date.now() - t0);
-  if (error) { if (String(error.message).includes('monitoramento_trancado')) mostrarTrava(); return; }
+  if (error) { if (/monitoramento_trancado|falta_codigo_email/.test(String(error.message))) mostrarTrava(); return; }
   const novos = [];
   if (S.conhecidos) (data || []).forEach(a => { if (!S.conhecidos.has(a.id)) novos.push(a); });
   S.conhecidos = new Set((data || []).map(a => a.id));
