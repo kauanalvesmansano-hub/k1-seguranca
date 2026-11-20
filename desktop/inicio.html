@@ -63,8 +63,30 @@
 <script>
   const sb = supabase.createClient("https://ftswxxdhxjkwufdagkzd.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0c3d4eGRoeGprd3VmZGFna3pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4ODQxMTksImV4cCI6MjExMDQ2MDExOX0.VD2-2rIO9mjgQ0YzJgMRTkn3YvUv0W5VM7qFDvv8jWA");
   const $ = id => document.getElementById(id);
-  const ERROS = { 'Invalid login credentials':'E-mail ou senha incorretos.', 'Email not confirmed':'Confirme o seu e-mail antes de entrar (veja também o Spam).' };
-  const traduz = e => { const m = e?.message || String(e); for (const k in ERROS) if (m.includes(k)) return ERROS[k]; return m; };
+// Mensagens do servidor em português (nunca mostra erro em inglês)
+const ERROS_PT = [
+  [/error sending (magic link|recovery|confirmation|invite|email change)? ?email|535|smtp/i, 'Não foi possível enviar o e-mail agora (o servidor de e-mail recusou). Tente de novo em alguns minutos.'],
+  [/database error granting user|database error/i, 'Erro no servidor ao entrar. Feche e abra o programa e tente de novo.'],
+  [/for security purposes.*?(\d+) seconds?/i, m => `Por segurança, espere ${m[1]} segundos para pedir de novo.`],
+  [/rate limit|too many requests|over_email_send_rate_limit/i, 'Muitos pedidos seguidos. Espere alguns minutos e tente de novo.'],
+  [/token has expired|otp_expired|invalid.*token|token.*invalid/i, 'Código errado ou vencido. Peça outro código.'],
+  [/signups not allowed|user not found/i, 'Este e-mail não está cadastrado.'],
+  [/invalid login credentials/i, 'E-mail ou senha incorretos.'],
+  [/email not confirmed/i, 'Confirme o seu e-mail antes de entrar (veja também o Spam).'],
+  [/new password should be different/i, 'A senha nova precisa ser diferente da atual.'],
+  [/password should be at least|weak.?password|password is too weak/i, 'Senha fraca: use 8 ou mais caracteres, com letras e números.'],
+  [/jwt expired|session.*(missing|expired)|refresh token/i, 'A sua sessão venceu. Entre de novo.'],
+  [/failed to fetch|networkerror|network request failed|load failed/i, 'Sem internet ou servidor fora do ar. Confira a conexão e tente de novo.'],
+  [/sem_permissao/i, 'Esta conta não tem permissão para isso.'],
+  [/monitoramento_trancado|falta_codigo_email/i, 'O monitoramento está trancado. Confirme o código e a senha do monitoramento.'],
+];
+function emPortugues(e){
+  const m = String(e?.message || e || '');
+  for (const [re, txt] of ERROS_PT) { const r = m.match(re); if (r) return typeof txt === 'function' ? txt(r) : txt; }
+  return /[a-z]{4,} [a-z]{3,}/i.test(m) && !/[áéíóúãõç]/i.test(m) ? 'Não foi possível concluir agora. Tente de novo em instantes.' : m;
+}
+
+  const traduz = emPortugues;
   async function entrar(){
     $('erro').textContent = '';
     const email = $('email').value.trim(), senha = $('senha').value;

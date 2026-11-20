@@ -351,9 +351,32 @@ function ha(s){ if (!s) return '—'; const m = Math.round((Date.now() - new Dat
 const mapsUrl = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
 const bat = b => b == null ? '<span class="mut">—</span>' : `<span style="color:${b < 20 ? 'var(--bad)' : b < 40 ? 'var(--warn)' : 'var(--ok)'}">${b}%</span>`;
 const semSinal = p => p.em_turno && (!p.atualizado || Date.now() - new Date(p.atualizado) > 10 * 60000);
-const ERROS = { sem_permissao:'Esta conta não é do dono do K1.', 'Invalid login credentials':'E-mail ou senha incorretos.' };
+// Mensagens do servidor em português (nunca mostra erro em inglês)
+const ERROS_PT = [
+  [/error sending (magic link|recovery|confirmation|invite|email change)? ?email|535|smtp/i, 'Não foi possível enviar o e-mail agora (o servidor de e-mail recusou). Tente de novo em alguns minutos.'],
+  [/database error granting user|database error/i, 'Erro no servidor ao entrar. Feche e abra o programa e tente de novo.'],
+  [/for security purposes.*?(\d+) seconds?/i, m => `Por segurança, espere ${m[1]} segundos para pedir de novo.`],
+  [/rate limit|too many requests|over_email_send_rate_limit/i, 'Muitos pedidos seguidos. Espere alguns minutos e tente de novo.'],
+  [/token has expired|otp_expired|invalid.*token|token.*invalid/i, 'Código errado ou vencido. Peça outro código.'],
+  [/signups not allowed|user not found/i, 'Este e-mail não está cadastrado.'],
+  [/invalid login credentials/i, 'E-mail ou senha incorretos.'],
+  [/email not confirmed/i, 'Confirme o seu e-mail antes de entrar (veja também o Spam).'],
+  [/new password should be different/i, 'A senha nova precisa ser diferente da atual.'],
+  [/password should be at least|weak.?password|password is too weak/i, 'Senha fraca: use 8 ou mais caracteres, com letras e números.'],
+  [/jwt expired|session.*(missing|expired)|refresh token/i, 'A sua sessão venceu. Entre de novo.'],
+  [/failed to fetch|networkerror|network request failed|load failed/i, 'Sem internet ou servidor fora do ar. Confira a conexão e tente de novo.'],
+  [/sem_permissao/i, 'Esta conta não tem permissão para isso.'],
+  [/monitoramento_trancado|falta_codigo_email/i, 'O monitoramento está trancado. Confirme o código e a senha do monitoramento.'],
+];
+function emPortugues(e){
+  const m = String(e?.message || e || '');
+  for (const [re, txt] of ERROS_PT) { const r = m.match(re); if (r) return typeof txt === 'function' ? txt(r) : txt; }
+  return /[a-z]{4,} [a-z]{3,}/i.test(m) && !/[áéíóúãõç]/i.test(m) ? 'Não foi possível concluir agora. Tente de novo em instantes.' : m;
+}
+
+const ERROS = { sem_permissao:'Esta conta não é do dono do K1.' };
 const traduzBase = e => { const m = e?.message || String(e); for (const k in ERROS) if (m.includes(k)) return ERROS[k]; return m; };
-const traduz = traduzBase;
+const traduz = e => { const m = String(e?.message || e || ''); for (const k in ERROS) if (m.includes(k)) return ERROS[k]; return emPortugues(e); };
 
 // ================= LOGIN =================
 async function entrar(){
@@ -368,7 +391,7 @@ const TRAVA_ERROS = {
   muitas_tentativas:'Muitas tentativas erradas. Espere 15 minutos.', senha_fraca:'A senha precisa ter 8 ou mais caracteres, com letras e números.',
   limite_de_aparelhos:'Já existem 5 computadores autorizados. Remova um em Configurações.', senha_ja_criada:'A senha já foi criada.'
 };
-const travaErro = m => TRAVA_ERROS[m] || m;
+const travaErro = m => TRAVA_ERROS[m] || emPortugues(m);
 let CHAVE = null, APP_ABERTO = false;
 function campoSenha(id, ph){ return `<label>${ph}</label><input id="${id}" type="password" style="width:100%" onkeydown="if(event.key==='Enter')$('btnTrava').click()">`; }
 async function iniciar(){
@@ -414,18 +437,22 @@ async function mostrarTrava(){
 }
 let EMAIL_DONO = '', CODIGO_ENVIADO = false, ESPERA = 0;
 async function enviarCodigo(){
-  if (Date.now() < ESPERA) return $('eTrava').textContent = `Espere ${Math.ceil((ESPERA - Date.now()) / 1000)} s para pedir outro código.`;
+  const b = $('btnReenviar');
+  $('eTrava').style.color = '';
+  if (Date.now() < ESPERA) return $('eTrava').textContent = `Por segurança, espere ${Math.ceil((ESPERA - Date.now()) / 1000)} segundos para pedir outro código.`;
+  if (b) { b.disabled = true; b.textContent = 'Enviando…'; }
+  $('eTrava').textContent = 'Enviando o código para o seu e-mail…';
   const { error } = await sb.auth.signInWithOtp({ email:EMAIL_DONO, options:{ shouldCreateUser:false } });
-  if (error) return $('eTrava').textContent = /rate|security purposes/i.test(error.message) ? 'Espere um pouco para pedir outro código.' : traduz(error);
+  if (b) { b.disabled = false; b.textContent = 'Reenviar código'; }
+  if (error) { $('eTrava').style.color = ''; return $('eTrava').textContent = traduz(error); }
   CODIGO_ENVIADO = true; ESPERA = Date.now() + 60000;
-  $('eTrava').style.color = 'var(--ok)'; $('eTrava').textContent = 'Código enviado para o seu e-mail.';
-  setTimeout(() => { $('eTrava').style.color = ''; }, 4000);
+  $('eTrava').style.color = 'var(--ok)'; $('eTrava').textContent = '✔ Código enviado. Veja o seu e-mail (e a caixa de Spam).';
 }
 async function confirmarCodigo(){
   const cod = ($('tCod').value || '').replace(/\D/g, '');
   if (cod.length !== 6) return $('eTrava').textContent = 'Digite os 6 números do código.';
   const { error } = await sb.auth.verifyOtp({ email:EMAIL_DONO, token:cod, type:'email' });
-  if (error) return $('eTrava').textContent = /expired|invalid/i.test(error.message) ? 'Código errado ou vencido. Peça outro.' : traduz(error);
+  if (error) return $('eTrava').textContent = traduz(error);
   CODIGO_ENVIADO = false; mostrarTrava();
 }
 async function trocarSenhaLogin(){

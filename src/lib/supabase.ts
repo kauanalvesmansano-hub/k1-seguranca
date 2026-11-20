@@ -61,8 +61,23 @@ const ERROS: Record<string, string> = {
 export function traduzErro(e: unknown): string {
   const msg = e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : String(e);
   for (const k of Object.keys(ERROS)) if (msg.includes(k)) return ERROS[k];
-  return msg;
+  for (const [re, txt] of ERROS_PT) { const r = msg.match(re); if (r) return typeof txt === 'function' ? txt(r) : txt; }
+  // nunca mostra frase em inglês para o usuário
+  return /[a-z]{4,} [a-z]{3,}/i.test(msg) && !/[áéíóúãõç]/i.test(msg) ? 'Não foi possível concluir agora. Tente de novo em instantes.' : msg;
 }
+
+const ERROS_PT: [RegExp, string | ((m: RegExpMatchArray) => string)][] = [
+  [/error sending (magic link|recovery|confirmation|invite|email change)? ?email|535|smtp/i, 'Não foi possível enviar o e-mail agora (o servidor de e-mail recusou). Tente de novo em alguns minutos.'],
+  [/database error granting user|database error/i, 'Erro no servidor ao entrar. Tente de novo.'],
+  [/for security purposes.*?(\d+) seconds?/i, m => `Por segurança, espere ${m[1]} segundos para pedir de novo.`],
+  [/rate limit|too many requests/i, 'Muitos pedidos seguidos. Espere alguns minutos e tente de novo.'],
+  [/token has expired|otp_expired|invalid.*token|token.*invalid/i, 'Código ou link vencido. Peça outro.'],
+  [/signups not allowed|user not found/i, 'Este e-mail não está cadastrado.'],
+  [/new password should be different/i, 'A senha nova precisa ser diferente da atual.'],
+  [/password should be at least|weak.?password/i, 'Senha fraca: use 8 ou mais caracteres, com letras e números.'],
+  [/jwt expired|refresh token/i, 'A sua sessão venceu. Entre de novo.'],
+  [/failed to fetch|network request failed|networkerror/i, 'Sem internet. Confira a conexão e tente de novo.'],
+];
 
 /** Para onde o link do e-mail de confirmação manda (abre o próprio app). */
 export const LINK_CONFIRMACAO = 'k1seguranca://confirmado';
