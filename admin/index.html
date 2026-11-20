@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>K1 Segurança — Administração</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--bg:#0b0f14;--panel:#121821;--line:#243041;--txt:#e6edf3;--mut:#8b98a8;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--red:#e10600}
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+  button{font:inherit;cursor:pointer;border:0;border-radius:8px;padding:8px 13px;background:var(--red);color:#fff;font-weight:600}
+  button.sec{background:#18202b;border:1px solid var(--line);color:var(--txt)} button.ok{background:#15803d} button.sm{padding:5px 10px;font-size:12px}
+  input{font:inherit;width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:#0e141c;color:var(--txt)}
+  label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+  .hidden{display:none!important} .mut{color:var(--mut)} .err{color:var(--bad);min-height:1em;margin-top:8px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:2px solid var(--red);background:var(--panel)}
+  main{max-width:1200px;margin:0 auto;padding:20px;display:grid;gap:16px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px} .stat b{display:block;font-size:24px;margin-top:4px}
+  table{width:100%;border-collapse:collapse} th,td{text-align:left;padding:9px;border-bottom:1px solid var(--line)} th{color:var(--mut);font-size:12px}
+  .badge{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
+  .b-ok{background:#14532d;color:#86efac}.b-warn{background:#78350f;color:#fcd34d}.b-bad{background:#7f1d1d;color:#fca5a5}.b-off{background:#1e293b;color:#94a3b8}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 12px}
+  h2{margin:0 0 12px;font-size:17px}
+  @media(max-width:800px){.stats,.grid3{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<script>
+  // Mesmos valores do painel (Supabase > Project Settings > API)
+  const SUPABASE_URL = "https://ftswxxdhxjkwufdagkzd.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0c3d4eGRoeGprd3VmZGFna3pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4ODQxMTksImV4cCI6MjExMDQ2MDExOX0.VD2-2rIO9mjgQ0YzJgMRTkn3YvUv0W5VM7qFDvv8jWA";
+</script>
+
+<section id="tLogin" class="center"><div class="card" style="width:100%;max-width:380px">
+  <h2>K1 Segurança — Administração</h2>
+  <p class="mut">Acesso somente para o dono da K1.</p>
+  <label>E-mail</label><input id="email" type="email">
+  <label>Senha</label><input id="senha" type="password">
+  <button style="width:100%;margin-top:14px" onclick="entrar()">Entrar</button>
+  <div id="eLogin" class="err"></div>
+</div></section>
+
+<section id="tAdmin" class="hidden">
+  <header><b>K1 SEGURANÇA · Administração</b><div><button class="sec sm" onclick="carregar()">Atualizar</button> <button class="sec sm" onclick="sair()">Sair</button></div></header>
+  <main>
+    <div class="stats">
+      <div class="card mut">Empresas ativas<b id="sAtivas" style="color:var(--ok)">0</b></div>
+      <div class="card mut">Bloqueadas / encerradas<b id="sBloq" style="color:var(--bad)">0</b></div>
+      <div class="card mut">A receber<b id="sReceber" style="color:var(--warn)">R$ 0</b></div>
+      <div class="card mut">Recebido no mês<b id="sRecebido">R$ 0</b></div>
+    </div>
+
+    <div class="card" id="cardSos" style="border-color:#7f1d1d">
+      <h2>🚨 SOS ao vivo — Plano do Vigilante e Família <span id="sosQtd" class="mut" style="font-size:13px"></span></h2>
+      <p class="mut" style="margin-top:0;font-size:13px">Pedidos de socorro das últimas 24 h de quem não tem central própria. Abra a câmera/áudio, veja o mapa e, se for perigo, ligue 190 e passe o endereço. A lista atualiza sozinha a cada 15 s e apita quando chega um novo.</p>
+      <div style="overflow:auto"><table><thead><tr><th>Quando</th><th>Pessoa</th><th>Plano</th><th>Situação</th><th></th></tr></thead>
+      <tbody id="tbSos"></tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Faturas</h2>
+      <div style="overflow:auto"><table><thead><tr><th>Empresa</th><th>Mês</th><th>Vigilantes</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Continuar?</th><th></th></tr></thead>
+      <tbody id="tbFat"></tbody></table></div>
+      <div style="margin-top:12px"><button class="sec" onclick="gerarAgora()">Gerar faturas do mês agora</button>
+      <span class="mut small">(normalmente é automático a partir do dia de fechamento)</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Empresas</h2>
+      <div style="overflow:auto"><table><thead><tr><th>Empresa</th><th>Responsável</th><th>Vigilantes ativos</th><th>Plano</th><th></th></tr></thead>
+      <tbody id="tbEmp"></tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h2>Seu Pix e regras de cobrança</h2>
+      <div class="grid3">
+        <div><label>Chave Pix</label><input id="cChave"></div>
+        <div><label>Nome do favorecido</label><input id="cNome"></div>
+        <div><label>Cidade</label><input id="cCidade"></div>
+        <div><label>Seu WhatsApp (comprovantes)</label><input id="cZap" placeholder="5511999998888"></div>
+        <div><label>Valor por vigilante (R$)</label><input id="cValor" type="number" step="0.01"></div>
+        <div><label>Valor com desconto por volume (R$)</label><input id="cVolume" type="number" step="0.01"></div>
+        <div><label>Desconto a partir de quantos vigilantes</label><input id="cVolA" type="number"></div>
+        <div><label>Dias de teste grátis</label><input id="cTeste" type="number"></div>
+        <div><label>Dia de fechamento (1–28)</label><input id="cDia" type="number"></div>
+        <div><label>Dias para pagar após o mês</label><input id="cDias" type="number"></div>
+      </div>
+      <button style="margin-top:14px" onclick="salvarConfig()">Salvar</button>
+      <span class="mut">As faturas novas usam esses dados.</span>
+      <div id="eCfg" class="err"></div>
+    </div>
+  </main>
+</section>
+
+<script>
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const brl = n => Number(n || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+const dt = d => d ? d.slice(0,10).split('-').reverse().join('/') : '—';
+const mes = d => d ? d.slice(5,7) + '/' + d.slice(0,4) : '—';
+const ST = { aberta:['Aberta','b-warn'], vencida:['Vencida','b-bad'], paga:['Paga','b-ok'], cancelada:['Cancelada','b-off'] };
+const PL = { ativo:['Ativo','b-ok'], bloqueado:['Bloqueado','b-bad'], encerrado:['Encerrado','b-off'] };
+let R = null;
+
+async function entrar(){
+  $('eLogin').textContent = '';
+  const { error } = await sb.auth.signInWithPassword({ email:$('email').value.trim(), password:$('senha').value });
+  if (error) { $('eLogin').textContent = 'E-mail ou senha incorretos.'; return; }
+  iniciar();
+}
+async function sair(){ await sb.auth.signOut(); location.reload(); }
+
+async function iniciar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session) return;
+  const { data:adm } = await sb.rpc('eh_k1_admin');
+  if (!adm) { $('eLogin').textContent = 'Esta conta não é administradora da K1.'; await sb.auth.signOut(); return; }
+  $('tLogin').classList.add('hidden'); $('tAdmin').classList.remove('hidden');
+  carregar();
+}
+
+// ===== SOS do Plano do Vigilante e da Família (o dono do K1 acompanha) =====
+const LINK_SOS = new URL('../sos/index.html', location.href).href.split('#')[0];
+let sosVistos = null, somSos = null;
+async function carregarSos(){
+  const { data, error } = await sb.rpc('admin_sos_ativos'); if (error) return;
+  const abertos = data.filter(a => a.status !== 'resolvido');
+  $('sosQtd').textContent = abertos.length ? `(${abertos.length} em aberto)` : '';
+  const TIPO = { panico:'PÂNICO (Power 4x)', coacao:'COAÇÃO', sem_movimento:'CAÍDO / SEM MOVIMENTO', batida:'POSSÍVEL ACIDENTE' };
+  $('tbSos').innerHTML = data.length ? data.map(a => `<tr>
+    <td>${new Date(a.criado_em).toLocaleString('pt-BR')}</td>
+    <td><b>${esc(a.pessoa)}</b><div class="mut" style="font-size:12px">${esc(a.local || '')}${a.telefone ? ' · ' + esc(a.telefone) : ''}</div>
+      <div class="mut" style="font-size:12px">${(a.contatos || []).map(c => esc(c.nome) + ' ' + esc(c.whatsapp)).join(' · ')}</div></td>
+    <td>${a.plano === 'autonomo' ? 'Vigilante' : 'Família'}<div class="mut" style="font-size:12px">${esc(a.conta)}</div></td>
+    <td><b style="color:${a.status === 'resolvido' ? 'var(--ok)' : 'var(--bad)'}">${TIPO[a.tipo] || a.tipo}</b><div class="mut" style="font-size:12px">${a.status}${a.trechos ? ' · ' + a.trechos + ' trecho(s) de vídeo' : ''}</div></td>
+    <td style="white-space:nowrap">
+      ${a.token ? `<a href="${LINK_SOS}#${a.token}" target="_blank" rel="noopener"><button class="sm">🎥 Ao vivo</button></a>` : ''}
+      ${a.lat != null ? `<a href="https://www.google.com/maps?q=${a.lat},${a.lng}" target="_blank" rel="noopener"><button class="sm sec">Mapa</button></a>` : ''}
+      ${a.status !== 'resolvido' ? `<button class="sm sec" onclick="resolverSos('${a.id}')">Resolver</button>` : ''}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="mut">Nenhum pedido de socorro nas últimas 24 h.</td></tr>';
+  const ids = new Set(abertos.map(a => a.id));
+  if (sosVistos && [...ids].some(id => !sosVistos.has(id))) {
+    try { somSos = somSos || new (window.AudioContext || window.webkitAudioContext)();
+      [0, .3, .6].forEach(t => { const o = somSos.createOscillator(), g = somSos.createGain(); o.type = 'square'; o.frequency.value = 880; g.gain.value = .15;
+        o.connect(g); g.connect(somSos.destination); o.start(somSos.currentTime + t); o.stop(somSos.currentTime + t + .2); }); } catch {}
+    document.title = '🚨 SOS — K1 Administração';
+  }
+  sosVistos = ids;
+}
+async function resolverSos(id){
+  const obs = prompt('O que foi feito? (ex.: PM acionada, pessoa bem)', ''); if (obs === null) return;
+  const { error } = await sb.rpc('admin_resolver_sos', { p_alerta_id:id, p_observacao:obs }); if (error) return alert(error.message);
+  carregarSos();
+}
+setInterval(() => { if (!$('tAdmin').classList.contains('hidden')) carregarSos(); }, 15000);
+
+async function carregar(){
+  carregarSos();
+  const { data, error } = await sb.rpc('admin_resumo');
+  if (error) return alert(error.message);
+  R = data;
+  const emp = R.empresas, fat = R.faturas, cfg = R.config;
+  $('sAtivas').textContent = emp.filter(e => e.plano_status === 'ativo').length;
+  $('sBloq').textContent = emp.filter(e => e.plano_status !== 'ativo').length;
+  $('sReceber').textContent = brl(fat.filter(f => f.status === 'aberta' || f.status === 'vencida').reduce((s, f) => s + Number(f.valor_total), 0));
+  const mesAtual = new Date().toISOString().slice(0,7);
+  $('sRecebido').textContent = brl(fat.filter(f => f.status === 'paga' && (f.paga_em || '').slice(0,7) === mesAtual).reduce((s, f) => s + Number(f.valor_total), 0));
+
+  $('tbFat').innerHTML = fat.length ? fat.map(f => `<tr>
+    <td>${esc(f.empresa)}</td><td>${mes(f.competencia)}</td><td>${f.qtd_vigilantes}</td><td><b>${brl(f.valor_total)}</b></td>
+    <td>${dt(f.vencimento)}</td><td><span class="badge ${ST[f.status][1]}">${ST[f.status][0]}</span>${f.paga_em ? `<div class="mut" style="font-size:11px">em ${dt(f.paga_em)}</div>` : ''}</td>
+    <td>${f.renovar === null ? '<span class="mut">Não respondeu</span>' : f.renovar ? '✅ Sim' : '❌ Não'}</td>
+    <td>${f.status === 'aberta' || f.status === 'vencida' ? `<button class="ok sm" onclick="confirmar('${f.id}')">Confirmar pagamento</button>` : ''}</td>
+  </tr>`).join('') : '<tr><td colspan="8" class="mut">Nenhuma fatura ainda.</td></tr>';
+
+  $('tbEmp').innerHTML = emp.length ? emp.map(e => `<tr>
+    <td>${esc(e.nome)}<div class="mut" style="font-size:11px">${esc(e.cnpj || '')}</div></td><td>${esc(e.responsavel || '—')}</td><td>${e.vigilantes_ativos}</td>
+    <td><span class="badge ${PL[e.plano_status][1]}">${PL[e.plano_status][0]}</span></td>
+    <td>${e.plano_status === 'ativo'
+      ? `<button class="sec sm" onclick="definir('${e.id}','bloqueado')">Bloquear</button>`
+      : `<button class="ok sm" onclick="definir('${e.id}','ativo')">Liberar</button>`}</td></tr>`).join('') : '<tr><td colspan="5" class="mut">Nenhuma empresa.</td></tr>';
+
+  $('cChave').value = cfg.pix_chave; $('cNome').value = cfg.pix_nome; $('cCidade').value = cfg.pix_cidade;
+  $('cZap').value = cfg.whatsapp || ''; $('cValor').value = cfg.valor_por_vigilante; $('cVolume').value = cfg.valor_volume ?? 20; $('cVolA').value = cfg.volume_a_partir ?? 16; $('cTeste').value = cfg.dias_teste ?? 7; $('cDia').value = cfg.dia_fechamento; $('cDias').value = cfg.dias_para_pagar;
+}
+
+async function confirmar(id){
+  const f = R.faturas.find(x => x.id === id); if (!f) return;
+  if (!confirm(`Confirmar que ${f.empresa} pagou ${brl(f.valor_total)}?\nSe estiver bloqueada, o acesso será liberado na hora.`)) return;
+  const { error } = await sb.rpc('admin_confirmar_pagamento', { p_fatura_id:id });
+  if (error) return alert(error.message);
+  carregar();
+}
+async function definir(id, status){
+  if (!confirm(status === 'ativo' ? 'Liberar o acesso desta empresa?' : 'Bloquear o acesso desta empresa agora?')) return;
+  const { error } = await sb.rpc('admin_definir_status', { p_empresa_id:id, p_status:status });
+  if (error) return alert(error.message);
+  carregar();
+}
+async function gerarAgora(){
+  if (!confirm('Gerar agora a fatura do mês para todas as empresas ativas que ainda não têm?')) return;
+  const { data, error } = await sb.rpc('admin_gerar_faturas_agora');
+  if (error) return alert(error.message);
+  alert(`${data} fatura(s) gerada(s).`); carregar();
+}
+async function salvarConfig(){
+  $('eCfg').textContent = '';
+  const upd = { pix_chave:$('cChave').value.trim(), pix_nome:$('cNome').value.trim(), pix_cidade:$('cCidade').value.trim(),
+    whatsapp:$('cZap').value.replace(/\D/g,'') || null, valor_por_vigilante:Number($('cValor').value), valor_volume:Number($('cVolume').value), volume_a_partir:parseInt($('cVolA').value,10), dias_teste:parseInt($('cTeste').value,10),
+    dia_fechamento:parseInt($('cDia').value,10), dias_para_pagar:parseInt($('cDias').value,10) };
+  const { error } = await sb.from('config_k1').update(upd).eq('id', 1);
+  if (error) { $('eCfg').textContent = error.message; return; }
+  $('eCfg').style.color = 'var(--ok)'; $('eCfg').textContent = 'Salvo!';
+}
+
+if (SUPABASE_URL.startsWith('COLE_')) document.body.innerHTML = '<div class="center"><div class="card">Preencha SUPABASE_URL e SUPABASE_ANON_KEY no topo deste arquivo.</div></div>';
+else iniciar();
+</script>
+</body>
+</html>
