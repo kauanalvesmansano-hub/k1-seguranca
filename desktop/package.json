@@ -1,7 +1,7 @@
 {
   "name": "k1-seguranca-pc",
   "productName": "K1 Segurança",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "K1 Segurança para computador: K1 Monitoramento e Painel da Empresa",
   "author": "K1 Segurança",
   "main": "main.js",

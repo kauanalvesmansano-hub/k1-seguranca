@@ -22,6 +22,10 @@ function chaveDoComputador() {
 ipcMain.handle('k1-chave', () => chaveDoComputador());
 ipcMain.handle('k1-nome', () => `${os.hostname()} (${os.userInfo().username})`);
 
+// O nome "K1 Segurança" (com ç) entra no User-Agent e o servidor de login recusa (texto fora do padrão UTF-8).
+// Deixa o User-Agent só com letras simples.
+app.userAgentFallback = app.userAgentFallback.replace(/K1 Segurança\/[\d.]+\s*/g, 'K1Seguranca/' + app.getVersion() + ' ').replace(/[^\x20-\x7E]/g, '');
+
 // alarme toca sem precisar clicar e continua com a janela minimizada
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
@@ -34,6 +38,7 @@ function criar() {
     title: 'K1 Segurança', icon: path.join(__dirname, 'icone.png'), show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, backgroundThrottling: false },
   });
+  janela.webContents.setUserAgent(app.userAgentFallback);
   janela.once('ready-to-show', () => { janela.maximize(); janela.show(); });
   janela.loadFile('inicio.html');
   // links externos (Google Maps, WhatsApp, telefone) abrem fora do programa
