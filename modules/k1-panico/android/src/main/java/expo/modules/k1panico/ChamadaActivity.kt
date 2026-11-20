@@ -98,6 +98,8 @@ class ChamadaActivity : Activity() {
       if (bateria >= 0) "bateria $bateria%" else null
     ).joinToString(" · ")
     if (detalhes.isNotBlank()) raiz.addView(texto(detalhes, 16f, cor = Color.parseColor("#FEE2E2")))
+    val panico = tipo == "panico"
+    if (panico) raiz.addView(texto("Apertou o botão Power 4 vezes: possível ASSALTO no local agora. Evite ligar para o celular do vigilante: ele pode estar com o assaltante.", 16f, true, Color.parseColor("#FDE68A")))
 
     raiz.addView(botao("Atender", Color.parseColor("#16A34A")) {
       enviarAoServico(CentralService.ACAO_ATENDER)
@@ -117,13 +119,13 @@ class ChamadaActivity : Activity() {
     }
     if (!lat.isNaN() && !lng.isNaN()) {
       raiz.addView(botao("Ver no mapa", Color.parseColor("#1D4ED8")) {
-        enviarAoServico(CentralService.ACAO_SILENCIAR)
+        if (!panico) enviarAoServico(CentralService.ACAO_SILENCIAR) // pânico: só para de tocar quando ATENDER
         try {
           startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps?q=$lat,$lng")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         } catch (_: Exception) {}
       })
     }
-    raiz.addView(botao("Silenciar", Color.parseColor("#3F3F46")) {
+    if (!panico) raiz.addView(botao("Silenciar", Color.parseColor("#3F3F46")) {
       enviarAoServico(CentralService.ACAO_SILENCIAR)
     })
     setContentView(raiz)
