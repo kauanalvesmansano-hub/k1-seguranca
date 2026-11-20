@@ -93,6 +93,8 @@ class ChamadaActivity : Activity() {
     raiz.addView(tit)
     raiz.addView(texto(nome, 26f, true))
     if (posto.isNotBlank()) raiz.addView(texto(posto, 18f))
+    val empresa = i.getStringExtra("empresa") ?: ""
+    if (empresa.isNotBlank()) raiz.addView(texto("Empresa: $empresa", 16f, cor = Color.parseColor("#FECACA")))
     val detalhes = listOfNotNull(
       hora.takeIf { it.isNotBlank() }?.let { "às $it" },
       if (bateria >= 0) "bateria $bateria%" else null

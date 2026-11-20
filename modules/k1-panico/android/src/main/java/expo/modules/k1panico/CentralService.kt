@@ -95,9 +95,10 @@ class CentralService : Service() {
       else -> "Foi disparado um alerta"
     }
 
-    fun frase(tipo: String, nome: String, posto: String, detalhe: String, aoVivo: Boolean = false): String {
+    fun frase(tipo: String, nome: String, posto: String, detalhe: String, aoVivo: Boolean = false, empresa: String = ""): String {
       val partes = mutableListOf("Atenção, central K1 Segurança. Alerta de ${titulo(tipo).lowercase().replace("—", ",")}.")
-      partes.add("Vigilante ${nome.ifBlank { "não identificado" }}" + (if (posto.isNotBlank()) ", posto $posto." else "."))
+      partes.add("Vigilante ${nome.ifBlank { "não identificado" }}" + (if (empresa.isNotBlank()) ", da empresa $empresa" else "") +
+        (if (posto.isNotBlank()) ", posto $posto." else "."))
       partes.add(motivo(tipo) + ".")
       if (detalhe.isNotBlank()) partes.add(detalhe.trimEnd('.') + ".")
       if (aoVivo) partes.add("A câmera e o áudio do celular dele estão sendo transmitidos ao vivo. Toque em Ver câmera ao vivo.")
@@ -292,7 +293,7 @@ class CentralService : Service() {
     val nome = a.optString("vigilante")
     val posto = a.optString("posto")
     val critico = forcarChamada || tipo in CRITICOS
-    val texto = listOf(nome, posto).filter { it.isNotBlank() }.joinToString(" · ").ifBlank { "Vigilante" }
+    val texto = listOf(nome, posto, a.optString("empresa")).filter { it.isNotBlank() }.joinToString(" · ").ifBlank { "Vigilante" }
 
     val tela = Intent(this, ChamadaActivity::class.java).apply {
       flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -300,6 +301,7 @@ class CentralService : Service() {
       putExtra("tipo", tipo)
       putExtra("nome", nome)
       putExtra("posto", posto)
+      putExtra("empresa", a.optString("empresa"))
       putExtra("lat", if (a.isNull("lat")) Double.NaN else a.optDouble("lat", Double.NaN))
       putExtra("lng", if (a.isNull("lng")) Double.NaN else a.optDouble("lng", Double.NaN))
       putExtra("bateria", if (a.isNull("bateria")) -1 else a.optInt("bateria", -1))
@@ -326,7 +328,7 @@ class CentralService : Service() {
     // Todo alerta toca sem parar até ser resolvido ou silenciado
     b.setOngoing(true)
     tocando.add(id)
-    falas[id] = frase(tipo, nome, posto, a.optString("detalhe"), (tipo == "panico" || tipo == "coacao") && a.optBoolean("gravar_sos", false))
+    falas[id] = frase(tipo, nome, posto, a.optString("detalhe"), (tipo == "panico" || tipo == "coacao") && a.optBoolean("gravar_sos", false), a.optString("empresa"))
     tocar()
     handler.removeCallbacks(vozCiclo)
     handler.postDelayed(vozCiclo, 2_500) // deixa tocar um pouco e já explica o alerta

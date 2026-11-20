@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https://unpkg.com https://*.openstreetmap.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.openstreetmap.org; media-src 'self' blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>K1 Monitoramento</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--bg:#07090d;--panel:#10151d;--panel2:#0c1118;--line:#1f2a38;--txt:#e6edf3;--mut:#8b98a8;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--red:#e10600;--acc:#3b82f6}
+  *{box-sizing:border-box} html,body{height:100%} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+  button{font:inherit;cursor:pointer;border:0;border-radius:8px;padding:7px 12px;background:var(--red);color:#fff;font-weight:600}
+  button.sec{background:#18202b;border:1px solid var(--line);color:var(--txt)} button.ok{background:#15803d} button.acc{background:#1d4ed8} button.sm{padding:4px 9px;font-size:12px}
+  button:disabled{opacity:.5;cursor:default}
+  input,select,textarea{font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:#0b1017;color:var(--txt)}
+  label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+  a{color:#93c5fd}
+  .hidden{display:none!important} .mut{color:var(--mut)} .small{font-size:12px} .err{color:var(--bad);min-height:1em;margin-top:8px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+  .b-ok{background:#14532d;color:#86efac}.b-warn{background:#78350f;color:#fcd34d}.b-bad{background:#7f1d1d;color:#fca5a5}.b-off{background:#1e293b;color:#94a3b8}.b-acc{background:#1e3a8a;color:#bfdbfe}.b-pur{background:#4c1d95;color:#ddd6fe}
+  table{width:100%;border-collapse:collapse} th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top} th{color:var(--mut);font-size:12px;font-weight:600;position:sticky;top:0;background:var(--panel)}
+  tr.click{cursor:pointer} tr.click:hover{background:#141c27}
+
+  /* layout */
+  #app{display:grid;grid-template-rows:auto auto 1fr;height:100vh}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 16px;border-bottom:2px solid var(--red);background:var(--panel)}
+  header .logo{font-weight:900;letter-spacing:1px} header .logo span{color:var(--red)}
+  #banner{background:#991b1b;color:#fff;padding:10px 16px;display:flex;gap:10px;align-items:center;font-weight:700;animation:pisca 1s infinite}
+  @keyframes pisca{50%{background:#dc2626}}
+  #corpo{display:grid;grid-template-columns:400px 1fr;min-height:0}
+  #fila{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:var(--panel2)}
+  #filaTopo{padding:10px 12px;border-bottom:1px solid var(--line)}
+  #filaLista{overflow:auto;padding:10px;display:grid;gap:8px;align-content:start}
+  .al{border:1px solid var(--line);border-left:5px solid var(--warn);border-radius:10px;padding:10px;background:var(--panel)}
+  .al.crit{border-left-color:var(--red)} .al.atend{border-left-color:var(--acc);opacity:.92}
+  .al.novo{box-shadow:0 0 0 2px #ef4444 inset}
+  .al h4{margin:0 0 4px;font-size:14px;display:flex;justify-content:space-between;gap:6px}
+  .al .acoes{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  #principal{display:flex;flex-direction:column;min-height:0}
+  nav{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap;background:var(--panel)}
+  nav button{background:transparent;color:var(--mut);border:1px solid transparent} nav button.on{background:#18202b;color:#fff;border-color:var(--line)}
+  .aba{flex:1;overflow:auto;padding:14px;min-height:0}
+  .stats{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--mut)} .stat b{display:block;font-size:20px;color:var(--txt);margin-top:2px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+  .emp{cursor:pointer} .emp:hover{border-color:#334155}
+  .emp h3{margin:0 0 6px;font-size:15px;display:flex;justify-content:space-between;gap:8px}
+  .linha{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  #mapaGeral{height:calc(100vh - 230px);min-height:420px;border-radius:12px;border:1px solid var(--line)}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:flex-start;justify-content:center;padding:30px 16px;overflow:auto;z-index:2000}
+  .modal .card{width:100%;max-width:1100px}
+  .bar{height:16px;background:var(--red);border-radius:4px;min-width:2px}
+  .barras td{padding:4px 8px}
+  .ponto{width:10px;height:10px;border-radius:50%;display:inline-block}
+  @media(max-width:1000px){#corpo{grid-template-columns:1fr} #fila{max-height:45vh;border-right:0;border-bottom:1px solid var(--line)} .stats{grid-template-columns:repeat(3,1fr)}}
+  @media print{header,#banner,#fila,nav,.stats,.noprint{display:none!important} #corpo{display:block} .aba{overflow:visible} body{background:#fff;color:#000} .card{border-color:#ccc;background:#fff}}
+</style>
+</head>
+<body>
+<script>
+  const SUPABASE_URL = "https://ftswxxdhxjkwufdagkzd.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0c3d4eGRoeGprd3VmZGFna3pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4ODQxMTksImV4cCI6MjExMDQ2MDExOX0.VD2-2rIO9mjgQ0YzJgMRTkn3YvUv0W5VM7qFDvv8jWA";
+</script>
+
+<section id="tLogin" class="center"><div class="card" style="width:100%;max-width:380px">
+  <div style="font-weight:900;font-size:20px;letter-spacing:1px">K1 <span style="color:var(--red)">MONITORAMENTO</span></div>
+  <p class="mut">Central geral: todas as empresas, vigilantes, caminhoneiros e famílias. Acesso só do dono do K1.</p>
+  <label>E-mail</label><input id="email" type="email" style="width:100%">
+  <label>Senha</label><input id="senha" type="password" style="width:100%" onkeydown="if(event.key==='Enter')entrar()">
+  <button style="width:100%;margin-top:14px" onclick="entrar()">Entrar</button>
+  <div id="eLogin" class="err"></div>
+</div></section>
+
+<div id="app" class="hidden">
+  <div>
+    <header>
+      <div class="logo">K1 <span>MONITORAMENTO</span> <span class="mut small" id="hora" style="font-weight:400;letter-spacing:0"></span></div>
+      <div class="linha">
+        <label class="small mut" style="margin:0;display:flex;gap:6px;align-items:center"><input type="checkbox" id="vozLig" checked> Voz</label>
+        <button class="sec sm" onclick="testarAlarme()">Testar alarme</button>
+        <button class="sec sm" onclick="carregarTudo()">Atualizar</button>
+        <button class="sec sm" onclick="sair()">Sair</button>
+      </div>
+    </header>
+    <div id="banner" class="hidden"><span id="bannerTxt" style="flex:1"></span><button class="sec sm" onclick="atenderPrimeiro()">Atender</button><button class="sec sm" onclick="silenciarTodos()">Silenciar</button></div>
+  </div>
+  <div class="stats">
+    <div class="stat">Empresas<b id="sEmp">0</b></div>
+    <div class="stat">Individuais / caminhoneiros<b id="sInd">0</b></div>
+    <div class="stat">Pessoas em turno<b id="sTurno">0</b></div>
+    <div class="stat">Sem sinal (&gt;10 min)<b id="sSinal" style="color:var(--warn)">0</b></div>
+    <div class="stat">Alertas abertos (24 h)<b id="sAlertas" style="color:var(--bad)">0</b></div>
+    <div class="stat">SOS ao vivo<b id="sSos" style="color:var(--red)">0</b></div>
+  </div>
+  <div id="corpo">
+    <aside id="fila">
+      <div id="filaTopo">
+        <div class="linha" style="justify-content:space-between"><b>Fila de alertas <span id="filaQtd" class="mut"></span></b>
+          <button class="sec sm" id="btnVarios" onclick="modoVarios()">Selecionar vários</button></div>
+        <div class="linha" style="margin-top:8px">
+          <select id="filaFiltro" onchange="renderFila()" style="flex:1">
+            <option value="">Todos os tipos</option><option value="crit">Só críticos (pânico, coação, homem caído, batida)</option>
+          </select>
+          <input id="filaBusca" placeholder="Buscar pessoa / empresa" oninput="renderFila()" style="flex:1;min-width:0">
+        </div>
+        <div id="variosBar" class="linha hidden" style="margin-top:8px"><span class="small mut" id="variosQtd">0 selecionados</span>
+          <button class="ok sm" onclick="resolverSelecionados()">Resolver selecionados</button><button class="sec sm" onclick="modoVarios()">Cancelar</button></div>
+      </div>
+      <div id="filaLista"></div>
+    </aside>
+    <section id="principal">
+      <nav>
+        <button data-tab="mapa" class="on" onclick="aba('mapa')">Mapa geral</button>
+        <button data-tab="empresas" onclick="aba('empresas')">Empresas</button>
+        <button data-tab="individuais" onclick="aba('individuais')">Individuais e caminhoneiros</button>
+        <button data-tab="familias" onclick="aba('familias')">Família</button>
+        <button data-tab="historico" onclick="aba('historico')">Histórico de alertas</button>
+        <button data-tab="ocorrencias" onclick="aba('ocorrencias')">Ocorrências</button>
+        <button data-tab="livro" onclick="aba('livro')">Livro</button>
+        <button data-tab="relatorios" onclick="aba('relatorios')">Relatórios</button>
+      </nav>
+      <div class="aba" id="aba-mapa">
+        <div class="linha small mut" style="margin-bottom:8px">
+          <span><span class="ponto" style="background:#22c55e"></span> em turno</span>
+          <span><span class="ponto" style="background:#f59e0b"></span> bateria baixa</span>
+          <span><span class="ponto" style="background:#64748b"></span> sem sinal</span>
+          <span><span class="ponto" style="background:#ef4444"></span> com alerta</span>
+          <span style="margin-left:auto"><label style="display:inline;margin:0"><input type="checkbox" id="mapaSoAlerta" onchange="renderMapa()"> só quem tem alerta</label></span>
+        </div>
+        <div id="mapaGeral"></div>
+      </div>
+      <div class="aba hidden" id="aba-empresas">
+        <div class="linha" style="margin-bottom:10px"><input id="empBusca" placeholder="Buscar empresa" oninput="renderEmpresas()" style="flex:1;max-width:360px">
+          <select id="empOrdem" onchange="renderEmpresas()"><option value="alertas">Mais alertas primeiro</option><option value="nome">Nome</option><option value="turno">Mais gente em turno</option></select></div>
+        <div class="grid" id="gEmp"></div>
+      </div>
+      <div class="aba hidden" id="aba-individuais">
+        <div class="linha" style="margin-bottom:10px"><input id="indBusca" placeholder="Buscar nome" oninput="renderIndividuais()" style="flex:1;max-width:360px">
+          <select id="indProf" onchange="renderIndividuais()"><option value="">Vigilantes e caminhoneiros</option><option value="vigilante">Só vigilantes</option><option value="caminhoneiro">Só caminhoneiros</option></select></div>
+        <div class="card" style="padding:0;overflow:auto"><table><thead><tr><th>Nome</th><th>Profissão</th><th>Turno</th><th>Bateria</th><th>Último sinal</th><th>Localização</th><th>Alerta</th></tr></thead><tbody id="tbInd"></tbody></table></div>
+      </div>
+      <div class="aba hidden" id="aba-familias">
+        <div class="grid" id="gFam"></div>
+      </div>
+      <div class="aba hidden" id="aba-historico">
+        <div class="linha" style="margin-bottom:10px">
+          <select id="hEmp" onchange="carregarHistorico()"><option value="">Todas as contas</option></select>
+          <select id="hTipo" onchange="renderHistorico()"><option value="">Todos os tipos</option></select>
+          <select id="hStatus" onchange="renderHistorico()"><option value="">Todas as situações</option><option value="aberto">Aberto</option><option value="em_atendimento">Em atendimento</option><option value="resolvido">Resolvido</option></select>
+          <button class="sec sm noprint" onclick="window.print()">Imprimir / PDF</button>
+        </div>
+        <div class="card" style="padding:0;overflow:auto"><table><thead><tr><th>Quando</th><th>Tipo</th><th>Pessoa</th><th>Conta</th><th>Local</th><th>Situação</th><th>Atendido</th><th>Resolvido</th><th>Observação</th></tr></thead><tbody id="tbHist"></tbody></table></div>
+      </div>
+      <div class="aba hidden" id="aba-ocorrencias">
+        <div class="linha" style="margin-bottom:10px">
+          <select id="oEmp" onchange="carregarOcorrencias()"><option value="">Todas as contas</option></select>
+          <select id="oDias" onchange="carregarOcorrencias()"><option value="1">Hoje</option><option value="7">7 dias</option><option value="30" selected>30 dias</option><option value="90">90 dias</option></select>
+          <input id="oBusca" placeholder="Buscar" oninput="renderOcorrencias()"><button class="sec sm noprint" onclick="window.print()">Imprimir / PDF</button>
+        </div>
+        <div class="card" style="padding:0;overflow:auto"><table><thead><tr><th>Quando</th><th>Tipo</th><th>Pessoa</th><th>Conta</th><th>Local</th><th>Descrição</th><th></th></tr></thead><tbody id="tbOco"></tbody></table></div>
+      </div>
+      <div class="aba hidden" id="aba-livro">
+        <div class="linha" style="margin-bottom:10px">
+          <select id="lEmp" onchange="carregarLivro()"><option value="">Todas as contas</option></select>
+          <select id="lDias" onchange="carregarLivro()"><option value="1">Hoje</option><option value="7" selected>7 dias</option><option value="30">30 dias</option></select>
+          <input id="lBusca" placeholder="Buscar" oninput="renderLivro()"><button class="sec sm noprint" onclick="window.print()">Imprimir / PDF</button>
+        </div>
+        <div class="card" style="padding:0;overflow:auto"><table><thead><tr><th>Horário</th><th>Assunto</th><th>Pessoa</th><th>Conta</th><th>Local</th><th>Relato</th><th></th></tr></thead><tbody id="tbLivro"></tbody></table></div>
+      </div>
+      <div class="aba hidden" id="aba-relatorios">
+        <div class="linha noprint" style="margin-bottom:10px"><select id="rDias" onchange="carregarRelatorio()"><option value="1">Hoje</option><option value="7">7 dias</option><option value="30" selected>30 dias</option><option value="90">90 dias</option><option value="365">1 ano</option></select>
+          <button class="sec sm" onclick="window.print()">Imprimir / PDF</button></div>
+        <div id="relat"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Detalhe da empresa -->
+<div id="mEmp" class="modal hidden" onclick="if(event.target===this)fechar('mEmp')"><div class="card">
+  <div class="linha" style="justify-content:space-between"><h2 style="margin:0" id="eTit"></h2><button class="sec sm" onclick="fechar('mEmp')">Fechar</button></div>
+  <div class="mut small" id="eInfo" style="margin:6px 0 10px"></div>
+  <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:12px">
+    <div style="overflow:auto;max-height:60vh"><table><thead><tr><th>Pessoa</th><th>Local</th><th>Turno</th><th>Bateria</th><th>Sinal</th><th>Alerta</th></tr></thead><tbody id="tbEmpPes"></tbody></table></div>
+    <div id="mapaEmp" style="height:60vh;border-radius:10px;border:1px solid var(--line)"></div>
+  </div>
+  <h3 style="margin:14px 0 6px;font-size:15px">Alertas das últimas 24 h</h3>
+  <div style="overflow:auto;max-height:30vh"><table><thead><tr><th>Quando</th><th>Tipo</th><th>Pessoa</th><th>Situação</th><th></th></tr></thead><tbody id="tbEmpAl"></tbody></table></div>
+</div></div>
+
+<!-- Detalhe da pessoa -->
+<div id="mPes" class="modal hidden" onclick="if(event.target===this)fechar('mPes')"><div class="card" style="max-width:900px">
+  <div class="linha" style="justify-content:space-between"><h2 style="margin:0" id="pTit"></h2><button class="sec sm" onclick="fechar('mPes')">Fechar</button></div>
+  <div class="mut small" id="pInfo" style="margin:6px 0 10px"></div>
+  <div class="linha small" style="margin-bottom:6px">Trajeto das últimas <select id="pHoras" onchange="carregarTrilha()"><option>2</option><option selected>6</option><option>12</option><option>24</option></select> horas</div>
+  <div id="mapaPes" style="height:55vh;border-radius:10px;border:1px solid var(--line)"></div>
+</div></div>
+
+<!-- SOS ao vivo -->
+<div id="mSos" class="modal hidden"><div class="card" style="max-width:760px">
+  <div class="linha" style="justify-content:space-between"><h2 style="margin:0">🔴 Ao vivo — <span id="sosNome"></span></h2><button class="sec sm" onclick="fecharSos()">Fechar</button></div>
+  <p class="small mut" id="sosInfo" style="margin:6px 0">Câmera e áudio com atraso de ~6 a 10 s.</p>
+  <div style="position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:3/4;max-height:65vh;margin:0 auto">
+    <video id="sosVideo" playsinline autoplay controls style="width:100%;height:100%;object-fit:contain;background:#000"></video>
+    <div id="sosSt" style="position:absolute;left:10px;top:10px;padding:4px 10px;border-radius:12px;background:rgba(0,0,0,.6);font-size:13px;font-weight:700">Aguardando imagem…</div>
+  </div>
+  <div class="linha" style="margin-top:10px"><a id="sosMapa" target="_blank" rel="noopener" class="hidden"><button class="acc">Ver no mapa</button></a>
+    <a href="tel:190"><button>Ligar 190</button></a><a href="tel:191"><button class="sec">Ligar 191 (PRF)</button></a>
+    <button id="sosEncerrar" class="sec" onclick="encerrarSos()">Encerrar transmissão</button></div>
+</div></div>
+
+<!-- Resolver -->
+<div id="mRes" class="modal hidden"><div class="card" style="max-width:480px">
+  <h2 style="margin:0 0 6px">Resolver alerta</h2>
+  <div class="mut small" id="resInfo"></div>
+  <label>O que aconteceu / o que foi feito (fica no histórico)</label>
+  <textarea id="resObs" rows="4" style="width:100%" placeholder="Ex.: falso alarme, vigilante confirmou por telefone. / PM acionada, ocorrência nº..."></textarea>
+  <div class="linha" style="margin-top:6px">
+    <button class="sec sm" onclick="obsRapida('Falso alarme / teste.')">Falso alarme / teste</button>
+    <button class="sec sm" onclick="obsRapida('Confirmado com a pessoa: está bem.')">Pessoa está bem</button>
+    <button class="sec sm" onclick="obsRapida('Polícia acionada.')">Polícia acionada</button>
+  </div>
+  <div class="linha" style="margin-top:12px;justify-content:flex-end"><button class="sec" onclick="fechar('mRes')">Cancelar</button><button class="ok" onclick="confirmarResolver()">Resolver</button></div>
+</div></div>
+
+<!-- Foto -->
+<div id="mFoto" class="modal hidden" onclick="fechar('mFoto')"><div class="card" style="max-width:700px;text-align:center"><img id="fotoImg" style="max-width:100%;border-radius:8px"></div></div>
+
+<script>
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const S = { alertas:[], empresas:[], pessoas:[], historico:[], oco:[], livro:[], varios:false, sel:new Set(), conhecidos:null, empAberta:null, pesAberta:null, resId:null };
+
+const TIPOS = {
+  panico:['PÂNICO','b-bad'], coacao:['COAÇÃO','b-bad'], sem_movimento:['HOMEM CAÍDO','b-bad'], batida:['BATIDA / TOMBAMENTO','b-bad'],
+  senha_errada:['SENHA ERRADA','b-warn'], sem_resposta:['SEM RESPOSTA','b-warn'], fora_do_posto:['FORA DO POSTO','b-warn'],
+  bateria_baixa:['BATERIA BAIXA','b-warn'], atraso_chegada:['NÃO CHEGOU NO HORÁRIO','b-bad'], ronda_perdida:['RONDA NÃO CONCLUÍDA','b-warn'],
+  plantao_nao_assumido:['PLANTÃO NÃO ASSUMIDO','b-bad'], parada_sem_resposta:['PARADA SEM RESPOSTA','b-bad'], desvio_rota:['DESVIO DE ROTA','b-warn'], parada_longa:['PARADA FORA DO PLANO','b-warn']
+};
+const CRITICOS = ['panico','coacao','sem_movimento','batida','atraso_chegada','plantao_nao_assumido','parada_sem_resposta'];
+const tipoTxt = t => TIPOS[t] || [String(t || '').toUpperCase(), 'b-warn'];
+const PLANO = { seguranca:['Empresa','b-acc'], autonomo:['Individual','b-pur'], familia:['Família','b-ok'], transportadora:['Transportadora','b-warn'] };
+const plano = p => PLANO[p] || [p, 'b-off'];
+const ST = { aberto:['Aberto','b-bad'], em_atendimento:['Em atendimento','b-acc'], resolvido:['Resolvido','b-ok'] };
+const dt = s => s ? new Date(s).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—';
+function ha(s){ if (!s) return '—'; const m = Math.round((Date.now() - new Date(s)) / 60000); if (m < 1) return 'agora'; if (m < 60) return `há ${m} min`; const h = Math.floor(m / 60); return h < 24 ? `há ${h} h ${m % 60} min` : dt(s); }
+const mapsUrl = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
+const bat = b => b == null ? '<span class="mut">—</span>' : `<span style="color:${b < 20 ? 'var(--bad)' : b < 40 ? 'var(--warn)' : 'var(--ok)'}">${b}%</span>`;
+const semSinal = p => p.em_turno && (!p.atualizado || Date.now() - new Date(p.atualizado) > 10 * 60000);
+const ERROS = { sem_permissao:'Esta conta não é do dono do K1.', 'Invalid login credentials':'E-mail ou senha incorretos.' };
+const traduz = e => { const m = e?.message || String(e); for (const k in ERROS) if (m.includes(k)) return ERROS[k]; return m; };
+
+// ================= LOGIN =================
+async function entrar(){
+  $('eLogin').textContent = '';
+  const { error } = await sb.auth.signInWithPassword({ email:$('email').value.trim(), password:$('senha').value });
+  if (error) return $('eLogin').textContent = traduz(error);
+  iniciar();
+}
+async function sair(){ await sb.auth.signOut(); location.reload(); }
+async function iniciar(){
+  const { error } = await sb.rpc('mon_resumo');
+  if (error) { $('eLogin').textContent = traduz(error); await sb.auth.signOut(); return; }
+  $('tLogin').classList.add('hidden'); $('app').classList.remove('hidden');
+  iniciarMapa();
+  await carregarTudo();
+  setInterval(carregarAlertas, 5000);
+  setInterval(() => { carregarResumo(); carregarPessoas(); }, 20000);
+  setInterval(() => { carregarEmpresas(); }, 60000);
+  setInterval(() => { $('hora').textContent = new Date().toLocaleString('pt-BR'); renderFila(); atualizarAlarme(); }, 15000);
+  $('hora').textContent = new Date().toLocaleString('pt-BR');
+}
+sb.auth.getSession().then(({ data }) => { if (data.session) iniciar(); });
+
+async function carregarTudo(){
+  await Promise.all([carregarResumo(), carregarAlertas(), carregarEmpresas(), carregarPessoas()]);
+}
+async function carregarResumo(){
+  const { data } = await sb.rpc('mon_resumo'); if (!data) return;
+  $('sEmp').textContent = data.empresas; $('sInd').textContent = data.individuais; $('sTurno').textContent = data.em_turno;
+  $('sSinal').textContent = data.sem_sinal; $('sAlertas').textContent = data.alertas_abertos; $('sSos').textContent = data.sos_ao_vivo;
+}
+async function carregarEmpresas(){
+  const { data } = await sb.rpc('mon_empresas'); S.empresas = data || [];
+  const ops = '<option value="">Todas as contas</option>' + S.empresas.slice().sort((a, b) => a.nome.localeCompare(b.nome)).map(e => `<option value="${e.id}">${esc(e.nome)} (${plano(e.tipo)[0]})</option>`).join('');
+  ['hEmp','oEmp','lEmp'].forEach(id => { const v = $(id).value; $(id).innerHTML = ops; $(id).value = v; });
+  renderEmpresas(); renderFamilias();
+}
+async function carregarPessoas(){
+  const { data } = await sb.rpc('mon_pessoas', { p_empresa_id:null, p_so_turno:false }); S.pessoas = data || [];
+  renderMapa(); renderIndividuais(); renderFamilias();
+  if (S.empAberta) renderEmpDetalhe();
+}
+
+// ================= FILA DE ALERTAS =================
+async function carregarAlertas(){
+  const { data, error } = await sb.rpc('mon_alertas', { p_todos:false, p_empresa_id:null, p_limite:300 });
+  if (error) return;
+  const novos = [];
+  if (S.conhecidos) (data || []).forEach(a => { if (!S.conhecidos.has(a.id)) novos.push(a); });
+  S.conhecidos = new Set((data || []).map(a => a.id));
+  S.alertas = data || [];
+  renderFila(novos.map(a => a.id)); atualizarAlarme(); renderMapa();
+  if (novos.length && window.Notification && Notification.permission === 'granted')
+    novos.forEach(a => new Notification('K1 — ' + tipoTxt(a.tipo)[0], { body: `${a.pessoa} · ${a.empresa}` }));
+  // Power 4x: abre a câmera ao vivo sozinho (uma vez por alerta)
+  const vivo = S.alertas.find(a => (a.tipo === 'panico' || a.tipo === 'coacao') && a.sos_gravando && a.status !== 'resolvido' && !SOS_ABERTOS.has(a.id));
+  if (vivo && !SOS.id) { SOS_ABERTOS.add(vivo.id); verSos(vivo.id); }
+}
+function ordemAlerta(a){ return (a.status === 'aberto' ? 0 : 1) * 10 + (CRITICOS.includes(a.tipo) ? 0 : 1); }
+function renderFila(destacar = []){
+  const f = $('filaFiltro').value, q = $('filaBusca').value.trim().toLowerCase();
+  let l = S.alertas.filter(a => a.status !== 'resolvido');
+  if (f === 'crit') l = l.filter(a => CRITICOS.includes(a.tipo));
+  if (q) l = l.filter(a => (a.pessoa + ' ' + a.empresa + ' ' + a.local).toLowerCase().includes(q));
+  l.sort((a, b) => ordemAlerta(a) - ordemAlerta(b) || new Date(b.criado_em) - new Date(a.criado_em));
+  $('filaQtd').textContent = `(${l.length})`;
+  if (!l.length) { $('filaLista').innerHTML = '<div class="mut" style="padding:20px;text-align:center">Nenhum alerta aberto. Tudo tranquilo.</div>'; return; }
+  $('filaLista').innerHTML = l.map(a => {
+    const [t, c] = tipoTxt(a.tipo), crit = CRITICOS.includes(a.tipo), [st, sc] = ST[a.status] || [a.status, 'b-off'];
+    const vivo = (a.tipo === 'panico' || a.tipo === 'coacao') && (a.sos_gravando || a.trechos > 0);
+    return `<div class="al ${crit ? 'crit' : ''} ${a.status === 'em_atendimento' ? 'atend' : ''} ${destacar.includes(a.id) ? 'novo' : ''}">
+      <h4><span>${S.varios ? `<input type="checkbox" ${S.sel.has(a.id) ? 'checked' : ''} onchange="marcar('${a.id}', this.checked)"> ` : ''}<span class="badge ${c}">${t}</span></span><span class="badge ${sc}">${st}</span></h4>
+      <div><b>${esc(a.pessoa)}</b>${a.profissao === 'caminhoneiro' ? ' 🚚' : ''} <span class="badge ${plano(a.plano)[1]}">${plano(a.plano)[0]}</span></div>
+      <div class="small mut">${esc(a.empresa)}${a.local ? ' · ' + esc(a.local) : ''}</div>
+      <div class="small mut">${ha(a.criado_em)} · ${dt(a.criado_em)}${a.bateria != null ? ' · bateria ' + a.bateria + '%' : ''}</div>
+      ${a.detalhe ? `<div class="small" style="margin-top:4px">${esc(a.detalhe)}</div>` : ''}
+      ${a.atendido_por ? `<div class="small mut">Atendido por ${esc(a.atendido_por)}</div>` : ''}
+      <div class="acoes">
+        ${a.status === 'aberto' ? `<button class="acc sm" onclick="atender('${a.id}')">Atender</button>` : ''}
+        <button class="ok sm" onclick="abrirResolver('${a.id}')">Resolver</button>
+        ${vivo ? `<button class="sm" onclick="verSos('${a.id}')">● Ao vivo</button>` : ''}
+        ${a.lat != null ? `<a href="${mapsUrl(a.lat, a.lng)}" target="_blank" rel="noopener"><button class="sec sm">Mapa</button></a>` : ''}
+        ${a.telefone ? `<a href="tel:${esc(a.telefone)}"><button class="sec sm">Ligar</button></a>` : ''}
+        <button class="sec sm" onclick="abrirEmpresa('${a.empresa_id}')">Conta</button>
+      </div></div>`;
+  }).join('');
+}
+function modoVarios(){ S.varios = !S.varios; S.sel.clear(); $('variosBar').classList.toggle('hidden', !S.varios); $('btnVarios').classList.toggle('hidden', S.varios); $('variosQtd').textContent = '0 selecionados'; renderFila(); }
+function marcar(id, on){ on ? S.sel.add(id) : S.sel.delete(id); $('variosQtd').textContent = S.sel.size + ' selecionados'; }
+async function resolverSelecionados(){
+  if (!S.sel.size) return;
+  const obs = prompt(`Resolver ${S.sel.size} alerta(s). O que aconteceu? (fica no histórico)`, 'Falso alarme / teste.');
+  if (obs === null) return;
+  const { error } = await sb.rpc('mon_resolver_varios', { p_ids:[...S.sel], p_observacao:obs });
+  if (error) return alert(traduz(error));
+  modoVarios(); carregarAlertas(); carregarResumo();
+}
+async function atender(id){
+  const { error } = await sb.rpc('mon_atender', { p_alerta_id:id }); if (error) return alert(traduz(error));
+  const a = S.alertas.find(x => x.id === id); if (a) { a.status = 'em_atendimento'; a.atendido_por = 'K1 Monitoramento'; }
+  renderFila(); atualizarAlarme();
+}
+function atenderPrimeiro(){ const a = alertasTocando()[0]; if (a) atender(a.id); }
+function abrirResolver(id){
+  const a = [...S.alertas, ...S.historico, ...(S.empAl || [])].find(x => x.id === id); S.resId = id;
+  $('resInfo').textContent = a ? `${tipoTxt(a.tipo)[0]} — ${a.pessoa} · ${a.empresa} · ${dt(a.criado_em)}` : '';
+  $('resObs').value = ''; $('mRes').classList.remove('hidden'); $('resObs').focus();
+}
+function obsRapida(t){ $('resObs').value = t; }
+async function confirmarResolver(){
+  const { error } = await sb.rpc('mon_resolver', { p_alerta_id:S.resId, p_observacao:$('resObs').value });
+  if (error) return alert(traduz(error));
+  fechar('mRes'); S.alertas = S.alertas.filter(a => a.id !== S.resId); renderFila(); atualizarAlarme(); carregarResumo();
+  if (S.empAberta) abrirEmpresa(S.empAberta);
+  if (!$('aba-historico').classList.contains('hidden')) carregarHistorico();
+  if (SOS.id === S.resId) fecharSos();
+}
+
+// ================= ALARME (toque + voz) =================
+const SIL_KEY = 'k1mon_silenciados';
+function silenciados(){ try { return new Set(JSON.parse(localStorage.getItem(SIL_KEY) || '[]')); } catch { return new Set(); } }
+function salvarSil(s){ try { localStorage.setItem(SIL_KEY, JSON.stringify([...s].slice(-500))); } catch {} }
+let audio = null;
+function somAlarme(){
+  const taxa = 8000, dur = 1.5, n = Math.floor(taxa * dur), buf = new ArrayBuffer(44 + n * 2), d = new DataView(buf);
+  const txt = (o, t) => [...t].forEach((c, i) => d.setUint8(o + i, c.charCodeAt(0)));
+  txt(0, 'RIFF'); d.setUint32(4, 36 + n * 2, true); txt(8, 'WAVE'); txt(12, 'fmt '); d.setUint32(16, 16, true); d.setUint16(20, 1, true);
+  d.setUint16(22, 1, true); d.setUint32(24, taxa, true); d.setUint32(28, taxa * 2, true); d.setUint16(32, 2, true); d.setUint16(34, 16, true);
+  txt(36, 'data'); d.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) { const t = i / taxa, on = (t < 0.18) || (t >= 0.25 && t < 0.43);
+    d.setInt16(44 + i * 2, on ? (Math.sin(2 * Math.PI * 880 * t) >= 0 ? 9000 : -9000) : 0, true); }
+  return URL.createObjectURL(new Blob([buf], { type:'audio/wav' }));
+}
+function alertasTocando(){
+  const sil = silenciados(), lim = Date.now() - 12 * 3600000;
+  return S.alertas.filter(a => a.status === 'aberto' && !sil.has(a.id) && new Date(a.criado_em).getTime() > lim)
+    .sort((a, b) => (CRITICOS.includes(a.tipo) ? 0 : 1) - (CRITICOS.includes(b.tipo) ? 0 : 1) || new Date(b.criado_em) - new Date(a.criado_em));
+}
+function tocarSom(){
+  if (!audio) { audio = new Audio(somAlarme()); audio.loop = true; }
+  if (!audio.paused) return;
+  audio.play().catch(() => {
+    $('bannerTxt').textContent += ' — CLIQUE NA TELA PARA LIGAR O SOM';
+    document.addEventListener('click', () => { if (alertasTocando().length) audio.play().catch(() => {}); }, { once:true });
+  });
+}
+function pararSom(){ if (audio && !audio.paused) { audio.pause(); audio.currentTime = 0; } pararVoz(); }
+let vozUltimo = '', vozTimer = null, vozFalando = false;
+function atualizarAlarme(){
+  const l = alertasTocando();
+  if (!l.length) { pararSom(); $('banner').classList.add('hidden'); vozUltimo = ''; return; }
+  const a = l[0];
+  $('bannerTxt').textContent = `⚠ ${tipoTxt(a.tipo)[0]} — ${a.pessoa} · ${a.empresa}${a.local ? ' (' + a.local + ')' : ''} — ${ha(a.criado_em)}` + (l.length > 1 ? `   (+${l.length - 1} alerta(s) esperando)` : '');
+  $('banner').classList.remove('hidden'); tocarSom();
+  const chave = l.map(x => x.id).join(',');
+  if (chave !== vozUltimo) { vozUltimo = chave; if (!vozFalando) setTimeout(falar, 1200); }
+  else if (!vozTimer && !vozFalando) vozTimer = setTimeout(falar, 20000);
+}
+function silenciarTodos(){ const s = silenciados(); alertasTocando().forEach(a => s.add(a.id)); salvarSil(s); pararSom(); $('banner').classList.add('hidden'); }
+function testarAlarme(){
+  const a = { id:'teste-' + Date.now(), tipo:'panico', status:'aberto', pessoa:'Vigilante de teste', empresa:'Empresa de teste', local:'Posto de teste', criado_em:new Date().toISOString() };
+  S.alertas.unshift(a); renderFila([a.id]); atualizarAlarme();
+  setTimeout(() => { S.alertas = S.alertas.filter(x => x.id !== a.id); renderFila(); atualizarAlarme(); }, 25000);
+}
+const MOTIVO = {
+  panico:'Apertou o botão de pânico, o botão de ligar 4 vezes. Pode estar acontecendo um assalto agora. Evite ligar para o celular dele',
+  coacao:'Digitou a senha de coação. Pode estar rendido, sendo obrigado a desligar o alarme',
+  sem_movimento:'O celular ficou parado, sem nenhum movimento. Pode ter caído ou passado mal',
+  batida:'O celular detectou um impacto forte, uma possível batida ou tombamento',
+  senha_errada:'Errou a senha várias vezes seguidas', sem_resposta:'Não respondeu à verificação de segurança',
+  fora_do_posto:'Saiu da área do posto', bateria_baixa:'A bateria do celular está acabando',
+  atraso_chegada:'Não chegou ao posto no horário', ronda_perdida:'A ronda programada não foi concluída',
+  plantao_nao_assumido:'O plantão não foi assumido no horário', parada_sem_resposta:'Está numa parada e não respondeu se está tudo bem',
+  desvio_rota:'Saiu do caminho da viagem', parada_longa:'Está parado há muito tempo fora de uma parada marcada'
+};
+function frase(a){
+  return [`Atenção, K1 Monitoramento. Alerta de ${tipoTxt(a.tipo)[0].toLowerCase().replace(/[\/—]/g, ',')}.`,
+    `${a.profissao === 'caminhoneiro' ? 'Caminhoneiro' : 'Vigilante'} ${a.pessoa}, ${a.plano === 'seguranca' ? 'da empresa ' + a.empresa : plano(a.plano)[0].toLowerCase()}${a.local ? ', posto ' + a.local : ''}.`,
+    (MOTIVO[a.tipo] || 'Foi disparado um alerta') + '.', a.detalhe ? String(a.detalhe).replace(/\.$/, '') + '.' : '',
+    (a.tipo === 'panico' || a.tipo === 'coacao') && a.sos_gravando ? 'A câmera e o áudio estão ao vivo na tela.' : '',
+    'Tome as medidas cabíveis para solucionar o problema.'].filter(Boolean).join(' ');
+}
+function vozPt(){ const vs = speechSynthesis.getVoices(); return vs.find(v => v.lang === 'pt-BR') || vs.find(v => (v.lang || '').startsWith('pt')); }
+function falar(){
+  clearTimeout(vozTimer); vozTimer = null;
+  if (!window.speechSynthesis || !$('vozLig').checked) return;
+  const l = alertasTocando(); if (!l.length || vozFalando) return;
+  const lista = l.slice(0, 3); vozFalando = true; if (audio) audio.volume = 0.12; speechSynthesis.cancel();
+  lista.forEach((a, i) => {
+    const u = new SpeechSynthesisUtterance((i === 0 && l.length > 1 ? `Há ${l.length} alertas esperando atendimento. ` : '') + frase(a));
+    u.lang = 'pt-BR'; u.rate = 0.97; const vp = vozPt(); if (vp) u.voice = vp;
+    if (i === lista.length - 1) u.onend = u.onerror = () => { vozFalando = false; if (audio) audio.volume = 1; if (alertasTocando().length) vozTimer = setTimeout(falar, 20000); };
+    speechSynthesis.speak(u);
+  });
+}
+function pararVoz(){ clearTimeout(vozTimer); vozTimer = null; vozFalando = false; try { speechSynthesis.cancel(); } catch {} if (audio) audio.volume = 1; }
+document.addEventListener('click', () => { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); }, { once:true });
+
+// ================= ABAS =================
+function aba(t){
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.querySelectorAll('.aba').forEach(x => x.classList.toggle('hidden', x.id !== 'aba-' + t));
+  if (t === 'mapa' && M.geral) setTimeout(() => M.geral.invalidateSize(), 50);
+  if (t === 'historico') carregarHistorico();
+  if (t === 'ocorrencias') carregarOcorrencias();
+  if (t === 'livro') carregarLivro();
+  if (t === 'relatorios') carregarRelatorio();
+}
+function fechar(id){ $(id).classList.add('hidden'); if (id === 'mEmp') S.empAberta = null; }
+
+// ================= MAPAS =================
+const M = { geral:null, camada:null, emp:null, empCamada:null, pes:null, pesCamada:null, centrou:false };
+function novoMapa(el){ const m = L.map(el).setView([-23.55, -46.63], 5); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(m); return m; }
+function iniciarMapa(){ M.geral = novoMapa('mapaGeral'); M.camada = L.layerGroup().addTo(M.geral); }
+function corPessoa(p){ return p.alerta ? '#ef4444' : semSinal(p) ? '#64748b' : (p.bateria != null && p.bateria < 20) ? '#f59e0b' : '#22c55e'; }
+function marcador(p){
+  return L.circleMarker([p.lat, p.lng], { radius:p.alerta ? 10 : 7, color:'#000', weight:1, fillColor:corPessoa(p), fillOpacity:.95 })
+    .bindPopup(`<b>${esc(p.nome)}</b>${p.profissao === 'caminhoneiro' ? ' 🚚' : ''}<br>${esc(p.empresa)}${p.local ? '<br>' + esc(p.local) : ''}<br>Bateria: ${p.bateria ?? '—'}% · sinal ${ha(p.atualizado)}${p.alerta ? '<br><b style="color:#ef4444">' + tipoTxt(p.alerta.tipo)[0] + '</b>' : ''}<br><a href="#" onclick="abrirPessoa('${p.id}');return false">Ver trajeto</a> · <a href="${mapsUrl(p.lat, p.lng)}" target="_blank" rel="noopener">Google Maps</a>`);
+}
+function renderMapa(){
+  if (!M.geral) return;
+  M.camada.clearLayers();
+  const so = $('mapaSoAlerta').checked;
+  const pts = S.pessoas.filter(p => p.lat != null && (p.em_turno || p.alerta) && (!so || p.alerta));
+  pts.forEach(p => marcador(p).addTo(M.camada));
+  S.alertas.filter(a => a.lat != null && a.status !== 'resolvido').forEach(a => {
+    L.marker([a.lat, a.lng]).bindPopup(`<b style="color:#ef4444">${tipoTxt(a.tipo)[0]}</b><br>${esc(a.pessoa)} · ${esc(a.empresa)}<br>${dt(a.criado_em)}`).addTo(M.camada);
+  });
+  if (!M.centrou && pts.length) { M.geral.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lng])).pad(0.2), { maxZoom:13 }); M.centrou = true; }
+}
+
+// ================= EMPRESAS =================
+function renderEmpresas(){
+  const q = $('empBusca').value.trim().toLowerCase(), o = $('empOrdem').value;
+  let l = S.empresas.filter(e => e.tipo === 'seguranca' || e.tipo === 'transportadora');
+  if (q) l = l.filter(e => e.nome.toLowerCase().includes(q));
+  l.sort((a, b) => o === 'nome' ? a.nome.localeCompare(b.nome) : o === 'turno' ? b.em_turno - a.em_turno : (b.alertas - a.alertas || b.em_turno - a.em_turno));
+  $('gEmp').innerHTML = l.map(e => `<div class="card emp" onclick="abrirEmpresa('${e.id}')" style="${e.alertas ? 'border-color:#7f1d1d' : ''}">
+      <h3><span>${esc(e.nome)}</span>${e.alertas ? `<span class="badge b-bad">${e.alertas} alerta(s)</span>` : '<span class="badge b-ok">OK</span>'}</h3>
+      <div class="linha small"><span class="badge ${plano(e.tipo)[1]}">${plano(e.tipo)[0]}</span>${e.plano_status !== 'ativo' ? `<span class="badge b-bad">${esc(e.plano_status)}</span>` : ''}${e.teste_ate && new Date(e.teste_ate) > new Date() ? '<span class="badge b-warn">teste grátis</span>' : ''}</div>
+      <div class="small mut" style="margin-top:8px">👮 ${e.pessoas} de ${e.vagas} vagas · <b style="color:var(--ok)">${e.em_turno} em turno</b></div>
+      <div class="small mut">Bateria mais baixa: ${e.bateria_min != null ? e.bateria_min + '%' : '—'}</div>
+      ${e.email ? `<div class="small mut">${esc(e.email)}</div>` : ''}
+    </div>`).join('') || '<div class="mut">Nenhuma empresa ainda.</div>';
+}
+async function abrirEmpresa(id){
+  const e = S.empresas.find(x => x.id === id); if (!e) return;
+  S.empAberta = id;
+  $('eTit').textContent = e.nome;
+  $('eInfo').innerHTML = `<span class="badge ${plano(e.tipo)[1]}">${plano(e.tipo)[0]}</span> · plano ${esc(e.plano_status)} · ${e.pessoas} de ${e.vagas} vagas · ${e.em_turno} em turno${e.email ? ' · ' + esc(e.email) : ''}${e.cnpj ? ' · CNPJ ' + esc(e.cnpj) : ''} · cliente desde ${new Date(e.criado_em).toLocaleDateString('pt-BR')}`;
+  $('mEmp').classList.remove('hidden');
+  if (!M.emp) { M.emp = novoMapa('mapaEmp'); M.empCamada = L.layerGroup().addTo(M.emp); }
+  setTimeout(() => M.emp.invalidateSize(), 60);
+  renderEmpDetalhe(true);
+  const { data } = await sb.rpc('mon_alertas', { p_todos:true, p_empresa_id:id, p_limite:100 });
+  S.empAl = data || [];
+  const lim = Date.now() - 24 * 3600000;
+  $('tbEmpAl').innerHTML = (data || []).filter(a => new Date(a.criado_em) > lim).map(a => `<tr><td>${dt(a.criado_em)}</td><td><span class="badge ${tipoTxt(a.tipo)[1]}">${tipoTxt(a.tipo)[0]}</span></td><td>${esc(a.pessoa)}</td><td><span class="badge ${(ST[a.status] || ['', 'b-off'])[1]}">${(ST[a.status] || [a.status])[0]}</span></td>
+    <td>${a.status !== 'resolvido' ? `<button class="ok sm" onclick="abrirResolver('${a.id}')">Resolver</button>` : esc(a.observacao || '')}</td></tr>`).join('') || '<tr><td colspan="5" class="mut">Nenhum alerta nas últimas 24 h.</td></tr>';
+}
+function renderEmpDetalhe(centralizar){
+  const id = S.empAberta; if (!id) return;
+  const ps = S.pessoas.filter(p => p.empresa_id === id);
+  $('tbEmpPes').innerHTML = ps.map(p => `<tr class="click" onclick="abrirPessoa('${p.id}')"><td><b>${esc(p.nome)}</b>${p.profissao === 'caminhoneiro' ? ' 🚚' : ''}<div class="small mut">${esc(p.telefone || '')}</div></td><td>${esc(p.local)}</td>
+    <td>${p.em_turno ? '<span class="badge b-ok">em turno</span>' : '<span class="badge b-off">folga</span>'}</td><td>${bat(p.bateria)}</td>
+    <td class="small">${semSinal(p) ? '<span style="color:var(--warn)">' + ha(p.atualizado) + '</span>' : ha(p.atualizado)}</td>
+    <td>${p.alerta ? `<span class="badge b-bad">${tipoTxt(p.alerta.tipo)[0]}</span>` : '—'}</td></tr>`).join('') || '<tr><td colspan="6" class="mut">Nenhuma pessoa cadastrada.</td></tr>';
+  M.empCamada.clearLayers();
+  const pts = ps.filter(p => p.lat != null);
+  pts.forEach(p => marcador(p).addTo(M.empCamada));
+  if (centralizar && pts.length) M.emp.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lng])).pad(0.3), { maxZoom:15 });
+}
+
+// ================= PESSOA (trajeto) =================
+function abrirPessoa(id){
+  const p = S.pessoas.find(x => x.id === id); if (!p) return; S.pesAberta = p;
+  $('pTit').textContent = p.nome + (p.profissao === 'caminhoneiro' ? ' 🚚' : '');
+  $('pInfo').innerHTML = `${esc(p.empresa)} <span class="badge ${plano(p.plano)[1]}">${plano(p.plano)[0]}</span>${p.local ? ' · ' + esc(p.local) : ''} · ${p.em_turno ? 'em turno desde ' + dt(p.turno_iniciado_em) : 'fora de turno'} · bateria ${p.bateria ?? '—'}%${p.carregando ? ' (carregando)' : ''} · último sinal ${ha(p.atualizado)}${p.telefone ? ` · <a href="tel:${esc(p.telefone)}">${esc(p.telefone)}</a>` : ''}${p.matricula_acesso ? ' · matrícula de acesso ' + esc(p.matricula_acesso) : ''}`;
+  $('mPes').classList.remove('hidden');
+  if (!M.pes) { M.pes = novoMapa('mapaPes'); M.pesCamada = L.layerGroup().addTo(M.pes); }
+  setTimeout(() => { M.pes.invalidateSize(); carregarTrilha(); }, 60);
+}
+async function carregarTrilha(){
+  const p = S.pesAberta; if (!p) return;
+  const { data } = await sb.rpc('mon_trilha', { p_vigilante_id:p.id, p_horas:+$('pHoras').value });
+  M.pesCamada.clearLayers();
+  const pts = (data || []).map(x => [x[0], x[1]]);
+  if (pts.length > 1) L.polyline(pts, { color:'#e10600', weight:4, opacity:.8 }).addTo(M.pesCamada);
+  if (pts.length) L.circleMarker(pts[0], { radius:6, color:'#fff', fillColor:'#3b82f6', fillOpacity:1 }).bindPopup('Início: ' + dt(data[0][3])).addTo(M.pesCamada);
+  if (p.lat != null) marcador(p).addTo(M.pesCamada);
+  const todos = pts.concat(p.lat != null ? [[p.lat, p.lng]] : []);
+  if (todos.length) M.pes.fitBounds(L.latLngBounds(todos).pad(0.2), { maxZoom:16 });
+}
+
+// ================= INDIVIDUAIS / FAMÍLIA =================
+function renderIndividuais(){
+  const q = $('indBusca').value.trim().toLowerCase(), prof = $('indProf').value;
+  let l = S.pessoas.filter(p => p.plano === 'autonomo');
+  if (prof) l = l.filter(p => p.profissao === prof);
+  if (q) l = l.filter(p => p.nome.toLowerCase().includes(q));
+  $('tbInd').innerHTML = l.map(p => `<tr class="click" onclick="abrirPessoa('${p.id}')"><td><b>${esc(p.nome)}</b><div class="small mut">${esc(p.telefone || '')}</div></td><td>${p.profissao === 'caminhoneiro' ? '🚚 Caminhoneiro' : '👮 Vigilante'}</td>
+    <td>${p.em_turno ? '<span class="badge b-ok">ativo</span>' : '<span class="badge b-off">desligado</span>'}</td><td>${bat(p.bateria)}</td><td class="small">${ha(p.atualizado)}</td>
+    <td>${p.lat != null ? `<a href="${mapsUrl(p.lat, p.lng)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">abrir</a>` : '—'}</td>
+    <td>${p.alerta ? `<span class="badge b-bad">${tipoTxt(p.alerta.tipo)[0]}</span>` : '—'}</td></tr>`).join('') || '<tr><td colspan="7" class="mut">Ninguém no plano individual ainda.</td></tr>';
+}
+function renderFamilias(){
+  const fams = S.empresas.filter(e => e.tipo === 'familia');
+  $('gFam').innerHTML = fams.map(e => {
+    const ps = S.pessoas.filter(p => p.empresa_id === e.id);
+    return `<div class="card emp" onclick="abrirEmpresa('${e.id}')" style="${e.alertas ? 'border-color:#7f1d1d' : ''}"><h3><span>${esc(e.nome)}</span>${e.alertas ? `<span class="badge b-bad">${e.alertas} alerta(s)</span>` : ''}</h3>
+      ${ps.map(p => `<div class="small" style="display:flex;justify-content:space-between"><span>${esc(p.nome)}</span><span>${bat(p.bateria)} · <span class="mut">${ha(p.atualizado)}</span></span></div>`).join('') || '<div class="small mut">Sem membros</div>'}</div>`;
+  }).join('') || '<div class="mut">Nenhuma família cadastrada.</div>';
+}
+
+// ================= HISTÓRICO / OCORRÊNCIAS / LIVRO =================
+async function carregarHistorico(){
+  const { data } = await sb.rpc('mon_alertas', { p_todos:true, p_empresa_id:$('hEmp').value || null, p_limite:1000 });
+  S.historico = data || [];
+  const tipos = [...new Set(S.historico.map(a => a.tipo))]; const v = $('hTipo').value;
+  $('hTipo').innerHTML = '<option value="">Todos os tipos</option>' + tipos.map(t => `<option value="${t}">${tipoTxt(t)[0]}</option>`).join(''); $('hTipo').value = v;
+  renderHistorico();
+}
+function renderHistorico(){
+  const t = $('hTipo').value, st = $('hStatus').value;
+  const l = S.historico.filter(a => (!t || a.tipo === t) && (!st || a.status === st));
+  $('tbHist').innerHTML = l.map(a => `<tr><td class="small">${dt(a.criado_em)}</td><td><span class="badge ${tipoTxt(a.tipo)[1]}">${tipoTxt(a.tipo)[0]}</span></td><td>${esc(a.pessoa)}</td><td>${esc(a.empresa)}</td><td>${esc(a.local)}</td>
+    <td><span class="badge ${(ST[a.status] || ['', 'b-off'])[1]}">${(ST[a.status] || [a.status])[0]}</span>${a.status !== 'resolvido' ? ` <button class="ok sm noprint" onclick="abrirResolver('${a.id}')">Resolver</button>` : ''}</td>
+    <td class="small">${a.atendido_em ? dt(a.atendido_em) + '<br>' + esc(a.atendido_por || '') : '—'}</td><td class="small">${dt(a.resolvido_em)}</td><td class="small">${esc(a.observacao || '')}</td></tr>`).join('') || '<tr><td colspan="9" class="mut">Nada encontrado.</td></tr>';
+}
+async function carregarOcorrencias(){ const { data } = await sb.rpc('mon_ocorrencias', { p_empresa_id:$('oEmp').value || null, p_dias:+$('oDias').value }); S.oco = data || []; renderOcorrencias(); }
+function renderOcorrencias(){
+  const q = $('oBusca').value.trim().toLowerCase();
+  const l = S.oco.filter(o => !q || (o.pessoa + ' ' + o.empresa + ' ' + o.descricao + ' ' + o.tipo).toLowerCase().includes(q));
+  $('tbOco').innerHTML = l.map(o => `<tr><td class="small">${dt(o.criado_em)}</td><td>${esc(o.tipo)}</td><td>${esc(o.pessoa)}</td><td>${esc(o.empresa)}</td><td>${esc(o.local)}</td><td>${esc(o.descricao)}</td>
+    <td class="noprint">${o.tem_foto ? `<button class="sec sm" onclick="verFoto('ocorrencia','${o.id}')">Foto</button>` : ''} ${o.lat != null ? `<a href="${mapsUrl(o.lat, o.lng)}" target="_blank" rel="noopener">mapa</a>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="mut">Nenhuma ocorrência no período.</td></tr>';
+}
+async function carregarLivro(){ const { data } = await sb.rpc('mon_livro', { p_empresa_id:$('lEmp').value || null, p_dias:+$('lDias').value }); S.livro = data || []; renderLivro(); }
+function renderLivro(){
+  const q = $('lBusca').value.trim().toLowerCase();
+  const l = S.livro.filter(o => !q || (o.pessoa + ' ' + o.empresa + ' ' + o.descricao + ' ' + o.assunto).toLowerCase().includes(q));
+  $('tbLivro').innerHTML = l.map(o => `<tr><td class="small">${dt(o.hora)}</td><td>${esc(o.assunto)}${o.oculto_vigilante ? ' <span class="badge b-bad">pânico silencioso</span>' : ''}</td><td>${esc(o.pessoa)}</td><td>${esc(o.empresa)}</td><td>${esc(o.local)}</td><td>${esc(o.descricao)}</td>
+    <td class="noprint">${o.tem_foto ? `<button class="sec sm" onclick="verFoto('livro','${o.id}')">Foto</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="mut">Nenhum registro no período.</td></tr>';
+}
+async function verFoto(tipo, id){
+  const { data } = await sb.rpc('mon_foto', { p_tipo:tipo, p_id:id }); if (!data) return;
+  $('fotoImg').src = data.startsWith('data:') ? data : 'data:image/jpeg;base64,' + data; $('mFoto').classList.remove('hidden');
+}
+
+// ================= RELATÓRIOS =================
+async function carregarRelatorio(){
+  const { data:r, error } = await sb.rpc('mon_relatorio', { p_dias:+$('rDias').value });
+  if (error || !r) return $('relat').innerHTML = '<div class="mut">Não foi possível carregar.</div>';
+  const barras = (pares, rot) => { const max = Math.max(1, ...pares.map(p => p[1])); return `<table class="barras">${pares.map(p => `<tr><td style="width:190px" class="small">${rot(p[0])}</td><td><div class="bar" style="width:${Math.round(p[1] / max * 100)}%"></div></td><td style="width:50px;text-align:right">${p[1]}</td></tr>`).join('')}</table>`; };
+  const tipos = Object.entries(r.por_tipo || {}).sort((a, b) => b[1] - a[1]);
+  const horas = Array.from({ length:24 }, (_, h) => [h, (r.por_hora || []).find(x => x.hora === h)?.n || 0]);
+  $('relat').innerHTML = `
+    <h2 style="margin:0 0 10px">Relatório K1 Monitoramento — últimos ${r.dias} dia(s) <span class="mut small">gerado em ${new Date().toLocaleString('pt-BR')}</span></h2>
+    <div class="stats" style="padding:0;border:0;background:none;margin-bottom:12px">
+      <div class="stat">Total de alertas<b>${r.total}</b></div><div class="stat">Sem resolver<b style="color:var(--bad)">${r.sem_resolver}</b></div>
+      <div class="stat">Tempo médio até atender<b>${r.atendimento_medio_min ?? '—'} min</b></div><div class="stat">Tempo médio até resolver<b>${r.resolucao_media_min ?? '—'} min</b></div>
+      <div class="stat">Ocorrências<b>${r.ocorrencias}</b></div><div class="stat">Registros no livro<b>${r.livro}</b></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="card"><h3 style="margin-top:0;font-size:15px">Alertas por tipo</h3>${tipos.length ? barras(tipos, t => tipoTxt(t)[0]) : '<div class="mut">Sem alertas.</div>'}</div>
+      <div class="card"><h3 style="margin-top:0;font-size:15px">Pânico e coação por horário do dia</h3>${barras(horas, h => String(h).padStart(2, '0') + 'h')}</div>
+    </div>
+    <div class="card" style="margin-top:12px"><h3 style="margin-top:0;font-size:15px">Alertas por dia</h3>${(r.por_dia || []).length ? barras(r.por_dia.map(x => [x.dia, x.n]), d => new Date(d + 'T12:00').toLocaleDateString('pt-BR')) : '<div class="mut">Sem alertas.</div>'}</div>
+    <div class="card" style="margin-top:12px;padding:0;overflow:auto"><table><thead><tr><th>Conta</th><th>Plano</th><th>Alertas</th><th>Pânico/coação</th><th>Sem resolver</th><th>Tempo médio até atender</th></tr></thead>
+      <tbody>${(r.por_conta || []).map(c => `<tr><td>${esc(c.nome)}</td><td><span class="badge ${plano(c.tipo)[1]}">${plano(c.tipo)[0]}</span></td><td>${c.total}</td><td>${c.panicos}</td><td>${c.abertos}</td><td>${c.atendimento_min ?? '—'} min</td></tr>`).join('') || '<tr><td colspan="6" class="mut">Sem alertas no período.</td></tr>'}</tbody></table></div>`;
+}
+
+// ================= SOS AO VIVO =================
+const SOS = { id:null, ultimo:-1, fila:[], tocando:false, timer:null, url:null, gravado:false };
+const SOS_ABERTOS = new Set();
+function sosBlob(b64, mime){ const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return URL.createObjectURL(new Blob([u], { type:mime })); }
+function sosProx(){
+  const v = $('sosVideo');
+  if (!SOS.fila.length){ SOS.tocando = false; $('sosSt').textContent = SOS.gravado ? 'Fim da gravação' : 'AO VIVO · aguardando próximo trecho…'; return; }
+  SOS.tocando = true; const t = SOS.fila.shift();
+  if (SOS.url) URL.revokeObjectURL(SOS.url); SOS.url = sosBlob(t.dados, t.mime);
+  v.src = SOS.url; v.play().catch(() => { $('sosSt').textContent = 'Clique no vídeo para ouvir'; });
+  $('sosSt').textContent = (SOS.gravado ? 'GRAVAÇÃO' : 'AO VIVO') + ' · trecho ' + (t.seq + 1) + (t.tipo === 'audio' ? ' · só áudio' : '');
+}
+async function sosPuxar(){
+  if (!SOS.id) return;
+  if (SOS.gravado && SOS.fila.length >= 2) return;
+  const { data:r, error } = await sb.rpc('mon_sos_trechos', { p_alerta_id:SOS.id, p_depois:SOS.ultimo });
+  if (error || !r) { $('sosInfo').textContent = 'Sem conexão. Tentando de novo…'; return; }
+  const a = r.alerta;
+  if (a) {
+    SOS.gravado = !!a.encerrado_em;
+    $('sosEncerrar').classList.toggle('hidden', SOS.gravado);
+    $('sosInfo').textContent = SOS.gravado ? 'Transmissão encerrada' + (a.encerrado_por ? ' por ' + a.encerrado_por : '') + '. Mostrando a gravação.' : 'Câmera e áudio com atraso de ~6 a 10 s.';
+    if (a.lat != null) { $('sosMapa').href = mapsUrl(a.lat, a.lng); $('sosMapa').classList.remove('hidden'); }
+  }
+  (r.trechos || []).forEach(t => { if (t.seq > SOS.ultimo) { SOS.ultimo = t.seq; SOS.fila.push(t); } });
+  if (!SOS.gravado) while (SOS.fila.length > 4) SOS.fila.shift();
+  if (!SOS.tocando) sosProx();
+}
+function verSos(id){
+  const a = S.alertas.find(x => x.id === id) || S.historico.find(x => x.id === id);
+  Object.assign(SOS, { id, ultimo:-1, fila:[], tocando:false, gravado:false });
+  $('sosNome').textContent = a ? `${a.pessoa} · ${a.empresa}` : '—';
+  const v = $('sosVideo'); v.onended = sosProx; v.onerror = sosProx;
+  $('mSos').classList.remove('hidden'); $('sosMapa').classList.add('hidden');
+  sosPuxar(); clearInterval(SOS.timer); SOS.timer = setInterval(sosPuxar, 3000);
+}
+function fecharSos(){ clearInterval(SOS.timer); SOS.id = null; const v = $('sosVideo'); v.pause(); v.removeAttribute('src'); $('mSos').classList.add('hidden'); }
+async function encerrarSos(){
+  if (!SOS.id || !confirm('Encerrar a transmissão? O celular para de gravar. O alerta continua aberto até ser resolvido.')) return;
+  const { error } = await sb.rpc('mon_sos_encerrar', { p_alerta_id:SOS.id }); if (error) return alert(traduz(error));
+  SOS.gravado = true; $('sosEncerrar').classList.add('hidden');
+}
+</script>
+</body>
+</html>
