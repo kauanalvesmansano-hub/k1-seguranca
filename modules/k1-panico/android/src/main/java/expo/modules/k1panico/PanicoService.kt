@@ -85,6 +85,8 @@ class PanicoService : Service() {
     private const val MIN_DISTANCIA_M = 6f
     private const val FILA = "fila_panico"
     private const val CANAL_ALERTA = "k1_alerta"
+    private const val CANAL_PARCEIRO = "k1_parceiro_perigo"
+    private const val INTERVALO_PARCEIROS_MS = 15_000L
     private const val NOTIF_HOMEM_CAIDO = 4411
     private const val LIMIAR_MOVIMENTO = 1.2f      // m/s² de variação em relação à gravidade
     private const val TEMPO_RESPOSTA_MS = 30_000L
@@ -158,6 +160,15 @@ class PanicoService : Service() {
     }
   }
 
+  // Parceiro do mesmo posto acionou pânico/coação: este celular também é avisado
+  private val parceirosExecutor = Executors.newSingleThreadExecutor()
+  private val cicloParceiros = object : Runnable {
+    override fun run() {
+      try { parceirosExecutor.execute { consultarParceiros() } } catch (_: Exception) {}
+      handler.postDelayed(this, INTERVALO_PARCEIROS_MS)
+    }
+  }
+
   private val cicloTelemetria = object : Runnable {
     override fun run() {
       enviarTelemetria()
@@ -192,6 +203,7 @@ class PanicoService : Service() {
     iniciarSensorMovimento()
     handler.postDelayed(cicloTelemetria, 5_000L)
     handler.postDelayed(verificaHomemCaido, 15_000L)
+    handler.postDelayed(cicloParceiros, 8_000L)
     if (temPanicoNaFila()) handler.post(reenvioFila)
     Log.i(TAG, "Monitoramento do botão Power ativo")
   }
@@ -206,6 +218,8 @@ class PanicoService : Service() {
     handler.removeCallbacks(cicloTelemetria)
     handler.removeCallbacks(reenvioFila)
     handler.removeCallbacks(verificaHomemCaido)
+    handler.removeCallbacks(cicloParceiros)
+    try { parceirosExecutor.shutdownNow() } catch (_: Exception) {}
     try { (getSystemService(Context.SENSOR_SERVICE) as SensorManager).unregisterListener(ouvinteMovimento) } catch (_: Exception) {}
     cancelarPreAlarme()
     cancelarPreBatida()
@@ -615,6 +629,96 @@ class PanicoService : Service() {
       Log.w(TAG, "Sem conexão: ${e.message}")
       false
     }
+  }
+
+  // ---------- Aviso de parceiro em perigo ----------
+  private fun consultarParceiros() {
+    val p = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    val url = p.getString("url", null) ?: return
+    val chave = p.getString("anon", null) ?: return
+    val token = p.getString("token", null) ?: return
+    val texto = try {
+      val con = (URL("${url.trimEnd('/')}/rest/v1/rpc/vig_alertas_parceiros").openConnection() as HttpURLConnection).apply {
+        requestMethod = "POST"
+        connectTimeout = 8_000
+        readTimeout = 10_000
+        doOutput = true
+        setRequestProperty("apikey", chave)
+        setRequestProperty("Authorization", "Bearer $chave")
+        setRequestProperty("Content-Type", "application/json")
+      }
+      con.outputStream.use { it.write(JSONObject().put("p_token", token).toString().toByteArray(Charsets.UTF_8)) }
+      val c = con.responseCode
+      val t = if (c in 200..299) con.inputStream.bufferedReader().use { it.readText() } else null
+      con.disconnect()
+      t
+    } catch (_: Exception) { null } ?: return
+    try {
+      val lista = JSONArray(texto.ifBlank { "[]" })
+      if (lista.length() == 0) return
+      val vistos = LinkedHashSet((p.getString("parceiros_avisados", "") ?: "").split(",").filter { it.isNotBlank() })
+      var mudou = false
+      for (i in 0 until lista.length()) {
+        val a = lista.getJSONObject(i)
+        val id = a.optString("id")
+        if (id.isBlank() || !vistos.add(id)) continue
+        mudou = true
+        handler.post { avisarParceiro(a) }
+      }
+      if (mudou) {
+        while (vistos.size > 60) vistos.remove(vistos.first())
+        p.edit().putString("parceiros_avisados", vistos.joinToString(",")).apply()
+      }
+    } catch (e: Exception) { Log.w(TAG, "Aviso de parceiro inválido: ${e.message}") }
+  }
+
+  private fun avisarParceiro(a: JSONObject) {
+    val id = a.optString("id")
+    val nome = a.optString("vigilante").ifBlank { "Seu parceiro" }
+    val posto = a.optString("posto")
+    val coacao = a.optString("tipo") == "coacao"
+    val titulo = if (coacao) "⚠ PARCEIRO RENDIDO — $nome" else "⚠ PARCEIRO EM PERIGO — $nome"
+    val oque = if (coacao) "$nome digitou a SENHA DE COAÇÃO: ele pode estar rendido, sendo obrigado a desligar o alarme."
+      else "$nome apertou o botão de PÂNICO: possível assalto no posto agora."
+    val texto = oque + (if (posto.isNotBlank()) " Posto: $posto." else "") +
+      " A central já foi avisada. Não vá sozinho até ele e não ligue para o celular dele: proteja-se, ligue 190 se for seguro e siga a orientação da central."
+    val lat = if (a.isNull("lat")) Double.NaN else a.optDouble("lat", Double.NaN)
+    val lng = if (a.isNull("lng")) Double.NaN else a.optDouble("lng", Double.NaN)
+    val abrir = if (!lat.isNaN() && !lng.isNaN())
+      Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.google.com/maps?q=$lat,$lng")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    else packageManager.getLaunchIntentForPackage(packageName)
+    val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      nm.createNotificationChannel(NotificationChannel(CANAL_PARCEIRO, "Parceiro em perigo", NotificationManager.IMPORTANCE_HIGH).apply {
+        description = "Outro vigilante do seu posto acionou pânico ou coação"
+        setSound(null, null) // sem toque alto: vibra forte para não chamar a atenção do assaltante
+        enableVibration(true)
+        vibrationPattern = longArrayOf(0, 900, 300, 900, 300, 900)
+        setBypassDnd(true)
+        lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+      })
+    }
+    val n = NotificationCompat.Builder(this, CANAL_PARCEIRO)
+      .setSmallIcon(applicationInfo.icon)
+      .setContentTitle(titulo)
+      .setContentText(oque)
+      .setStyle(NotificationCompat.BigTextStyle().bigText(texto))
+      .setColor(0xFFDC2626.toInt())
+      .setPriority(NotificationCompat.PRIORITY_MAX)
+      .setCategory(NotificationCompat.CATEGORY_ALARM)
+      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+      .setVibrate(longArrayOf(0, 900, 300, 900, 300, 900))
+      .setAutoCancel(true)
+    abrir?.let { n.setContentIntent(PendingIntent.getActivity(this, 9000 + (id.hashCode() and 0xFFF), it,
+      PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)) }
+    try { nm.notify(9000 + (id.hashCode() and 0xFFF), n.build()) } catch (e: Exception) { Log.w(TAG, "Sem permissão de notificação: ${e.message}") }
+    // vibração longa e insistente (uns 12 s), mesmo com o celular no bolso
+    try {
+      val v = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+      val padrao = longArrayOf(0, 1000, 400, 1000, 400, 1000, 400, 1000, 400, 1000, 400, 1000, 400, 1000, 400, 1000)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) v.vibrate(VibrationEffect.createWaveform(padrao, -1))
+      else @Suppress("DEPRECATION") v.vibrate(padrao, -1)
+    } catch (_: Exception) {}
   }
 
   // ---------- Dados do aparelho ----------
