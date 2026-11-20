@@ -211,13 +211,14 @@
         <div class="stat">Alertas abertos (24 h)<b id="sAlertas" style="color:var(--bad)">0</b></div><div class="stat">SOS ao vivo<b id="sSos" style="color:var(--red)">0</b></div>
       </div>
         <div class="linha" style="margin-bottom:10px"><input id="empBusca" placeholder="Buscar empresa" oninput="renderEmpresas()" style="flex:1;max-width:360px">
-          <select id="empOrdem" onchange="renderEmpresas()"><option value="alertas">Mais alertas primeiro</option><option value="nome">Nome</option><option value="turno">Mais gente em turno</option></select></div>
+          <select id="empOrdem" onchange="renderEmpresas()"><option value="alertas">Mais alertas primeiro</option><option value="nome">Nome</option><option value="turno">Mais gente em turno</option></select>
+          <select id="empPag" onchange="renderEmpresas()"><option value="">Todas (pagamento)</option><option value="pago">Pagas</option><option value="teste">Em teste grátis</option><option value="aguardando">Aguardando pagamento</option><option value="vencido">Vencidas</option><option value="bloqueado">Bloqueadas</option></select></div>
         <div class="grid" id="gEmp"></div>
       </div>
       <div class="aba hidden" id="aba-individuais">
         <div class="linha" style="margin-bottom:10px"><input id="indBusca" placeholder="Buscar nome" oninput="renderIndividuais()" style="flex:1;max-width:360px">
           <select id="indProf" onchange="renderIndividuais()"><option value="">Vigilantes e caminhoneiros</option><option value="vigilante">Só vigilantes</option><option value="caminhoneiro">Só caminhoneiros</option></select></div>
-        <div class="card" style="padding:0;overflow:auto"><table><thead><tr><th>Nome</th><th>Profissão</th><th>Turno</th><th>Bateria</th><th>Último sinal</th><th>Localização</th><th>Alerta</th></tr></thead><tbody id="tbInd"></tbody></table></div>
+        <div class="card" style="padding:0;overflow:auto"><table><thead><tr><th>Nome</th><th>Profissão</th><th>Pagamento</th><th>Turno</th><th>Bateria</th><th>Último sinal</th><th>Localização</th><th>Alerta</th></tr></thead><tbody id="tbInd"></tbody></table></div>
       </div>
       <div class="aba hidden" id="aba-familias">
         <div class="grid" id="gFam"></div>
@@ -288,6 +289,14 @@
     <div style="overflow:auto;max-height:60vh"><table><thead><tr><th>Pessoa</th><th>Local</th><th>Turno</th><th>Bateria</th><th>Sinal</th><th>Alerta</th></tr></thead><tbody id="tbEmpPes"></tbody></table></div>
     <div id="mapaEmp" style="height:60vh;border-radius:10px;border:1px solid var(--line)"></div>
   </div>
+  <h3 style="margin:14px 0 6px;font-size:15px">💰 Pagamento</h3>
+  <div id="ePag" class="linha" style="margin-bottom:6px"></div>
+  <div style="overflow:auto;max-height:26vh"><table><thead><tr><th>Mês</th><th>Valor</th><th>Vencimento</th><th>Situação</th><th>Pago em</th><th></th></tr></thead><tbody id="tbFat"></tbody></table></div>
+  <div class="linha" style="margin-top:8px">
+    <button class="ok sm" id="btnLiberar" onclick="definirStatus('ativo')">Liberar acesso</button>
+    <button class="sm" id="btnBloquear" onclick="definirStatus('bloqueado')">Bloquear acesso</button>
+    <button class="sec sm" style="margin-left:auto;border-color:#7f1d1d;color:#fca5a5" onclick="removerConta()">🗑 Remover esta conta</button>
+  </div>
   <h3 style="margin:14px 0 6px;font-size:15px">Alertas das últimas 24 h</h3>
   <div style="overflow:auto;max-height:30vh"><table><thead><tr><th>Quando</th><th>Tipo</th><th>Pessoa</th><th>Situação</th><th></th></tr></thead><tbody id="tbEmpAl"></tbody></table></div>
 </div></div>
@@ -346,6 +355,13 @@ const CRITICOS = ['panico','coacao','sem_movimento','batida','atraso_chegada','p
 const tipoTxt = t => TIPOS[t] || [String(t || '').toUpperCase(), 'b-warn'];
 const PLANO = { seguranca:['Empresa','b-acc'], autonomo:['Individual','b-pur'], familia:['Família','b-ok'], transportadora:['Transportadora','b-warn'] };
 const plano = p => PLANO[p] || [p, 'b-off'];
+const PAG = { pago:['PAGO','b-ok'], teste:['TESTE GRÁTIS','b-acc'], aguardando:['AGUARDANDO PAGAMENTO','b-warn'], vencido:['VENCIDO','b-bad'],
+  bloqueado:['BLOQUEADO — NÃO PAGOU','b-bad'], encerrado:['ENCERRADO','b-off'], sem_fatura:['SEM FATURA','b-off'] };
+const pagTxt = e => { const g = e?.pagamento || {}; const [t, c] = PAG[g.situacao] || [g.situacao || '—', 'b-off'];
+  const extra = g.situacao === 'teste' && g.teste_ate ? ' até ' + new Date(g.teste_ate).toLocaleDateString('pt-BR')
+    : g.aberta ? ` · R$ ${Number(g.aberta.valor).toFixed(2).replace('.', ',')} vence ${new Date(g.aberta.vencimento + 'T12:00').toLocaleDateString('pt-BR')}` : '';
+  return `<span class="badge ${c}">💰 ${t}</span><span class="small mut">${extra}</span>`; };
+const pagDe = empresaId => S.empresas.find(e => e.id === empresaId);
 const ST = { aberto:['Aberto','b-bad'], em_atendimento:['Em atendimento','b-acc'], resolvido:['Resolvido','b-ok'] };
 const dt = s => s ? new Date(s).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—';
 function ha(s){ if (!s) return '—'; const m = Math.round((Date.now() - new Date(s)) / 60000); if (m < 1) return 'agora'; if (m < 60) return `há ${m} min`; const h = Math.floor(m / 60); return h < 24 ? `há ${h} h ${m % 60} min` : dt(s); }
@@ -819,10 +835,11 @@ function renderEmpresas(){
   const q = $('empBusca').value.trim().toLowerCase(), o = $('empOrdem').value;
   let l = S.empresas.filter(e => e.tipo === 'seguranca' || e.tipo === 'transportadora');
   if (q) l = l.filter(e => e.nome.toLowerCase().includes(q));
+  const fp = $('empPag').value; if (fp) l = l.filter(e => e.pagamento?.situacao === fp);
   l.sort((a, b) => o === 'nome' ? a.nome.localeCompare(b.nome) : o === 'turno' ? b.em_turno - a.em_turno : (b.alertas - a.alertas || b.em_turno - a.em_turno));
   $('gEmp').innerHTML = l.map(e => `<div class="card emp" onclick="abrirEmpresa('${e.id}')" style="${e.alertas ? 'border-color:#7f1d1d' : ''}">
       <h3><span>${esc(e.nome)}</span>${e.alertas ? `<span class="badge b-bad">${e.alertas} alerta(s)</span>` : '<span class="badge b-ok">OK</span>'}</h3>
-      <div class="linha small"><span class="badge ${plano(e.tipo)[1]}">${plano(e.tipo)[0]}</span>${e.plano_status !== 'ativo' ? `<span class="badge b-bad">${esc(e.plano_status)}</span>` : ''}${e.teste_ate && new Date(e.teste_ate) > new Date() ? '<span class="badge b-warn">teste grátis</span>' : ''}</div>
+      <div class="linha small"><span class="badge ${plano(e.tipo)[1]}">${plano(e.tipo)[0]}</span>${pagTxt(e)}</div>
       <div class="small mut" style="margin-top:8px">👮 ${e.pessoas} de ${e.vagas} vagas · <b style="color:var(--ok)">${e.em_turno} em turno</b></div>
       <div class="small mut">Bateria mais baixa: ${e.bateria_min != null ? e.bateria_min + '%' : '—'}</div>
       ${e.email ? `<div class="small mut">${esc(e.email)}</div>` : ''}
@@ -834,6 +851,7 @@ async function abrirEmpresa(id){
   $('eTit').textContent = e.nome;
   $('eInfo').innerHTML = `<span class="badge ${plano(e.tipo)[1]}">${plano(e.tipo)[0]}</span> · plano ${esc(e.plano_status)} · ${e.pessoas} de ${e.vagas} vagas · ${e.em_turno} em turno${e.email ? ' · ' + esc(e.email) : ''}${e.cnpj ? ' · CNPJ ' + esc(e.cnpj) : ''} · cliente desde ${new Date(e.criado_em).toLocaleDateString('pt-BR')}`;
   $('mEmp').classList.remove('hidden');
+  carregarFaturas(e);
   if (!M.emp) { M.emp = novoMapa('mapaEmp'); M.empCamada = L.layerGroup().addTo(M.emp); }
   setTimeout(() => M.emp.invalidateSize(), 60);
   renderEmpDetalhe(true);
@@ -842,6 +860,37 @@ async function abrirEmpresa(id){
   const lim = Date.now() - 24 * 3600000;
   $('tbEmpAl').innerHTML = (data || []).filter(a => new Date(a.criado_em) > lim).map(a => `<tr><td>${dt(a.criado_em)}</td><td><span class="badge ${tipoTxt(a.tipo)[1]}">${tipoTxt(a.tipo)[0]}</span></td><td>${esc(a.pessoa)}</td><td><span class="badge ${(ST[a.status] || ['', 'b-off'])[1]}">${(ST[a.status] || [a.status])[0]}</span></td>
     <td>${a.status !== 'resolvido' ? `<button class="ok sm" onclick="abrirResolver('${a.id}')">Resolver</button>` : esc(a.observacao || '')}</td></tr>`).join('') || '<tr><td colspan="5" class="mut">Nenhum alerta nas últimas 24 h.</td></tr>';
+}
+async function carregarFaturas(e){
+  $('ePag').innerHTML = pagTxt(e) + (e.pagamento?.valor_mensal != null ? `<span class="small mut">Mensalidade: R$ ${Number(e.pagamento.valor_mensal).toFixed(2).replace('.', ',')}</span>` : '');
+  $('btnLiberar').classList.toggle('hidden', e.plano_status === 'ativo'); $('btnBloquear').classList.toggle('hidden', e.plano_status !== 'ativo');
+  const { data } = await sb.rpc('mon_faturas', { p_empresa_id:e.id });
+  const ST_F = { aberta:['Aberta','b-warn'], vencida:['Vencida','b-bad'], paga:['Paga','b-ok'], cancelada:['Cancelada','b-off'] };
+  $('tbFat').innerHTML = (data || []).map(f => `<tr><td>${new Date(f.competencia + 'T12:00').toLocaleDateString('pt-BR', { month:'short', year:'numeric' })}</td>
+    <td>R$ ${Number(f.valor).toFixed(2).replace('.', ',')}</td><td>${new Date(f.vencimento + 'T12:00').toLocaleDateString('pt-BR')}</td>
+    <td><span class="badge ${(ST_F[f.status] || ['', 'b-off'])[1]}">${(ST_F[f.status] || [f.status])[0]}</span>${f.renovar === false ? ' <span class="small mut">não vai renovar</span>' : ''}</td>
+    <td class="small">${f.paga_em ? dt(f.paga_em) : '—'}</td>
+    <td>${f.status === 'aberta' || f.status === 'vencida' ? `<button class="ok sm" onclick="confirmarPagamento('${f.id}', '${e.id}')">Confirmar pagamento</button>` : ''}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="mut">Nenhuma fatura ainda (está no teste grátis ou acabou de entrar).</td></tr>';
+}
+async function confirmarPagamento(fid, eid){
+  if (!confirm('Confirmar que o Pix desta fatura caiu na sua conta? Se a conta estava bloqueada, ela é liberada na hora.')) return;
+  const { error } = await sb.rpc('mon_confirmar_pagamento', { p_fatura_id:fid }); if (error) return alert(traduz(error));
+  await carregarEmpresas(); const e = S.empresas.find(x => x.id === eid); if (e) { abrirEmpresa(eid); }
+}
+async function definirStatus(st){
+  const e = S.empresas.find(x => x.id === S.empAberta); if (!e) return;
+  if (!confirm(st === 'ativo' ? `Liberar o acesso de "${e.nome}" agora?` : `Bloquear "${e.nome}"? O painel e o aplicativo de todos ficam bloqueados até liberar ou pagar.`)) return;
+  const { error } = await sb.rpc('mon_definir_status', { p_empresa_id:e.id, p_status:st }); if (error) return alert(traduz(error));
+  await carregarEmpresas(); abrirEmpresa(e.id);
+}
+async function removerConta(){
+  const e = S.empresas.find(x => x.id === S.empAberta); if (!e) return;
+  const nome = prompt(`ATENÇÃO: isso apaga para sempre a conta "${e.nome}" e TUDO dela (pessoas, alertas, livro, vídeos, faturas). Não dá para desfazer.\n\nPara confirmar, digite o nome da conta exatamente:`);
+  if (nome === null) return;
+  const { error } = await sb.rpc('mon_remover_conta', { p_empresa_id:e.id, p_confirmacao:nome });
+  if (error) return alert(/confirmacao_incorreta/.test(error.message) ? 'O nome digitado não confere. Nada foi apagado.' : traduz(error));
+  fechar('mEmp'); await carregarEmpresas(); carregarPessoas(); carregarResumo(); alert('Conta removida.');
 }
 function renderEmpDetalhe(centralizar){
   const id = S.empAberta; if (!id) return;
@@ -883,16 +932,16 @@ function renderIndividuais(){
   let l = S.pessoas.filter(p => p.plano === 'autonomo');
   if (prof) l = l.filter(p => p.profissao === prof);
   if (q) l = l.filter(p => p.nome.toLowerCase().includes(q));
-  $('tbInd').innerHTML = l.map(p => `<tr class="click" onclick="abrirPessoa('${p.id}')"><td><b>${esc(p.nome)}</b><div class="small mut">${esc(p.telefone || '')}</div></td><td>${p.profissao === 'caminhoneiro' ? '🚚 Caminhoneiro' : '👮 Vigilante'}</td>
+  $('tbInd').innerHTML = l.map(p => `<tr class="click" onclick="abrirPessoa('${p.id}')"><td><b>${esc(p.nome)}</b><div class="small mut">${esc(p.telefone || '')}</div></td><td>${p.profissao === 'caminhoneiro' ? '🚚 Caminhoneiro' : '👮 Vigilante'}</td><td>${pagTxt(pagDe(p.empresa_id))} <a href="#" onclick="event.stopPropagation();abrirEmpresa('${p.empresa_id}');return false">conta</a></td>
     <td>${p.em_turno ? '<span class="badge b-ok">ativo</span>' : '<span class="badge b-off">desligado</span>'}</td><td>${bat(p.bateria)}</td><td class="small">${ha(p.atualizado)}</td>
     <td>${p.lat != null ? `<a href="${mapsUrl(p.lat, p.lng)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">abrir</a>` : '—'}</td>
-    <td>${p.alerta ? `<span class="badge b-bad">${tipoTxt(p.alerta.tipo)[0]}</span>` : '—'}</td></tr>`).join('') || '<tr><td colspan="7" class="mut">Ninguém no plano individual ainda.</td></tr>';
+    <td>${p.alerta ? `<span class="badge b-bad">${tipoTxt(p.alerta.tipo)[0]}</span>` : '—'}</td></tr>`).join('') || '<tr><td colspan="8" class="mut">Ninguém no plano individual ainda.</td></tr>';
 }
 function renderFamilias(){
   const fams = S.empresas.filter(e => e.tipo === 'familia');
   $('gFam').innerHTML = fams.map(e => {
     const ps = S.pessoas.filter(p => p.empresa_id === e.id);
-    return `<div class="card emp" onclick="abrirEmpresa('${e.id}')" style="${e.alertas ? 'border-color:#7f1d1d' : ''}"><h3><span>${esc(e.nome)}</span>${e.alertas ? `<span class="badge b-bad">${e.alertas} alerta(s)</span>` : ''}</h3>
+    return `<div class="card emp" onclick="abrirEmpresa('${e.id}')" style="${e.alertas ? 'border-color:#7f1d1d' : ''}"><h3><span>${esc(e.nome)}</span>${e.alertas ? `<span class="badge b-bad">${e.alertas} alerta(s)</span>` : ''}</h3><div class="linha small" style="margin-bottom:6px">${pagTxt(e)}</div>
       ${ps.map(p => `<div class="small" style="display:flex;justify-content:space-between"><span>${esc(p.nome)}</span><span>${bat(p.bateria)} · <span class="mut">${ha(p.atualizado)}</span></span></div>`).join('') || '<div class="small mut">Sem membros</div>'}</div>`;
   }).join('') || '<div class="mut">Nenhuma família cadastrada.</div>';
 }

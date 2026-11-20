@@ -160,3 +160,13 @@ export function salvarContato(s: SessaoVigilante, tipo: 'emergencia' | 'empresa'
 export function excluirContato(s: SessaoVigilante, id: string) {
   return rpc<void>('vig_contato_excluir', { p_token: s.token, p_id: id });
 }
+
+// ---------- Pagamento (funciona mesmo com a conta bloqueada) ----------
+export type PlanoPagamento = {
+  tipo: 'seguranca' | 'familia' | 'autonomo'; plano_status: 'ativo' | 'bloqueado' | 'encerrado'; ativa: boolean;
+  em_teste: boolean; teste_ate: string | null; valor_mensal: number; whatsapp_k1: string | null; pix_nome: string;
+  fatura: { id: string; valor_total: number; vencimento: string; status: string; pix_chave: string; pix_copia_cola: string } | null;
+};
+export function planoPagamento(s: SessaoVigilante) {
+  return rpc<PlanoPagamento>('vig_plano_pagamento', { p_token: s.token });
+}
