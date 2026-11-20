@@ -35,6 +35,16 @@ export default function OcorrenciasEmpresa() {
     return () => { supabase.removeChannel(canal); };
   }, [carregar]);
 
+  function remover(o: Ocorrencia) {
+    Alert.alert('Remover ocorrência?', 'Ela será apagada de vez. Não dá para desfazer.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: async () => {
+        const { error } = await supabase.from('ocorrencias').delete().eq('id', o.id);
+        if (error) Alert.alert('Erro', traduzErro(error)); else setLista(l => l.filter(x => x.id !== o.id));
+      } },
+    ]);
+  }
+
   async function mudar(o: Ocorrencia, status: Ocorrencia['status']) {
     const { error } = await supabase.from('ocorrencias').update({ status }).eq('id', o.id);
     if (error) Alert.alert('Erro', traduzErro(error)); else carregar();
@@ -70,6 +80,7 @@ export default function OcorrenciasEmpresa() {
             {o.status !== 'resolvida' && (
               <Pressable style={[st.btn, { backgroundColor: '#15803d' }]} onPress={() => mudar(o, 'resolvida')}><Text style={st.btnTxt}>RESOLVIDA</Text></Pressable>
             )}
+            <Pressable style={[st.btn, { backgroundColor: '#7f1d1d' }]} onPress={() => remover(o)}><Text style={st.btnTxt}>REMOVER</Text></Pressable>
           </View>
         </CardK1>
       ))}

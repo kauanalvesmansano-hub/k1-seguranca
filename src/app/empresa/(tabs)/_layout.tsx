@@ -24,6 +24,7 @@ export default function AbasEmpresa() {
     <Tabs screenOptions={opcoes}>
       <Tabs.Screen name="painel" options={{ title: 'Painel', tabBarIcon: icone('home') }} />
       <Tabs.Screen name="relatorios" options={{ title: 'Relatórios', tabBarIcon: icone('bar-chart') }} />
+      <Tabs.Screen name="livro" options={{ title: 'Livro', href: familia ? null : undefined, tabBarIcon: icone('book') }} />
       <Tabs.Screen name="funcionarios" options={{ title: familia ? 'Pessoas' : 'Funcionários', tabBarIcon: icone('people') }} />
       <Tabs.Screen name="configuracoes" options={{ title: 'Ajustes', tabBarIcon: icone('settings-sharp') }} />
     </Tabs>

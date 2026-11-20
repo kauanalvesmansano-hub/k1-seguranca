@@ -130,3 +130,17 @@ export function registrarEntradaVisitante(s: SessaoVigilante, v: {
 export function registrarSaidaVisitante(s: SessaoVigilante, id: string) {
   return rpc<void>('vig_visitante_saida', { p_token: s.token, p_id: id });
 }
+
+// ---------- Livro de ocorrências digital ----------
+export type RegistroLivro = { id: string; assunto: string; hora_fato: string; descricao: string; tem_foto: boolean };
+export function livroDoTurno(s: SessaoVigilante) {
+  return rpc<{ assuntos: string[]; em_turno: boolean; registros: RegistroLivro[] }>('vig_livro_turno', { p_token: s.token });
+}
+export function registrarNoLivro(s: SessaoVigilante, assunto: string, hora: Date, descricao: string, fotoBase64?: string | null) {
+  return rpc<{ id: string; hora: string }>('vig_livro_registrar', {
+    p_token: s.token, p_assunto: assunto, p_hora: hora.toISOString(), p_descricao: descricao, p_foto_base64: fotoBase64 ?? null,
+  });
+}
+export function excluirDoLivro(s: SessaoVigilante, id: string) {
+  return rpc<void>('vig_livro_excluir', { p_token: s.token, p_id: id });
+}

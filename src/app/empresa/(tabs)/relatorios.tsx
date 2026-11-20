@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
-import { RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { FundoK1, CardK1, K1, dataHora, s as k } from '../../../components/k1';
-import { supabase } from '../../../lib/supabase';
+import { supabase, traduzErro } from '../../../lib/supabase';
 import { RESULTADO, type Checkin } from '../../../lib/empresa';
 
 /** Relatório dos últimos 30 dias + todas as comunicações recentes. */
@@ -26,6 +26,29 @@ export default function Relatorios() {
   }, []);
 
   useFocusEffect(useCallback(() => { carregar(); }, [carregar]));
+
+  function remover(c: Checkin) {
+    Alert.alert('Remover este registro?', 'Ele será apagado do relatório de vez.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: async () => {
+        const { error } = await supabase.from('checkins').delete().eq('id', c.id);
+        if (error) Alert.alert('Erro', traduzErro(error)); else setLista(l => l.filter(x => x.id !== c.id));
+      } },
+    ]);
+  }
+  function limparTudo() {
+    Alert.alert('Apagar o relatório inteiro?', `Os ${lista.length} registros dos últimos 30 dias serão apagados de vez. Não dá para desfazer.`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Apagar tudo', style: 'destructive', onPress: async () => {
+        const ids = lista.map(c => c.id);
+        for (let i = 0; i < ids.length; i += 200) {
+          const { error } = await supabase.from('checkins').delete().in('id', ids.slice(i, i + 200));
+          if (error) { Alert.alert('Erro', traduzErro(error)); break; }
+        }
+        carregar();
+      } },
+    ]);
+  }
 
   const conta = (r: Checkin['resultado']) => lista.filter(c => c.resultado === r).length;
   const total = lista.length || 1;
@@ -52,7 +75,10 @@ export default function Relatorios() {
       </View>
 
       <CardK1 style={{ gap: 12 }}>
-        <Text style={[k.titulo, { fontSize: 16 }]}>Todas as comunicações</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={[k.titulo, { fontSize: 16 }]}>Todas as comunicações</Text>
+          {lista.length > 0 && <Pressable onPress={limparTudo} hitSlop={8}><Text style={{ color: '#f87171', fontWeight: '700' }}>Apagar tudo</Text></Pressable>}
+        </View>
         {lista.length === 0 && <Text style={k.mut}>Nenhum registro no período.</Text>}
         {lista.slice(0, 200).map(c => (
           <View key={c.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -62,6 +88,7 @@ export default function Relatorios() {
               <Text style={[k.mut, { fontSize: 12 }]} numberOfLines={1}>{c.vigilantes?.nome}</Text>
             </View>
             <Text style={k.mut}>{dataHora(c.criado_em)}</Text>
+            <Pressable onPress={() => remover(c)} hitSlop={10}><Ionicons name="trash-outline" size={18} color="#f87171" /></Pressable>
           </View>
         ))}
       </CardK1>
