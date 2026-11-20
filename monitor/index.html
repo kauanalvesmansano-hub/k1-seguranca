@@ -274,6 +274,7 @@
       <div class="card" style="max-width:640px;margin-top:12px">
         <h3 style="margin-top:0">💻 Computadores autorizados</h3>
         <table><thead><tr><th>Computador</th><th>Autorizado em</th><th>Último uso</th><th></th></tr></thead><tbody id="cfAparelhos"></tbody></table>
+        <button class="sec sm" style="margin-top:10px" onclick="desconfiarTodos()">Pedir o código de novo em todos os computadores</button>
       </div>
     </div>
   </div>
@@ -309,7 +310,7 @@
   </div>
   <div class="linha" style="margin-top:10px"><a id="sosMapa" target="_blank" rel="noopener" class="hidden"><button class="acc">Ver no mapa</button></a>
     <a href="tel:190"><button>Ligar 190</button></a><a href="tel:191"><button class="sec">Ligar 191 (PRF)</button></a>
-    <button id="sosEncerrar" class="sec" onclick="encerrarSos()">Encerrar transmissão</button></div>
+    <button id="sosEncerrar" onclick="encerrarSos()">■ Cancelar câmera e áudio</button></div>
 </div></div>
 
 <!-- Resolver -->
@@ -379,7 +380,9 @@ const traduzBase = e => { const m = e?.message || String(e); for (const k in ERR
 const traduz = e => { const m = String(e?.message || e || ''); for (const k in ERROS) if (m.includes(k)) return ERROS[k]; return emPortugues(e); };
 
 // ================= LOGIN =================
+let USUARIO_DIGITOU = false;
 async function entrar(){
+  USUARIO_DIGITOU = true;
   $('eLogin').textContent = '';
   const { error } = await sb.auth.signInWithPassword({ email:$('email').value.trim(), password:$('senha').value });
   if (error) return $('eLogin').textContent = traduz(error);
@@ -396,7 +399,7 @@ let CHAVE = null, APP_ABERTO = false;
 function campoSenha(id, ph){ return `<label>${ph}</label><input id="${id}" type="password" style="width:100%" onkeydown="if(event.key==='Enter')$('btnTrava').click()">`; }
 async function iniciar(){
   const { error } = await sb.rpc('mon_status', { p_chave_aparelho:null });
-  if (error) { $('eLogin').textContent = traduz(error); await sb.auth.signOut(); return; }
+  if (error) { await sb.auth.signOut(); if (USUARIO_DIGITOU) $('eLogin').textContent = traduz(error); return; }
   $('tLogin').classList.add('hidden');
   await mostrarTrava();
 }
@@ -414,7 +417,7 @@ async function mostrarTrava(){
     const { data:{ user } } = await sb.auth.getUser();
     EMAIL_DONO = user?.email || '';
     const oculto = EMAIL_DONO.replace(/^(.{2}).*(@.*)$/, '$1•••••$2');
-    $('travaCorpo').innerHTML = `<p>Para sua segurança, enviamos um <b>código de 6 dígitos</b> para o e-mail <b>${esc(oculto)}</b>. Veja também a caixa de Spam.</p>
+    $('travaCorpo').innerHTML = `<p>Para sua segurança, enviamos um <b>código de 6 dígitos</b> para o e-mail <b>${esc(oculto)}</b>. Veja também a caixa de Spam.</p><p class="small mut">Depois de confirmar, <b>este computador fica salvo por 30 dias</b> e não pede mais o código.</p>
       <label>Código de 6 dígitos</label><input id="tCod" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="width:100%;font-size:26px;letter-spacing:10px;text-align:center" onkeydown="if(event.key==='Enter')confirmarCodigo()">
       <button id="btnTrava" style="width:100%;margin-top:14px" onclick="confirmarCodigo()">Confirmar código</button>
       <button id="btnReenviar" class="sec sm" style="margin-top:10px" onclick="enviarCodigo()">Reenviar código</button>`;
@@ -495,13 +498,8 @@ async function abrirApp(){
   const inicio = Date.now();
   setInterval(() => { const t = Math.floor((Date.now() - inicio) / 1000); $('nTempo').textContent = [Math.floor(t / 3600), Math.floor(t % 3600 / 60), t % 60].map(n => String(n).padStart(2, '0')).join(':'); }, 1000);
 }
-// ao fechar o programa a central tranca de novo (abre só com a senha do monitoramento)
 let TOKEN = null;
-sb.auth.onAuthStateChange((_e, s) => { TOKEN = s?.access_token || null; });
-window.addEventListener('beforeunload', () => {
-  if (!TOKEN) return;
-  try { fetch(SUPABASE_URL + '/rest/v1/rpc/mon_trancar', { method:'POST', keepalive:true, headers:{ apikey:SUPABASE_ANON_KEY, Authorization:'Bearer ' + TOKEN, 'Content-Type':'application/json' }, body:'{}' }); } catch {}
-});
+sb.auth.onAuthStateChange((_e, sess) => { TOKEN = sess?.access_token || null; });
 async function trocarSenhaMon(){
   const { data, error } = await sb.rpc('mon_trocar_senha', { p_atual:$('cfAtual').value, p_nova:$('cfNova').value });
   $('cfMsg').style.color = error || data !== 'ok' ? 'var(--bad)' : 'var(--ok)';
@@ -510,8 +508,12 @@ async function trocarSenhaMon(){
 }
 async function carregarAparelhos(){
   const { data } = await sb.rpc('mon_aparelhos_lista');
-  $('cfAparelhos').innerHTML = (data || []).map(a => `<tr><td>${esc(a.nome)}</td><td class="small">${dt(a.criado_em)}</td><td class="small">${dt(a.ultimo_uso)}</td>
+  $('cfAparelhos').innerHTML = (data || []).map(a => `<tr><td>${esc(a.nome)}${a.confiavel_ate && new Date(a.confiavel_ate) > new Date() ? `<div class="small" style="color:var(--ok)">salvo até ${new Date(a.confiavel_ate).toLocaleDateString('pt-BR')} (sem código)</div>` : '<div class="small mut">pede código</div>'}</td><td class="small">${dt(a.criado_em)}</td><td class="small">${dt(a.ultimo_uso)}</td>
     <td><button class="sec sm" onclick="removerAparelho('${a.id}')">Remover</button></td></tr>`).join('') || '<tr><td colspan="4" class="mut">Nenhum.</td></tr>';
+}
+async function desconfiarTodos(){
+  if (!confirm('Todos os computadores vão voltar a pedir o código do e-mail. Continuar?')) return;
+  await sb.rpc('mon_desconfiar_todos'); carregarAparelhos();
 }
 async function removerAparelho(id){
   if (!confirm('Remover este computador? Ele não vai mais conseguir abrir o K1 Monitoramento.')) return;
@@ -973,7 +975,7 @@ async function sosPuxar(){
   if (a) {
     SOS.gravado = !!a.encerrado_em;
     $('sosEncerrar').classList.toggle('hidden', SOS.gravado);
-    $('sosInfo').textContent = SOS.gravado ? 'Transmissão encerrada' + (a.encerrado_por ? ' por ' + a.encerrado_por : '') + '. Mostrando a gravação.' : 'Câmera e áudio com atraso de ~6 a 10 s.';
+    $('sosInfo').textContent = SOS.gravado ? 'Transmissão encerrada' + (a.encerrado_por ? ' por ' + a.encerrado_por : '') + '. Mostrando a gravação.' : 'Câmera e áudio ocultos, ao vivo (atraso de ~6 a 10 s). Grava até você cancelar ou resolver o alerta.';
     if (a.lat != null) { $('sosMapa').href = mapsUrl(a.lat, a.lng); $('sosMapa').classList.remove('hidden'); }
   }
   (r.trechos || []).forEach(t => { if (t.seq > SOS.ultimo) { SOS.ultimo = t.seq; SOS.fila.push(t); } });
@@ -990,7 +992,7 @@ function verSos(id){
 }
 function fecharSos(){ clearInterval(SOS.timer); SOS.id = null; const v = $('sosVideo'); v.pause(); v.removeAttribute('src'); $('mSos').classList.add('hidden'); }
 async function encerrarSos(){
-  if (!SOS.id || !confirm('Encerrar a transmissão? O celular para de gravar. O alerta continua aberto até ser resolvido.')) return;
+  if (!SOS.id || !confirm('Cancelar a câmera e o áudio? O celular para de gravar escondido. O alerta continua aberto até ser resolvido.')) return;
   const { error } = await sb.rpc('mon_sos_encerrar', { p_alerta_id:SOS.id }); if (error) return alert(traduz(error));
   SOS.gravado = true; $('sosEncerrar').classList.add('hidden');
 }

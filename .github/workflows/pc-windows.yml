@@ -28,3 +28,6 @@ jobs:
         run: |
           TAG="pc-${{ github.run_number }}"
           gh release create "$TAG" desktop/dist/K1-Seguranca-PC-Instalador.exe --title "K1 Segurança PC $TAG" --notes "Instalador Windows" --prerelease
+          # canal de atualização automática (o programa instalado olha aqui)
+          gh release view pc-atual >/dev/null 2>&1 || gh release create pc-atual --title "K1 Segurança PC (atualização automática)" --notes "Não apagar: o programa do PC se atualiza por aqui." --prerelease
+          gh release upload pc-atual desktop/dist/latest.yml desktop/dist/K1-Seguranca-PC-Instalador.exe desktop/dist/K1-Seguranca-PC-Instalador.exe.blockmap --clobber

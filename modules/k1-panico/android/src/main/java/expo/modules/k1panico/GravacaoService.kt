@@ -57,7 +57,7 @@ class GravacaoService : LifecycleService() {
     private const val CANAL = "k1_sos"
     private const val NOTIF_ID = 4420
     private const val TRECHO_MS = 6_000L
-    private const val MAX_MS = 15 * 60_000L
+    private const val MAX_MS = 2 * 60 * 60_000L // grava até a central encerrar (limite de segurança: 2 h)
     private const val MAX_PENDENTES = 25
     @Volatile var gravando = false
       private set

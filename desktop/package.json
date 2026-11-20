@@ -1,21 +1,49 @@
 {
   "name": "k1-seguranca-pc",
   "productName": "K1 Segurança",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "K1 Segurança para computador: K1 Monitoramento e Painel da Empresa",
   "author": "K1 Segurança",
   "main": "main.js",
-  "scripts": { "dist": "electron-builder --win nsis --x64 --publish never" },
-  "devDependencies": { "electron": "^33.2.0", "electron-builder": "24.13.3" },
+  "scripts": {
+    "dist": "electron-builder --win nsis --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "24.13.3"
+  },
   "build": {
     "appId": "br.com.k1seguranca.pc",
     "productName": "K1 Segurança",
-    "files": ["main.js", "preload.js", "inicio.html", "topo.jpg", "icone.png", "paginas/**"],
-    "win": { "icon": "icone.png", "target": "nsis" },
+    "files": [
+      "main.js",
+      "preload.js",
+      "inicio.html",
+      "topo.jpg",
+      "icone.png",
+      "paginas/**"
+    ],
+    "win": {
+      "icon": "icone.png",
+      "target": "nsis"
+    },
     "nsis": {
-      "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true, "createStartMenuShortcut": true, "shortcutName": "K1 Segurança",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "K1 Segurança",
       "artifactName": "K1-Seguranca-PC-Instalador.exe"
-    }
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/kauanalvesmansano-hub/k1-seguranca/releases/download/pc-atual"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "6.3.9"
   }
 }

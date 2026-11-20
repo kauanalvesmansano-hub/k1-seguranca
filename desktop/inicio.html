@@ -113,7 +113,7 @@ function emPortugues(e){
   // ACESSO OCULTO: segurar o cadeado SEGURANÇA por 5 s abre o K1 Monitoramento (só neste programa do computador)
   let t = null; const cad = $('cad');
   const soltar = () => { clearTimeout(t); t = null; };
-  cad.addEventListener('mousedown', () => { t = setTimeout(async () => { await sb.auth.signOut(); location.href = 'paginas/monitor.html'; }, 5000); });
+  cad.addEventListener('mousedown', () => { t = setTimeout(() => { location.href = 'paginas/monitor.html'; }, 5000); });
   ['mouseup', 'mouseleave'].forEach(ev => cad.addEventListener(ev, soltar));
 </script>
 </body></html>

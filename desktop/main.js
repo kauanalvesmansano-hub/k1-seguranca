@@ -1,5 +1,6 @@
 // K1 Segurança para computador (Windows): abre o K1 Monitoramento ou o Painel da Empresa.
-const { app, BrowserWindow, shell, Menu, ipcMain, safeStorage } = require('electron');
+const { app, BrowserWindow, shell, Menu, ipcMain, safeStorage, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -55,5 +56,22 @@ ipcMain.on('k1-alerta', () => {
 });
 
 Menu.setApplicationMenu(null);
-app.whenReady().then(criar);
+app.whenReady().then(() => {
+  criar();
+  // ATUALIZAÇÃO AUTOMÁTICA: baixa a versão nova sozinho e instala ao reiniciar
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on('update-downloaded', async (info) => {
+    const r = await dialog.showMessageBox(janela, {
+      type: 'info', buttons: ['Atualizar agora', 'Depois'], defaultId: 0, cancelId: 1,
+      title: 'K1 Segurança', message: `Nova versão ${info.version} do K1 Segurança pronta.`,
+      detail: 'Clique em "Atualizar agora" para reiniciar o programa já atualizado (leva poucos segundos). Se escolher "Depois", ela instala quando você fechar o programa.',
+    });
+    if (r.response === 0) autoUpdater.quitAndInstall(false, true);
+  });
+  autoUpdater.on('error', () => { /* sem internet: tenta de novo mais tarde */ });
+  const verificar = () => autoUpdater.checkForUpdates().catch(() => {});
+  setTimeout(verificar, 10_000);
+  setInterval(verificar, 3 * 60 * 60_000);
+});
 app.on('window-all-closed', () => app.quit());
