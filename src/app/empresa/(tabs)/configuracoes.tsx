@@ -7,71 +7,7 @@ import { supabase, traduzErro } from '../../../lib/supabase';
 import { useTipoConta } from '../../../lib/conta';
 import { precoFamilia } from '../../../lib/familia';
 import { precoVigilante } from '../../../lib/empresa';
-import { ativarCentral, centralDisponivel, desativarCentral, pedirFurarSilencio, pedirSemEconomia, pedirTelaCheia, statusCentral, testarCentral, type StatusCentral } from '../../../lib/central';
-
-function CardCentral() {
-  const [s, setS] = useState<StatusCentral>(statusCentral());
-  const [ocupado, setOcupado] = useState(false);
-  const atualizar = useCallback(() => setS(statusCentral()), []);
-  useFocusEffect(atualizar);
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', st => { if (st === 'active') atualizar(); });
-    return () => sub.remove();
-  }, [atualizar]);
-
-  async function alternar(ligar: boolean) {
-    setOcupado(true);
-    try {
-      if (ligar) await ativarCentral('Celular da central'); else await desativarCentral();
-    } catch (err) { Alert.alert('Erro', traduzErro(err)); }
-    setOcupado(false);
-    setTimeout(atualizar, 600);
-  }
-
-  if (!centralDisponivel) return null;
-  return (
-    <CardK1 style={{ gap: 12 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <Ionicons name="call" size={28} color={s.ativa ? K1.verde : K1.vermelho} />
-        <View style={{ flex: 1 }}>
-          <Text style={k.titulo}>Celular da central</Text>
-          <Text style={k.mut}>{s.ativa ? 'Ativo: este celular toca como ligação a cada alerta' : 'Desligado'}</Text>
-        </View>
-        <Switch value={s.ativa} disabled={ocupado} onValueChange={alternar} trackColor={{ true: K1.verde }} />
-      </View>
-      <Text style={[k.mut, { fontSize: 13 }]}>
-        Ligue no celular que fica com o monitoramento. A cada disparo ele toca no volume máximo, em tela cheia, mesmo bloqueado,
-        no silencioso e com o app fechado — e só para quando o alerta for resolvido ou alguém tocar em Silenciar.
-        Se o celular ficar sem internet (modo avião), ele avisa que não está recebendo os disparos.
-      </Text>
-      {s.ativa && (
-        <>
-          {!s.telaCheia && (
-            <Pressable style={st.aviso} onPress={pedirTelaCheia}>
-              <Ionicons name="warning" size={18} color={K1.amarelo} />
-              <Text style={st.avisoTxt}>Permitir tela cheia com o celular bloqueado (tocar aqui)</Text>
-            </Pressable>
-          )}
-          {!s.furaSilencio && (
-            <Pressable style={st.aviso} onPress={pedirFurarSilencio}>
-              <Ionicons name="volume-high" size={18} color={K1.amarelo} />
-              <Text style={st.avisoTxt}>Tocar mesmo no silencioso e no "Não Perturbe": ative o K1 na lista que vai abrir (tocar aqui)</Text>
-            </Pressable>
-          )}
-          {!s.semEconomia && (
-            <Pressable style={st.aviso} onPress={pedirSemEconomia}>
-              <Ionicons name="battery-charging" size={18} color={K1.amarelo} />
-              <Text style={st.avisoTxt}>Tirar o K1 da economia de bateria, para nunca deixar de tocar (tocar aqui)</Text>
-            </Pressable>
-          )}
-          <Pressable style={st.botao} onPress={() => { if (!testarCentral()) Alert.alert('Aguarde', 'A central ainda está iniciando.'); }}>
-            <Text style={{ color: '#fff', fontWeight: '800' }}>Testar toque agora</Text>
-          </Pressable>
-        </>
-      )}
-    </CardK1>
-  );
-}
+import { CardCentral } from '../../../components/CardCentral';
 
 type Empresa = {
   id: string; nome: string; cnpj: string | null; qtd_vigilantes_contratados: number;

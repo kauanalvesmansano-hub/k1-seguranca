@@ -10,13 +10,18 @@ import { lerSessao, rpc } from '../../lib/vigilante';
 import { supabase } from '../../lib/supabase';
 import { HTML_PLAYER_SOS, type RespostaSos } from '../../lib/sosPlayer';
 
-type Modo = 'membro' | 'central' | 'empresa';
+type Modo = 'membro' | 'central' | 'empresa' | 'monitor';
 
 /** Fontes de dados: família (token da pessoa), celular da central (token da central) ou responsável logado. */
 async function buscar(modo: Modo, id: string, depois: number): Promise<RespostaSos> {
   if (modo === 'membro') {
     const s = await lerSessao(); if (!s) throw new Error('sem sessão');
     return rpc<RespostaSos>('membro_sos_trechos', { p_token: s.token, p_alerta_id: id, p_depois: depois });
+  }
+  if (modo === 'monitor') {
+    const { data, error } = await supabase.rpc('mon_sos_trechos', { p_alerta_id: id, p_depois: depois });
+    if (error) throw error;
+    return data as RespostaSos;
   }
   if (modo === 'central') {
     const t = await SecureStore.getItemAsync('k1_central_token'); if (!t) throw new Error('sem central');
@@ -35,6 +40,7 @@ async function buscar(modo: Modo, id: string, depois: number): Promise<RespostaS
 
 async function encerrar(modo: Modo, id: string) {
   if (modo === 'membro') { const s = await lerSessao(); if (s) await rpc('membro_sos_encerrar', { p_token: s.token, p_alerta_id: id }); return; }
+  if (modo === 'monitor') { const { error } = await supabase.rpc('mon_sos_encerrar', { p_alerta_id: id }); if (error) throw error; return; }
   if (modo === 'central') { const t = await SecureStore.getItemAsync('k1_central_token'); if (t) await rpc('central_sos_encerrar', { p_token: t, p_alerta_id: id }); return; }
   const { error } = await supabase.rpc('sos_encerrar', { p_alerta_id: id }); if (error) throw error;
 }
@@ -42,7 +48,7 @@ async function encerrar(modo: Modo, id: string) {
 /** SOS ao vivo: câmera + áudio de quem pediu socorro, até alguém encerrar. */
 export default function SosAoVivo() {
   const { id, modo: m } = useLocalSearchParams<{ id: string; modo?: string }>();
-  const modo: Modo = m === 'central' || m === 'empresa' ? m : 'membro';
+  const modo: Modo = m === 'central' || m === 'empresa' || m === 'monitor' ? m : 'membro';
   const web = useRef<ComponentRef<typeof WebView>>(null);
   const ultimo = useRef(-1);
   const filaPlayer = useRef(0);

@@ -17,14 +17,14 @@ export function statusCentral(): StatusCentral {
 }
 
 /** Transforma este celular na central: ele toca como ligação a cada pânico, coação ou homem caído. */
-export async function ativarCentral(nome: string) {
+export async function ativarCentral(nome: string, global = false) {
   if (!centralDisponivel || !K1Panico) throw new Error('Disponível só no app K1 para Android.');
   if (Number(Platform.Version) >= 33) {
     try { await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS); } catch { /* segue */ }
   }
   let token = await SecureStore.getItemAsync(CHAVE);
   if (!token) {
-    const { data, error } = await supabase.rpc('ativar_central', { p_nome: nome });
+    const { data, error } = await supabase.rpc(global ? 'mon_ativar_central' : 'ativar_central', { p_nome: nome });
     if (error) throw error;
     token = data as string;
     await SecureStore.setItemAsync(CHAVE, token);

@@ -6,6 +6,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { CORES } from '../lib/config';
 
 /** Tela com a arte K1 no topo e conteúdo embaixo (mesmo visual da tela de login). */
@@ -90,10 +91,12 @@ function Rodape() {
       <View style={s.linhaVermelha} />
       <View style={s.rodapeItens}>
         {itens.map((it, i) => (
-          <View key={it.nome} style={[s.rodapeItem, i > 0 && { borderLeftWidth: 1, borderLeftColor: CORES.vermelhoEscuro }]}>
+          // Cadeado de SEGURANÇA: segurar 2 s abre o K1 Monitoramento (acesso oculto do dono do K1)
+          <Pressable key={it.nome} style={[s.rodapeItem, i > 0 && { borderLeftWidth: 1, borderLeftColor: CORES.vermelhoEscuro }]}
+            onLongPress={it.icone === 'lock' ? () => router.push('/monitor') : undefined} delayLongPress={2000}>
             <MaterialCommunityIcons name={it.icone} size={22} color="#e8e8e8" />
             <Text style={s.rodapeTxt}>{it.nome}</Text>
-          </View>
+          </Pressable>
         ))}
       </View>
       <Text style={s.rodapeMarca}>K1  S E G U R A N Ç A</Text>
