@@ -6,7 +6,7 @@ import { FundoK1, CardK1, K1, dataHora, s as k } from '../../components/k1';
 import { supabase, traduzErro } from '../../lib/supabase';
 
 type Alerta = {
-  id: string; tipo: 'panico' | 'coacao' | 'senha_errada' | 'sem_resposta' | 'bateria_baixa' | 'fora_do_posto' | 'sem_movimento' | 'atraso_chegada' | 'batida' | 'ronda_perdida';
+  id: string; tipo: 'panico' | 'coacao' | 'senha_errada' | 'sem_resposta' | 'bateria_baixa' | 'fora_do_posto' | 'sem_movimento' | 'atraso_chegada' | 'batida' | 'ronda_perdida' | 'plantao_nao_assumido';
   detalhe?: string | null;
   lat: number | null; lng: number | null; observacao?: string | null;
   bateria: number | null; sos_gravando?: boolean; sos_encerrado_em?: string | null; status: 'aberto' | 'em_atendimento' | 'resolvido'; criado_em: string;
@@ -19,6 +19,7 @@ const TIPO: Record<Alerta['tipo'], { txt: string; cor: string }> = {
   bateria_baixa: { txt: 'BATERIA BAIXA', cor: K1.amarelo },
   atraso_chegada: { txt: 'NÃO CHEGOU NO HORÁRIO', cor: '#ef4444' },
   ronda_perdida: { txt: 'RONDA NÃO CONCLUÍDA', cor: '#f59e0b' },
+  plantao_nao_assumido: { txt: 'PLANTÃO NÃO ASSUMIDO', cor: '#ef4444' },
   batida: { txt: 'POSSÍVEL BATIDA DE CARRO/MOTO', cor: '#ef4444' },
 };
 

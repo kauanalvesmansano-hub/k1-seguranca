@@ -228,17 +228,22 @@
           <div><label>Endereço (opcional)</label><input id="clEnd" maxlength="200"></div>
           <div><label>Ronda programada: passar em TODOS os pontos a cada (minutos)</label>
             <select id="clInt"><option value="">Sem ronda programada</option><option>30</option><option>60</option><option>90</option><option value="120">120 (2 h)</option><option value="180">180 (3 h)</option><option value="240">240 (4 h)</option></select></div>
-          <div><label>Tolerância de atraso (minutos)</label><input id="clTol" type="number" min="0" max="120" value="10"></div>
+          <div><label>Tolerância de atraso da ronda (minutos)</label><input id="clTol" type="number" min="0" max="120" value="10"></div>
+          <div><label>Plantão: horários de início (ex.: 07:00, 19:00) — vazio = não confere</label><input id="clPlHor" placeholder="07:00, 19:00" maxlength="60"></div>
+          <div><label>Tolerância para assumir o plantão (minutos)</label><input id="clPlTol" type="number" min="0" max="180" value="15"></div>
+          <div style="grid-column:1/-1"><label>Dias com plantão</label><div id="clPlDias" class="row" style="gap:12px"></div></div>
         </div>
         <button style="margin-top:14px" id="clBtn" onclick="salvarLocal()">Criar local</button>
         <button style="margin-top:14px" class="sec hidden" id="clCancel" onclick="limparLocal()">Cancelar edição</button>
         <span id="errCl" class="err"></span>
         <p class="small mut">Depois de criar o local: na aba <b>Vigilantes</b> escolha o local de cada vigilante e na aba <b>Rondas (QR)</b> o local de cada ponto.
           Com ronda programada, se o vigilante não passar em todos os pontos dentro do prazo, chega o alerta <b>RONDA NÃO CONCLUÍDA</b> dizendo quais pontos faltaram.
+          Com <b>horário de plantão</b>, se NENHUM vigilante do local iniciar o turno até o horário + tolerância, chega o alerta <b>PLANTÃO NÃO ASSUMIDO</b>.
+          Você pode colocar 2 ou mais vigilantes no mesmo local (coluna Vigilantes).
           O <b>link do cliente</b> mostra para o contratante (sem senha) as rondas, ocorrências, visitantes e quem está de serviço — só do local dele.</p>
       </div>
       <div class="card" style="padding:0;overflow:auto"><table>
-        <thead><tr><th>Local</th><th>Ronda programada</th><th>Vigilantes</th><th>Pontos</th><th>Link do cliente</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Local</th><th>Ronda programada</th><th>Plantão</th><th>Vigilantes do posto</th><th>Pontos</th><th>Link do cliente</th><th>Ações</th></tr></thead>
         <tbody id="tbLocais"></tbody></table></div>
     </div>
 
@@ -368,6 +373,8 @@ const minutosAtras = d => d ? (Date.now() - new Date(d).getTime()) / 60000 : Inf
 const ERROS = {
   intervalo_de_ronda_invalido: 'O intervalo da ronda deve ser de 15 a 720 minutos.',
   nao_encontrado: 'Registro não encontrado. Atualize a página.',
+  horario_invalido: 'Horário de plantão inválido. Use o formato 07:00, 19:00.',
+  no_maximo_6_horarios: 'Coloque no máximo 6 horários de plantão por local.',
   cnpj_ja_cadastrado: 'Este CNPJ já tem cadastro no K1 Segurança.',
   cnpj_invalido: 'CNPJ inválido.',
   dados_invalidos: 'Confira os dados informados.',
@@ -388,7 +395,7 @@ const traduz = e => { const m = e?.message || String(e); for (const k in ERROS) 
 const TIPOS = {
   panico: ['PÂNICO', 'b-bad'], coacao: ['COAÇÃO', 'b-bad'],
   senha_errada: ['SENHA ERRADA', 'b-warn'], sem_resposta: ['SEM RESPOSTA', 'b-warn'],
-  sem_movimento: ['HOMEM CAÍDO / SEM MOVIMENTO', 'b-bad'], fora_do_posto: ['FORA DO POSTO', 'b-warn'], bateria_baixa: ['BATERIA BAIXA', 'b-warn'], atraso_chegada: ['NÃO CHEGOU NO HORÁRIO', 'b-bad'], batida: ['POSSÍVEL BATIDA', 'b-bad'], ronda_perdida: ['RONDA NÃO CONCLUÍDA', 'b-warn']
+  sem_movimento: ['HOMEM CAÍDO / SEM MOVIMENTO', 'b-bad'], fora_do_posto: ['FORA DO POSTO', 'b-warn'], bateria_baixa: ['BATERIA BAIXA', 'b-warn'], atraso_chegada: ['NÃO CHEGOU NO HORÁRIO', 'b-bad'], batida: ['POSSÍVEL BATIDA', 'b-bad'], ronda_perdida: ['RONDA NÃO CONCLUÍDA', 'b-warn'], plantao_nao_assumido: ['PLANTÃO NÃO ASSUMIDO', 'b-bad']
 };
 const tipoTxt = t => (TIPOS[t] || [t, 'b-warn']);
 const ST_ALERTA = { aberto: ['Aberto', 'b-bad'], em_atendimento: ['Em atendimento', 'b-acc'], resolvido: ['Resolvido', 'b-ok'] };
@@ -473,7 +480,7 @@ async function carregarTudo(){
     sb.from('telemetria').select('vigilante_id,lat,lng,precisao_m,criado_em').gte('criado_em', desde).order('criado_em').limit(20000),
     sb.from('pontos_ronda').select('*').order('nome'),
     sb.from('rondas_registros').select('*').order('criado_em', { ascending:false }).limit(300),
-    sb.from('clientes').select('id,nome,endereco,ronda_intervalo_min,ronda_tolerancia_min,portal_criado_em,ativo').order('nome'),
+    sb.from('clientes').select('id,nome,endereco,ronda_intervalo_min,ronda_tolerancia_min,portal_criado_em,ativo,plantao_horarios,plantao_dias,plantao_tolerancia_min').order('nome'),
     sb.from('visitantes').select('id,cliente_id,vigilante_id,nome,documento,destino,placa,observacao,entrada_em,saida_em').order('entrada_em', { ascending:false }).limit(300)
   ]);
   S.clientes = cl.data || []; S.visitantes = vi.data || [];
@@ -964,25 +971,34 @@ async function vincularLocal(vigId, pontoId, cliId){
 function renderLocais(){
   const adm = S.papel === 'admin', ls = S.clientes || [];
   $('tbLocais').innerHTML = ls.length ? ls.map(c => {
-    const nv = S.vigilantes.filter(v => v.cliente_id === c.id && v.ativo).length, np = (S.pontos || []).filter(p => p.cliente_id === c.id && p.ativo).length;
+    const vs = S.vigilantes.filter(v => v.cliente_id === c.id && v.ativo), nv = vs.length, np = (S.pontos || []).filter(p => p.cliente_id === c.id && p.ativo).length;
     return `<tr><td><b>${esc(c.nome)}</b><div class="small mut">${esc(c.endereco || '')}</div></td>
       <td>${c.ronda_intervalo_min ? `A cada ${c.ronda_intervalo_min} min<div class="small mut">tolerância ${c.ronda_tolerancia_min} min</div>` : '<span class="mut">Não</span>'}</td>
-      <td>${nv}</td><td>${np}${c.ronda_intervalo_min && !np ? '<div class="small" style="color:var(--warn)">Ligue pontos a este local</div>' : ''}</td>
+      <td>${(c.plantao_horarios || []).length ? `${c.plantao_horarios.join(', ')}<div class="small mut">${diasTxt(c.plantao_dias)} · tolerância ${c.plantao_tolerancia_min} min</div>` : '<span class="mut">Não confere</span>'}</td>
+      <td>${vs.map(v => `<div>${esc(v.nome)}${adm ? ` <a href="#" class="small" onclick="vincularLocal('${v.id}', null, null);return false">remover</a>` : ''}</div>`).join('') || '<span class="mut">Nenhum</span>'}
+        ${adm ? `<select class="sm" style="width:auto;max-width:190px;padding:4px;margin-top:4px" onchange="if(this.value)vincularLocal(this.value, null, '${c.id}')">
+          <option value="">+ Colocar vigilante</option>${S.vigilantes.filter(v => v.ativo && v.cliente_id !== c.id).map(v => `<option value="${v.id}">${esc(v.nome)}${v.cliente_id ? ' (sai de ' + esc(nomeLocal(v.cliente_id)) + ')' : ''}</option>`).join('')}</select>` : ''}</td>
+      <td>${np}${c.ronda_intervalo_min && !np ? '<div class="small" style="color:var(--warn)">Ligue pontos a este local</div>' : ''}</td>
       <td>${c.portal_criado_em ? `<span class="badge b-ok">Ativo</span><div class="small mut">desde ${hora(c.portal_criado_em)}</div>` : '<span class="badge b-off">Sem link</span>'}</td>
       <td class="row">${adm ? `<button class="sm" onclick="linkLocal('${c.id}')">${c.portal_criado_em ? 'Novo link' : 'Gerar link do cliente'}</button>
         ${c.portal_criado_em ? `<button class="sm sec" onclick="revogarLinkLocal('${c.id}')">Desativar link</button>` : ''}
         <button class="sm sec" onclick="editarLocal('${c.id}')">Editar</button>
         <button class="sm danger" onclick="excluirLocal('${c.id}')">Excluir</button>` : ''}</td></tr>`;
-  }).join('') : '<tr><td colspan="6" class="mut">Nenhum local ainda. Crie um para cada cliente/contrato.</td></tr>';
+  }).join('') : '<tr><td colspan="7" class="mut">Nenhum local ainda. Crie um para cada cliente/contrato.</td></tr>';
+  if (!$('clPlDias').children.length) marcarDias([0,1,2,3,4,5,6]);
   const f = $('fVis'), atual = f.value;
   f.innerHTML = '<option value="">Todos os locais</option>' + ls.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
   f.value = atual;
 }
-function limparLocal(){ S.editLocal = null; ['clNome','clEnd'].forEach(i => $(i).value = ''); $('clInt').value = ''; $('clTol').value = 10;
+const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+function diasTxt(d){ d = d || []; return d.length === 7 ? 'todos os dias' : d.map(x => DIAS[x]).join(', ') || 'nenhum dia'; }
+function marcarDias(d){ $('clPlDias').innerHTML = DIAS.map((n, i) => `<label style="display:inline-flex;gap:4px;align-items:center;margin:0;color:var(--txt)"><input type="checkbox" style="width:auto" value="${i}" ${(d || []).includes(i) ? 'checked' : ''}>${n}</label>`).join(''); }
+function limparLocal(){ S.editLocal = null; ['clNome','clEnd','clPlHor'].forEach(i => $(i).value = ''); $('clInt').value = ''; $('clTol').value = 10; $('clPlTol').value = 15; marcarDias([0,1,2,3,4,5,6]);
   $('clBtn').textContent = 'Criar local'; $('clCancel').classList.add('hidden'); $('errCl').textContent = ''; }
 function editarLocal(id){
   const c = S.clientes.find(x => x.id === id); S.editLocal = id;
   $('clNome').value = c.nome; $('clEnd').value = c.endereco || ''; $('clTol').value = c.ronda_tolerancia_min;
+  $('clPlHor').value = (c.plantao_horarios || []).join(', '); $('clPlTol').value = c.plantao_tolerancia_min ?? 15; marcarDias(c.plantao_dias);
   $('clInt').value = c.ronda_intervalo_min || '';
   if (c.ronda_intervalo_min && $('clInt').value === '') { $('clInt').insertAdjacentHTML('beforeend', `<option>${c.ronda_intervalo_min}</option>`); $('clInt').value = c.ronda_intervalo_min; }
   $('clBtn').textContent = 'Salvar alterações'; $('clCancel').classList.remove('hidden'); $('clNome').focus();
@@ -990,10 +1006,15 @@ function editarLocal(id){
 async function salvarLocal(){
   $('errCl').textContent = '';
   const nome = $('clNome').value.trim(); if (nome.length < 2) { $('errCl').textContent = 'Informe o nome do local.'; return; }
-  const { error } = await sb.rpc('salvar_cliente', { p_id:S.editLocal || null, p_nome:nome, p_endereco:$('clEnd').value,
+  const horarios = $('clPlHor').value.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean).map(x => /^\d{1,2}$/.test(x) ? x + ':00' : x).map(x => x.length === 4 ? '0' + x : x);
+  if (horarios.some(x => !/^([01]\d|2[0-3]):[0-5]\d$/.test(x))) { $('errCl').textContent = 'Horário de plantão inválido. Use o formato 07:00, 19:00.'; return; }
+  const dias = [...$('clPlDias').querySelectorAll('input:checked')].map(i => +i.value);
+  const { data:idLocal, error } = await sb.rpc('salvar_cliente', { p_id:S.editLocal || null, p_nome:nome, p_endereco:$('clEnd').value,
     p_intervalo: $('clInt').value ? parseInt($('clInt').value, 10) : null, p_tolerancia: parseInt($('clTol').value, 10) || 0 });
   if (error) { $('errCl').textContent = traduz(error); return; }
-  const { data } = await sb.from('clientes').select('id,nome,endereco,ronda_intervalo_min,ronda_tolerancia_min,portal_criado_em,ativo').order('nome');
+  const { error:e2 } = await sb.rpc('salvar_plantao', { p_cliente_id:idLocal, p_horarios:horarios, p_dias:dias, p_tolerancia: parseInt($('clPlTol').value, 10) || 0 });
+  if (e2) { $('errCl').textContent = traduz(e2); return; }
+  const { data } = await sb.from('clientes').select('id,nome,endereco,ronda_intervalo_min,ronda_tolerancia_min,portal_criado_em,ativo,plantao_horarios,plantao_dias,plantao_tolerancia_min').order('nome');
   S.clientes = data || []; limparLocal(); renderTudo();
 }
 async function excluirLocal(id){
