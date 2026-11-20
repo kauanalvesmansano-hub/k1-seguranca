@@ -5,7 +5,7 @@ const brlTxt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', cur
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TelaK1, Campo, BotaoVermelho, Erro } from '../../components/ui';
-import { supabase, traduzErro } from '../../lib/supabase';
+import { contaParaCadastro, supabase, traduzErro } from '../../lib/supabase';
 import { TERMO_VERSAO } from '../../lib/config';
 
 /** Cadastro da empresa: conta + dados + aceite do termo. */
@@ -31,14 +31,8 @@ export default function CadastroEmpresa() {
     if (!aceite) { setErro('É preciso aceitar o termo.'); return; }
     setCarregando(true);
     try {
-      let { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        if (!email.trim() || senha.length < 8 || !/[A-Za-z]/.test(senha) || !/[0-9]/.test(senha)) throw new Error('Informe o e-mail e uma senha com 8 ou mais caracteres, com letras e números.');
-        const r = await supabase.auth.signUp({ email: email.trim(), password: senha });
-        if (r.error) throw r.error;
-        session = r.data.session;
-        if (!session) { setErro('Conta criada! Confirme no seu e-mail, faça login e termine o cadastro.'); return; }
-      }
+      const session = await contaParaCadastro(email, senha);
+      if (!session) { setErro('Enviamos um e-mail de confirmação. Abra o e-mail do K1 Segurança (veja também o Spam), toque em "Confirmar meu e-mail" e depois toque aqui de novo — seus dados continuam preenchidos.'); return; }
       const { error } = await supabase.rpc('registrar_empresa', {
         p_nome: nome, p_cnpj: cnpj, p_qtd_vigilantes: quantidade, p_nome_responsavel: responsavel,
         p_aceite_termo: true, p_termo_versao: TERMO_VERSAO,

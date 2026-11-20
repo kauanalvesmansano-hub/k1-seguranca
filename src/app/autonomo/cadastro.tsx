@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TelaK1, Campo, BotaoVermelho, Erro } from '../../components/ui';
-import { supabase, traduzErro } from '../../lib/supabase';
+import { contaParaCadastro, supabase, traduzErro } from '../../lib/supabase';
 import { TERMO_VERSAO } from '../../lib/config';
 import { entrar, salvarContato } from '../../lib/vigilante';
 
@@ -32,16 +32,8 @@ export default function CadastroAutonomo() {
     if (!aceite) { setErro('É preciso aceitar o termo.'); return; }
     setCarregando(true);
     try {
-      let { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        if (!email.trim() || senhaConta.length < 8 || !/[A-Za-z]/.test(senhaConta) || !/[0-9]/.test(senhaConta)) {
-          throw new Error('Informe o e-mail e uma senha da conta com 8 ou mais caracteres, com letras e números.');
-        }
-        const r = await supabase.auth.signUp({ email: email.trim(), password: senhaConta });
-        if (r.error) throw r.error;
-        session = r.data.session;
-        if (!session) { setErro('Conta criada! Confirme no seu e-mail e depois toque de novo em CRIAR (os dados continuam aqui).'); return; }
-      }
+      const session = await contaParaCadastro(email, senhaConta);
+      if (!session) { setErro('Enviamos um e-mail de confirmação. Abra o e-mail do K1 Segurança (veja também o Spam), toque em "Confirmar meu e-mail" e depois toque aqui de novo — seus dados continuam preenchidos.'); return; }
       const { data, error } = await supabase.rpc('registrar_autonomo', {
         p_nome: nome, p_telefone: telefone, p_empresa_trabalho: empresa, p_whatsapp_empresa: zapEmpresa,
         p_senha: senha, p_senha_coacao: coacao, p_aceite_termo: true, p_termo_versao: TERMO_VERSAO,
@@ -59,7 +51,7 @@ export default function CadastroAutonomo() {
       <Text style={s.titulo}>PLANO DO VIGILANTE</Text>
       <View style={s.teste}>
         <Text style={s.testeTit}>🎁 7 DIAS GRÁTIS · depois R$ 20,00/mês</Text>
-        <Text style={s.testeTxt}>Botão Power 4x → WhatsApp automático para a sua família e para a sua empresa, com a sua localização.</Text>
+        <Text style={s.testeTxt}>Apertou o Power 4x: WhatsApp automático para a sua família e para a sua empresa, com a sua localização.</Text>
       </View>
 
       <Text style={s.sec}>SUA CONTA</Text>

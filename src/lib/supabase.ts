@@ -56,3 +56,31 @@ export function traduzErro(e: unknown): string {
   for (const k of Object.keys(ERROS)) if (msg.includes(k)) return ERROS[k];
   return msg;
 }
+
+/** Para onde o link do e-mail de confirmação manda (abre o próprio app). */
+export const LINK_CONFIRMACAO = 'k1seguranca://confirmado';
+
+/**
+ * Pega (ou cria) a conta do e-mail para os cadastros.
+ * - já logado → usa a sessão;
+ * - conta existe e o e-mail já foi confirmado → entra;
+ * - conta não existe → cria e manda o e-mail de confirmação (devolve null).
+ */
+export async function contaParaCadastro(email: string, senha: string) {
+  const atual = (await supabase.auth.getSession()).data.session;
+  if (atual) return atual;
+  const e = email.trim().toLowerCase();
+  if (!e || senha.length < 8 || !/[A-Za-z]/.test(senha) || !/[0-9]/.test(senha)) {
+    throw new Error('Informe o e-mail e uma senha com 8 ou mais caracteres, com letras e números.');
+  }
+  const login = await supabase.auth.signInWithPassword({ email: e, password: senha });
+  if (login.data.session) return login.data.session;
+  if (login.error && /not confirmed/i.test(login.error.message)) {
+    await supabase.auth.resend({ type: 'signup', email: e, options: { emailRedirectTo: LINK_CONFIRMACAO } }).catch(() => {});
+    throw new Error('Falta confirmar o e-mail. Abra o e-mail do K1 Segurança (veja também o Spam), toque em "Confirmar meu e-mail" e depois toque aqui de novo.');
+  }
+  const r = await supabase.auth.signUp({ email: e, password: senha, options: { emailRedirectTo: LINK_CONFIRMACAO } });
+  if (r.error) throw r.error;
+  if (r.data.session) return r.data.session;
+  return null; // precisa confirmar o e-mail
+}
