@@ -68,7 +68,7 @@ export default function Alertas() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
             {a.lat != null && <Pressable style={st.btn} onPress={() => Linking.openURL(`https://www.google.com/maps?q=${a.lat},${a.lng}`)}><Text style={st.btnTxt}>MAPA</Text></Pressable>}
             {!!a.vigilantes?.telefone && <Pressable style={st.btn} onPress={() => Linking.openURL(`tel:${a.vigilantes?.telefone}`)}><Text style={st.btnTxt}>LIGAR</Text></Pressable>}
-            {a.tipo === 'panico' && (a.sos_gravando || a.sos_encerrado_em) && <Pressable style={[st.btn, { backgroundColor: '#e10600' }]} onPress={() => router.push({ pathname: '/sos/[id]', params: { id: a.id, modo: 'empresa' } })}><Text style={st.btnTxt}>● AO VIVO</Text></Pressable>}
+            {(a.tipo === 'panico' || a.tipo === 'coacao') && (a.sos_gravando || a.sos_encerrado_em) && <Pressable style={[st.btn, { backgroundColor: '#e10600' }]} onPress={() => router.push({ pathname: '/sos/[id]', params: { id: a.id, modo: 'empresa' } })}><Text style={st.btnTxt}>● AO VIVO</Text></Pressable>}
             {a.status === 'aberto' && <Pressable style={[st.btn, { backgroundColor: '#1d4ed8' }]} onPress={() => mudar(a, 'em_atendimento')}><Text style={st.btnTxt}>ATENDER</Text></Pressable>}
             <Pressable style={[st.btn, { backgroundColor: '#15803d' }]} onPress={() => mudar(a, 'resolvido')}><Text style={st.btnTxt}>RESOLVER</Text></Pressable>
           </View>

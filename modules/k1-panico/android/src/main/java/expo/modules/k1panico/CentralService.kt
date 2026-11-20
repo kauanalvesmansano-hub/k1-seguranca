@@ -95,11 +95,12 @@ class CentralService : Service() {
       else -> "Foi disparado um alerta"
     }
 
-    fun frase(tipo: String, nome: String, posto: String, detalhe: String): String {
+    fun frase(tipo: String, nome: String, posto: String, detalhe: String, aoVivo: Boolean = false): String {
       val partes = mutableListOf("Atenção, central K1 Segurança. Alerta de ${titulo(tipo).lowercase().replace("—", ",")}.")
       partes.add("Vigilante ${nome.ifBlank { "não identificado" }}" + (if (posto.isNotBlank()) ", posto $posto." else "."))
       partes.add(motivo(tipo) + ".")
       if (detalhe.isNotBlank()) partes.add(detalhe.trimEnd('.') + ".")
+      if (aoVivo) partes.add("A câmera e o áudio do celular dele estão sendo transmitidos ao vivo. Toque em Ver câmera ao vivo.")
       if (tipo != "teste") partes.add("Tome as medidas cabíveis para solucionar o problema.")
       return partes.joinToString(" ")
     }
@@ -303,7 +304,7 @@ class CentralService : Service() {
       putExtra("lng", if (a.isNull("lng")) Double.NaN else a.optDouble("lng", Double.NaN))
       putExtra("bateria", if (a.isNull("bateria")) -1 else a.optInt("bateria", -1))
       putExtra("hora", a.optString("criado_em"))
-      putExtra("sos", tipo == "panico" && a.optBoolean("gravar_sos", false))
+      putExtra("sos", (tipo == "panico" || tipo == "coacao") && a.optBoolean("gravar_sos", false))
     }
     val fl = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     val piTela = PendingIntent.getActivity(this, notifId(id), tela, fl)
@@ -325,7 +326,7 @@ class CentralService : Service() {
     // Todo alerta toca sem parar até ser resolvido ou silenciado
     b.setOngoing(true)
     tocando.add(id)
-    falas[id] = frase(tipo, nome, posto, a.optString("detalhe"))
+    falas[id] = frase(tipo, nome, posto, a.optString("detalhe"), (tipo == "panico" || tipo == "coacao") && a.optBoolean("gravar_sos", false))
     tocar()
     handler.removeCallbacks(vozCiclo)
     handler.postDelayed(vozCiclo, 2_500) // deixa tocar um pouco e já explica o alerta

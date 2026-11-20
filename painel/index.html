@@ -88,7 +88,7 @@
   const TERMO_VERSAO = "v1-2026-11";
 </script>
 
-<div id="banner" class="hidden"><span id="bannerTxt"></span><button class="sec sm" onclick="silenciar()">Silenciar</button></div>
+<div id="banner" class="hidden"><span id="bannerTxt"></span><button id="bannerVivo" class="sm hidden" style="background:#e10600" onclick="verSos(this.dataset.id)">● Ver câmera ao vivo</button><button class="sec sm" onclick="silenciar()">Silenciar</button></div>
 
 <!-- ================= LOGIN ================= -->
 <section id="telaLogin" class="center hidden">
@@ -632,6 +632,7 @@ function fraseAlerta(a){
     `Vigilante ${v?.nome || 'não identificado'}${posto ? ', posto ' + posto : ''}.`,
     (MOTIVO[a.tipo] || 'Foi disparado um alerta') + '.',
     a.detalhe ? String(a.detalhe).replace(/\.$/, '') + '.' : '',
+    (a.tipo === 'panico' || a.tipo === 'coacao') && a.sos_gravando ? 'A câmera e o áudio do celular dele estão sendo transmitidos ao vivo na tela.' : '',
     'Tome as medidas cabíveis para solucionar o problema.'].filter(Boolean).join(' ');
 }
 function vozPt(){ const vs = speechSynthesis.getVoices(); return vs.find(v => v.lang === 'pt-BR') || vs.find(v => (v.lang || '').startsWith('pt')); }
@@ -652,6 +653,7 @@ function falarAlarme(){
 }
 function pararVoz(){ clearTimeout(vozTimer); vozTimer = null; vozFalando = false; try { speechSynthesis.cancel(); } catch {} if (alarmeAudio) alarmeAudio.volume = 1; }
 let vozUltimo = '';
+const SOS_ABERTOS = new Set(); // transmissões que já abriram sozinhas (não reabre se a pessoa fechar)
 function atualizarAlarme(){
   const tocando = alertasTocando();
   if (!tocando.length) { pararSom(); if (!$('banner').style.background) $('banner').classList.add('hidden'); return; }
@@ -661,6 +663,10 @@ function atualizarAlarme(){
     (tocando.length > 1 ? `   (+${tocando.length - 1} alerta(s) sem resolver)` : '');
   $('banner').style.background = ''; $('banner').classList.remove('hidden');
   tocarSom();
+  // Power 4x: câmera + áudio do vigilante chegam ao vivo — abre sozinho na tela da central
+  const aoVivo = tocando.find(x => (x.tipo === 'panico' || x.tipo === 'coacao') && x.sos_gravando);
+  $('bannerVivo').classList.toggle('hidden', !aoVivo); if (aoVivo) $('bannerVivo').dataset.id = aoVivo.id;
+  if (aoVivo && !SOS_ABERTOS.has(aoVivo.id) && SOS.id !== aoVivo.id) { SOS_ABERTOS.add(aoVivo.id); verSos(aoVivo.id); }
   // alerta novo: fala na hora; senão continua repetindo a cada 20 s
   const chave = tocando.map(x => x.id).join(',');
   if (chave !== vozUltimo) { vozUltimo = chave; if (!vozFalando) setTimeout(falarAlarme, 1500); }
@@ -860,7 +866,7 @@ function renderAlertas(){
       <td>${mapa}</td><td>${a.bateria ?? '—'}%</td>
       <td><span class="badge ${sc}">${st}</span>${a.observacao ? `<div class="small mut">${esc(a.observacao)}</div>` : ''}</td>
       <td class="row">
-        ${a.tipo === 'panico' && (a.sos_gravando || a.sos_encerrado_em) ? `<button class="sm" style="background:#e10600" onclick="verSos('${a.id}')">● Ao vivo</button>` : ''}
+        ${(a.tipo === 'panico' || a.tipo === 'coacao') && (a.sos_gravando || a.sos_encerrado_em) ? `<button class="sm" style="background:#e10600" onclick="verSos('${a.id}')">● Ao vivo</button>` : ''}
         ${a.status === 'aberto' ? `<button class="sm" onclick="statusAlerta('${a.id}','em_atendimento')">Atender</button>` : ''}
         ${a.status !== 'resolvido' ? `<button class="sm sec" onclick="statusAlerta('${a.id}','resolvido')">Resolver</button>` : ''}
       </td></tr>`;
