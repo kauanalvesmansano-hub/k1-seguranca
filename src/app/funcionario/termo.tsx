@@ -37,7 +37,8 @@ export default function TermoFuncionario() {
         <Text style={s.p}>O K1 Segurança é uma ferramenta de proteção para você durante o serviço.</Text>
         <Text style={s.p}><Text style={s.b}>Quando funciona:</Text> só entre o "Iniciar turno" e o "Encerrar turno". Fora do turno, nada é enviado.</Text>
         <Text style={s.p}><Text style={s.b}>O que é enviado para a sua empresa:</Text> localização, nível de bateria, se está carregando e a rede Wi-Fi conectada.</Text>
-        <Text style={s.p}><Text style={s.b}>O que NÃO é coletado:</Text> fotos, áudio, mensagens, contatos ou qualquer conteúdo pessoal do celular.</Text>
+        <Text style={s.p}><Text style={s.b}>Gravação no pânico:</Text> quando você aperta o Power 4 vezes (ou o SOS), o celular liga a câmera e o microfone em segredo e envia as imagens e o som para quem monitora, até o atendimento encerrar (no máximo 15 minutos). Fora disso, nada é gravado.</Text>
+        <Text style={s.p}><Text style={s.b}>O que NÃO é coletado:</Text> suas fotos, mensagens, contatos ou qualquer conteúdo pessoal do celular.</Text>
         <Text style={s.p}><Text style={s.b}>Confirmação de presença:</Text> durante o turno, o app pedirá sua senha periodicamente. Senha errada ou falta de resposta gera alerta para o monitoramento.</Text>
         <Text style={s.p}><Text style={s.b}>Senha de coação:</Text> se você estiver rendido, digite a senha de coação. O app mostrará "Confirmado" normalmente e a empresa será avisada em silêncio.</Text>
         <Text style={s.p}><Text style={s.b}>Pânico:</Text> aperte o botão de ligar 4 vezes seguidas para avisar o monitoramento.</Text>

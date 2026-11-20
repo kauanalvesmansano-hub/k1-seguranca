@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob: data:; connect-src 'self' https://*.supabase.co; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex,nofollow">
+<title>K1 Segurança — SOS ao vivo</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *{box-sizing:border-box} body{margin:0;background:#000;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  header{padding:12px 14px;background:#7f1d1d;display:flex;align-items:center;gap:10px}
+  header b{font-size:17px} header small{display:block;color:#fecaca;font-size:12px}
+  .vid{position:relative;background:#000;aspect-ratio:3/4;max-height:70vh;margin:0 auto;max-width:640px}
+  video{width:100%;height:100%;object-fit:contain;background:#000}
+  #st{position:absolute;left:10px;top:10px;padding:5px 10px;border-radius:14px;background:rgba(0,0,0,.6);font-size:13px;font-weight:700}
+  #st i{display:inline-block;width:9px;height:9px;border-radius:50%;background:#e10600;margin-right:6px;animation:p 1s infinite}
+  @keyframes p{50%{opacity:.25}}
+  #aud{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#ddd;font-size:18px;pointer-events:none}
+  #tap{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);font-size:20px;font-weight:800}
+  .barra{display:flex;gap:10px;padding:12px;max-width:640px;margin:0 auto}
+  .barra a{flex:1;text-align:center;text-decoration:none;color:#fff;font-weight:800;padding:14px 8px;border-radius:12px;background:#27272a}
+  .barra a.pm{background:#e10600}
+  p.info{max-width:640px;margin:0 auto;padding:4px 14px 18px;color:#a1a1aa;font-size:13px;line-height:19px}
+  #erro{display:none;padding:40px 20px;text-align:center}
+</style>
+</head>
+<body>
+<script>
+  const SUPABASE_URL = "https://ftswxxdhxjkwufdagkzd.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0c3d4eGRoeGprd3VmZGFna3pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4ODQxMTksImV4cCI6MjExMDQ2MDExOX0.VD2-2rIO9mjgQ0YzJgMRTkn3YvUv0W5VM7qFDvv8jWA";
+</script>
+<header><div style="font-size:26px">🚨</div><div><b id="nome">SOS — carregando…</b><small id="sub">K1 Segurança · câmera e áudio de quem pediu socorro</small></div></header>
+<div id="erro"><h2>Link expirado ou inválido</h2><p style="color:#aaa">Os links de SOS valem por 24 horas.</p></div>
+<div id="tela">
+  <div class="vid">
+    <video id="v" playsinline autoplay controls></video>
+    <div id="aud">🎙 Só áudio (sem câmera)</div>
+    <div id="st"><i></i><span id="sx">Aguardando imagem…</span></div>
+    <div id="tap">Toque para ouvir</div>
+  </div>
+  <div class="barra">
+    <a class="pm" href="tel:190">📞 LIGAR 190 (PM)</a>
+    <a id="mapa" href="#" target="_blank" rel="noopener">🗺️ VER NO MAPA</a>
+  </div>
+  <p class="info">Atraso de 6 a 10 segundos. Não ligue para o celular da pessoa: ela pode estar com o assaltante. Se for perigo, chame a Polícia Militar (190) e passe a localização do mapa.</p>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const token = decodeURIComponent((location.hash || '').slice(1));
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ persistSession:false } });
+let fila = [], tocando = false, ultimo = -1, url = null, gravado = false;
+const v = $('v');
+function blob(b64, mime){ const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return URL.createObjectURL(new Blob([u], { type:mime })); }
+function prox(){
+  if (!fila.length){ tocando = false; $('sx').textContent = gravado ? 'Fim da gravação' : 'AO VIVO · aguardando próximo trecho…'; return; }
+  tocando = true; const t = fila.shift();
+  if (url) URL.revokeObjectURL(url); url = blob(t.dados, t.mime);
+  $('aud').style.display = t.tipo === 'audio' ? 'flex' : 'none';
+  v.src = url; v.play().catch(() => { $('tap').style.display = 'flex'; });
+  $('sx').textContent = (gravado ? 'GRAVAÇÃO' : 'AO VIVO') + ' · trecho ' + (t.seq + 1);
+}
+$('tap').onclick = () => { $('tap').style.display = 'none'; v.play(); };
+v.onended = prox; v.onerror = prox;
+async function puxar(){
+  if (gravado && fila.length >= 2) return;
+  const { data, error } = await sb.rpc('sos_publico', { p_token: token, p_depois: ultimo });
+  if (error) { if (/link_invalido/.test(error.message)) { $('tela').style.display = 'none'; $('erro').style.display = 'block'; clearInterval(timer); } return; }
+  const a = data.alerta;
+  if (a) {
+    $('nome').textContent = 'SOS — ' + a.nome;
+    $('sub').textContent = 'Pediu socorro às ' + new Date(a.criado_em).toLocaleTimeString('pt-BR') + (a.encerrado_em ? ' · transmissão encerrada' : ' · AO VIVO');
+    gravado = !!a.encerrado_em;
+    if (a.lat != null) $('mapa').href = 'https://www.google.com/maps?q=' + a.lat + ',' + a.lng;
+  }
+  (data.trechos || []).forEach(t => { if (t.seq > ultimo) { ultimo = t.seq; fila.push(t); } });
+  if (!gravado) while (fila.length > 4) fila.shift();
+  if (!tocando) prox();
+}
+const timer = setInterval(puxar, 3000);
+if (!token || token.length < 40) { $('tela').style.display = 'none'; $('erro').style.display = 'block'; } else puxar();
+</script>
+</body>
+</html>

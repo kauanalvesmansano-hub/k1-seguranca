@@ -7,6 +7,7 @@ import { FundoK1, CabecalhoK1, CardK1, Online, K1, s as k } from '../../../compo
 import { checkin, lerSessao, meuPlano, meusContatos, sairVigilante, status, turno, type ContatoEmergencia, type MeuPlano, type SessaoVigilante } from '../../../lib/vigilante';
 import { traduzErro } from '../../../lib/supabase';
 import { ativarPanicoPower, desativarPanicoPower, panicoPowerDisponivel } from '../../../lib/panicoNativo';
+import K1Panico from '../../../../modules/k1-panico/src/K1PanicoModule';
 
 function contagem(ms: number) {
   const t = Math.max(0, Math.floor(ms / 1000));
@@ -203,6 +204,13 @@ export default function InicioVigilante() {
           </Text>
         </View>
       </CardK1>
+
+      {panicoPowerDisponivel && K1Panico && !K1Panico.podeTelaCheia() && (
+        <CardK1 style={{ flexDirection: 'row', gap: 10, alignItems: 'center', borderColor: K1.amarelo }} onPress={() => K1Panico?.abrirPermissaoTelaCheia()}>
+          <Ionicons name="videocam" size={22} color={K1.amarelo} />
+          <Text style={{ color: '#fde68a', flex: 1, fontSize: 13 }}>Toque aqui e permita "tela cheia" para o K1: assim a câmera consegue ligar sozinha no pânico, mesmo com a tela bloqueada.</Text>
+        </CardK1>
+      )}
 
       {plano?.tipo === 'autonomo' && (
         <CardK1 style={{ gap: 8 }} onPress={() => router.push('/funcionario/contatos')}>

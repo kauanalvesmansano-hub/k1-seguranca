@@ -6,7 +6,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config';
 export const panicoPowerDisponivel = Platform.OS === 'android' && K1Panico != null;
 
 async function pedirPermissoes() {
-  const lista: Permission[] = [PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION, PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION];
+  // câmera e microfone: no pânico o celular grava em segredo para o monitoramento acompanhar
+  const lista: Permission[] = [PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION, PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+    PermissionsAndroid.PERMISSIONS.CAMERA, PermissionsAndroid.PERMISSIONS.RECORD_AUDIO];
   if (Number(Platform.Version) >= 33) lista.push(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
   try { await PermissionsAndroid.requestMultiple(lista); } catch { /* segue mesmo sem */ }
 }
@@ -16,6 +18,12 @@ export async function ativarPanicoPower(token: string, homemCaidoMin = 0) {
   if (!panicoPowerDisponivel || !K1Panico) return false;
   await pedirPermissoes();
   await K1Panico.iniciar(SUPABASE_URL, SUPABASE_ANON_KEY, token, homemCaidoMin);
+  // gravação oculta de câmera + áudio no Power 4x (todos os planos; a pessoa pode desligar)
+  try {
+    const { supabase } = await import('./supabase');
+    const { data } = await supabase.rpc('vig_gravar_sos', { p_token: token });
+    K1Panico.sosConfigurar(data !== false);
+  } catch { K1Panico.sosConfigurar(true); }
   return true;
 }
 
