@@ -91,9 +91,9 @@ function Rodape() {
       <View style={s.linhaVermelha} />
       <View style={s.rodapeItens}>
         {itens.map((it, i) => (
-          // Cadeado de SEGURANÇA: segurar 2 s abre o K1 Monitoramento (acesso oculto do dono do K1)
+          // Cadeado de SEGURANÇA: segurar 5 s abre o K1 Monitoramento (acesso oculto do dono do K1)
           <Pressable key={it.nome} style={[s.rodapeItem, i > 0 && { borderLeftWidth: 1, borderLeftColor: CORES.vermelhoEscuro }]}
-            onLongPress={it.icone === 'lock' ? () => router.push('/monitor') : undefined} delayLongPress={2000}>
+            onLongPress={it.icone === 'lock' ? () => router.push('/monitor') : undefined} delayLongPress={5000}>
             <MaterialCommunityIcons name={it.icone} size={22} color="#e8e8e8" />
             <Text style={s.rodapeTxt}>{it.nome}</Text>
           </Pressable>
