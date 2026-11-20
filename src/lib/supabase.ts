@@ -42,6 +42,8 @@ const ERROS: Record<string, string> = {
   sem_permissao: 'Você não tem permissão para isso.',
   usuario_ja_vinculado_a_empresa: 'Este usuário já tem uma empresa cadastrada.',
   senha_deve_ter_4_a_8_numeros: 'As senhas devem ter de 4 a 8 números.',
+  whatsapp_invalido: 'WhatsApp inválido. Use DDD + número, ex.: 43 99999-1234.',
+  no_maximo_6_contatos: 'Você pode ter no máximo 6 contatos.',
   senha_e_coacao_devem_ser_diferentes: 'A senha normal e a de coação precisam ser diferentes.',
   limite_de_vigilantes_do_plano_atingido: 'Limite do plano atingido. Aumente a quantidade no painel.',
   'Invalid login credentials': 'E-mail ou senha incorretos.',

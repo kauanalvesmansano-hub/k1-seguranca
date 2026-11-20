@@ -4,7 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FundoK1, CabecalhoK1, CardK1, Online, K1, s as k } from '../../../components/k1';
-import { checkin, lerSessao, sairVigilante, status, turno, type SessaoVigilante } from '../../../lib/vigilante';
+import { checkin, lerSessao, meuPlano, meusContatos, sairVigilante, status, turno, type ContatoEmergencia, type MeuPlano, type SessaoVigilante } from '../../../lib/vigilante';
 import { traduzErro } from '../../../lib/supabase';
 import { ativarPanicoPower, desativarPanicoPower, panicoPowerDisponivel } from '../../../lib/panicoNativo';
 
@@ -16,6 +16,17 @@ function contagem(ms: number) {
 
 /** Tela inicial do vigilante (modelo: Próxima Senha + Confirmar Senha + Rádio). */
 export default function InicioVigilante() {
+  const [plano, setPlano] = useState<MeuPlano | null>(null);
+  const [contatos, setContatos] = useState<ContatoEmergencia[]>([]);
+  useFocusEffect(useCallback(() => {
+    (async () => {
+      const s = await lerSessao(); if (!s) return;
+      try {
+        const p = await meuPlano(s); setPlano(p);
+        if (p.tipo === 'autonomo') setContatos(await meusContatos(s));
+      } catch { /* sem internet */ }
+    })();
+  }, []));
   const [sessao, setSessao] = useState<SessaoVigilante | null>(null);
   const [online, setOnline] = useState(true);
   const [emTurno, setEmTurno] = useState(false);
@@ -183,13 +194,32 @@ export default function InicioVigilante() {
         <Ionicons name="power" size={34} color={K1.vermelho} />
         <View style={{ flex: 1 }}>
           <Text style={k.titulo}>Pânico silencioso</Text>
-          <Text style={k.mut}>Aperte o botão Power 4 vezes seguidas. A empresa recebe WhatsApp e ligação de socorro.</Text>
+          <Text style={k.mut}>{plano?.tipo === 'autonomo'
+            ? 'Aperte o botão Power 4 vezes seguidas. Seus contatos de emergência e a sua empresa recebem a mensagem no WhatsApp, com a sua localização.'
+            : 'Aperte o botão Power 4 vezes seguidas. O monitoramento da empresa recebe o alarme na hora, sem aparecer nada no seu celular.'}</Text>
           <Text style={{ fontSize: 12, marginTop: 4, color: !panicoPowerDisponivel ? K1.amarelo : powerAtivo ? K1.verde : K1.mutado }}>
             {!panicoPowerDisponivel ? 'Indisponível nesta versão do app (use o botão SOS)'
               : powerAtivo ? '● Ativo neste turno' : 'Ativa ao iniciar o turno'}
           </Text>
         </View>
       </CardK1>
+
+      {plano?.tipo === 'autonomo' && (
+        <CardK1 style={{ gap: 8 }} onPress={() => router.push('/funcionario/contatos')}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Ionicons name="people" size={28} color={contatos.some(c => c.tipo === 'emergencia') ? K1.verde : K1.amarelo} />
+            <View style={{ flex: 1 }}>
+              <Text style={k.titulo}>Meus contatos de emergência</Text>
+              <Text style={k.mut}>{contatos.length ? contatos.map(c => c.nome).join(', ') : 'Nenhum ainda — toque para cadastrar'}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={22} color={K1.mutado} />
+          </View>
+          <Text style={{ color: K1.mutado, fontSize: 12 }}>
+            Plano do vigilante: R$ {Number(plano.valor).toFixed(2).replace('.', ',')}/mês
+            {plano.teste_ate && new Date(plano.teste_ate) > new Date() ? ` · grátis até ${new Date(plano.teste_ate).toLocaleDateString('pt-BR')}` : ''}
+          </Text>
+        </CardK1>
+      )}
 
       {emTurno && !bloqueado && (
         <Pressable

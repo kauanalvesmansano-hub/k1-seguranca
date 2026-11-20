@@ -37,6 +37,7 @@ export default function Escolha() {
       <BotaoVermelho titulo="SOU FUNCIONÁRIO" icone="person-outline" onPress={() => router.push('/funcionario/login')} />
       <BotaoContorno titulo="SOU EMPRESA" icone="business-outline" onPress={() => router.push('/empresa/login')} />
       <BotaoContorno titulo="PESSOAL / FAMÍLIA" icone="people-outline" onPress={() => router.push('/familia/entrar')} />
+      <BotaoContorno titulo="SOU VIGILANTE · PLANO INDIVIDUAL" icone="shield-checkmark-outline" onPress={() => router.push('/autonomo/cadastro')} />
     </TelaK1>
   );
 }

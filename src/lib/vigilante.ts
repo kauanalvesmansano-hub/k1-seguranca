@@ -144,3 +144,19 @@ export function registrarNoLivro(s: SessaoVigilante, assunto: string, hora: Date
 export function excluirDoLivro(s: SessaoVigilante, id: string) {
   return rpc<void>('vig_livro_excluir', { p_token: s.token, p_id: id });
 }
+
+// ---------- Plano do vigilante (contratado por ele mesmo) ----------
+export type MeuPlano = { tipo: 'seguranca' | 'familia' | 'autonomo'; teste_ate: string | null; plano_status: string; valor: number };
+export function meuPlano(s: SessaoVigilante) {
+  return rpc<MeuPlano>('vig_meu_plano', { p_token: s.token });
+}
+export type ContatoEmergencia = { id: string; tipo: 'emergencia' | 'empresa'; nome: string; whatsapp: string };
+export function meusContatos(s: SessaoVigilante) {
+  return rpc<ContatoEmergencia[]>('vig_contatos', { p_token: s.token });
+}
+export function salvarContato(s: SessaoVigilante, tipo: 'emergencia' | 'empresa', nome: string, whatsapp: string) {
+  return rpc<string>('vig_contato_salvar', { p_token: s.token, p_tipo: tipo, p_nome: nome, p_whatsapp: whatsapp });
+}
+export function excluirContato(s: SessaoVigilante, id: string) {
+  return rpc<void>('vig_contato_excluir', { p_token: s.token, p_id: id });
+}
