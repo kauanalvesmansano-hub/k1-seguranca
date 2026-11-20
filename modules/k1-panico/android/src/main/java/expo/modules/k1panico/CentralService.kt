@@ -15,7 +15,11 @@ import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import java.util.Locale
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -74,6 +78,32 @@ class CentralService : Service() {
       else -> tipo.uppercase()
     }
 
+    /** O que a voz fala para explicar POR QUE alarmou. */
+    fun motivo(tipo: String): String = when (tipo) {
+      "panico" -> "Ele apertou o botão de pânico, o botão de ligar 4 vezes. Pode estar acontecendo um assalto no local agora. Evite ligar para o celular do vigilante, ele pode estar com o assaltante"
+      "coacao" -> "Ele digitou a senha de coação. Isso quer dizer que ele pode estar rendido, sendo obrigado a desligar o alarme"
+      "sem_movimento" -> "O celular dele ficou parado, sem nenhum movimento. Ele pode ter caído, desmaiado ou passado mal"
+      "senha_errada" -> "Ele errou a senha várias vezes seguidas"
+      "sem_resposta" -> "Ele não respondeu à verificação de segurança no horário"
+      "fora_do_posto" -> "Ele saiu da área do posto de trabalho"
+      "bateria_baixa" -> "A bateria do celular dele está acabando. Se desligar, a central perde o contato"
+      "atraso_chegada" -> "Ele não chegou ao posto no horário do turno"
+      "ronda_perdida" -> "A ronda programada não foi concluída no horário"
+      "plantao_nao_assumido" -> "O plantão não foi assumido no horário. O posto pode estar sem vigilante"
+      "batida" -> "O celular detectou um impacto forte, uma possível batida de carro ou moto, ou uma queda"
+      "teste" -> "Este é apenas um teste do alarme da central"
+      else -> "Foi disparado um alerta"
+    }
+
+    fun frase(tipo: String, nome: String, posto: String, detalhe: String): String {
+      val partes = mutableListOf("Atenção, central K1 Segurança. Alerta de ${titulo(tipo).lowercase().replace("—", ",")}.")
+      partes.add("Vigilante ${nome.ifBlank { "não identificado" }}" + (if (posto.isNotBlank()) ", posto $posto." else "."))
+      partes.add(motivo(tipo) + ".")
+      if (detalhe.isNotBlank()) partes.add(detalhe.trimEnd('.') + ".")
+      if (tipo != "teste") partes.add("Tome as medidas cabíveis para solucionar o problema.")
+      return partes.joinToString(" ")
+    }
+
     fun notifId(id: String) = 8000 + (id.hashCode() and 0xFFFF)
     const val NOTIF_SEM_REDE = 7102
   }
@@ -91,6 +121,13 @@ class CentralService : Service() {
   private var primeira = true
   /** Alertas que estão tocando agora (param quando forem resolvidos em qualquer lugar). */
   private val tocando = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+  // ---------- Voz: explica qual vigilante, qual posto e por que alarmou ----------
+  private var tts: TextToSpeech? = null
+  @Volatile private var ttsPronto = false
+  @Volatile private var falando = false
+  private val falas = java.util.concurrent.ConcurrentHashMap<String, String>()
+  private val vozCiclo = Runnable { falarAlertas() }
 
   private val prefs: SharedPreferences get() = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -111,6 +148,7 @@ class CentralService : Service() {
     // Sem cursor salvo = acabou de ativar: o que já existia não toca
     primeira = prefs.getString("desde", null) == null
     criarCanais()
+    iniciarVoz()
     iniciarPrimeiroPlano("Aguardando alertas dos vigilantes")
     handler.post(ciclo)
   }
@@ -138,6 +176,8 @@ class CentralService : Service() {
   override fun onDestroy() {
     handler.removeCallbacksAndMessages(null)
     silenciar()
+    try { tts?.shutdown() } catch (_: Exception) {}
+    tts = null
     try { executor.shutdownNow() } catch (_: Exception) {}
     rodando = false
     instancia = null
@@ -205,7 +245,7 @@ class CentralService : Service() {
       val abertos = org.json.JSONArray(t.ifBlank { "[]" })
       val set = HashSet<String>(); for (i in 0 until abertos.length()) set.add(abertos.getString(i))
       val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-      ids.filter { it !in set }.forEach { tocando.remove(it); nm.cancel(notifId(it)) }
+      ids.filter { it !in set }.forEach { tocando.remove(it); falas.remove(it); nm.cancel(notifId(it)) }
       if (tocando.isEmpty()) handler.post { silenciar() }
     } catch (_: Exception) {}
   }
@@ -285,7 +325,10 @@ class CentralService : Service() {
     // Todo alerta toca sem parar até ser resolvido ou silenciado
     b.setOngoing(true)
     tocando.add(id)
+    falas[id] = frase(tipo, nome, posto, a.optString("detalhe"))
     tocar()
+    handler.removeCallbacks(vozCiclo)
+    handler.postDelayed(vozCiclo, 2_500) // deixa tocar um pouco e já explica o alerta
     try {
       (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(notifId(id), b.build())
     } catch (e: Exception) {
@@ -380,10 +423,61 @@ class CentralService : Service() {
     } catch (_: Exception) {}
   }
 
+  private fun iniciarVoz() {
+    try {
+      tts = TextToSpeech(applicationContext) { st ->
+        if (st == TextToSpeech.SUCCESS) {
+          tts?.let { t ->
+            val r = t.setLanguage(Locale("pt", "BR"))
+            if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) t.setLanguage(Locale("pt"))
+            t.setSpeechRate(0.95f)
+            // sai pelo canal de ALARME: fala mesmo com o celular no silencioso
+            t.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
+              .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+            t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+              override fun onStart(id: String?) {}
+              override fun onDone(id: String?) { if (id?.startsWith("fim") == true) handler.post { fimDaFala() } }
+              @Deprecated("Deprecated in Java") override fun onError(id: String?) { handler.post { fimDaFala() } }
+            })
+            ttsPronto = true
+          }
+        } else Log.w(TAG, "Voz indisponível neste celular")
+      }
+    } catch (e: Exception) { Log.w(TAG, "Voz falhou: ${e.message}") }
+  }
+
+  /** Abaixa o toque, fala cada alerta que está tocando e depois repete a cada 20 s até atender/resolver. */
+  private fun falarAlertas() {
+    val t = tts
+    val lista = tocando.mapNotNull { falas[it] }
+    if (lista.isEmpty() || t == null) return
+    if (!ttsPronto) { handler.postDelayed(vozCiclo, 1_000); return }
+    if (falando) return
+    falando = true
+    try { player?.setVolume(0.12f, 0.12f) } catch (_: Exception) {}
+    val p = Bundle().apply { putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1f) }
+    val total = lista.takeLast(3)
+    total.forEachIndexed { i, f ->
+      val fim = i == total.size - 1
+      val texto = if (total.size > 1 && i == 0) "Há ${total.size} alertas sem atendimento. $f" else f
+      t.speak(texto, if (i == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD, p, (if (fim) "fim-" else "parte-") + i)
+    }
+  }
+
+  private fun fimDaFala() {
+    falando = false
+    try { player?.setVolume(1f, 1f) } catch (_: Exception) {}
+    if (tocando.isNotEmpty()) { handler.removeCallbacks(vozCiclo); handler.postDelayed(vozCiclo, 20_000) }
+  }
+
   private fun renovarWake() { try { wake?.acquire(WAKE_MS) } catch (_: Exception) {} }
 
   fun silenciar() {
     tocando.clear()
+    falas.clear()
+    handler.removeCallbacks(vozCiclo)
+    try { tts?.stop() } catch (_: Exception) {}
+    falando = false
     try { player?.stop() } catch (_: Exception) {}
     try { player?.release() } catch (_: Exception) {}
     player = null

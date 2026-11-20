@@ -609,7 +609,49 @@ function tocarSom(){
     document.addEventListener('click', () => { if (alertasTocando().length) alarmeAudio.play().catch(() => {}); }, { once:true });
   });
 }
-function pararSom(){ if (alarmeAudio && !alarmeAudio.paused) { alarmeAudio.pause(); alarmeAudio.currentTime = 0; } }
+function pararSom(){ if (alarmeAudio && !alarmeAudio.paused) { alarmeAudio.pause(); alarmeAudio.currentTime = 0; } pararVoz(); }
+
+// ===== VOZ: explica qual vigilante, qual posto e por que alarmou (repete a cada 20 s até resolver/silenciar) =====
+const MOTIVO = {
+  panico: 'Ele apertou o botão de pânico, o botão de ligar 4 vezes. Pode estar acontecendo um assalto no local agora. Evite ligar para o celular do vigilante, ele pode estar com o assaltante',
+  coacao: 'Ele digitou a senha de coação. Isso quer dizer que ele pode estar rendido, sendo obrigado a desligar o alarme',
+  sem_movimento: 'O celular dele ficou parado, sem nenhum movimento. Ele pode ter caído, desmaiado ou passado mal',
+  senha_errada: 'Ele errou a senha várias vezes seguidas',
+  sem_resposta: 'Ele não respondeu à verificação de segurança no horário',
+  fora_do_posto: 'Ele saiu da área do posto de trabalho',
+  bateria_baixa: 'A bateria do celular dele está acabando. Se desligar, a central perde o contato',
+  atraso_chegada: 'Ele não chegou ao posto no horário do turno',
+  ronda_perdida: 'A ronda programada não foi concluída no horário',
+  plantao_nao_assumido: 'O plantão não foi assumido no horário. O posto pode estar sem vigilante',
+  batida: 'O celular detectou um impacto forte, uma possível batida de carro ou moto, ou uma queda'
+};
+let vozTimer = null, vozFalando = false;
+function fraseAlerta(a){
+  const v = vigPorId(a.vigilante_id), posto = nomeLocal(a.cliente_id) || v?.posto || '';
+  return [`Atenção, central K1 Segurança. Alerta de ${tipoTxt(a.tipo)[0].toLowerCase().replace(/[\/—]/g, ',')}.`,
+    `Vigilante ${v?.nome || 'não identificado'}${posto ? ', posto ' + posto : ''}.`,
+    (MOTIVO[a.tipo] || 'Foi disparado um alerta') + '.',
+    a.detalhe ? String(a.detalhe).replace(/\.$/, '') + '.' : '',
+    'Tome as medidas cabíveis para solucionar o problema.'].filter(Boolean).join(' ');
+}
+function vozPt(){ const vs = speechSynthesis.getVoices(); return vs.find(v => v.lang === 'pt-BR') || vs.find(v => (v.lang || '').startsWith('pt')); }
+function falarAlarme(){
+  clearTimeout(vozTimer); vozTimer = null;
+  if (!window.speechSynthesis || $('vozLig')?.checked === false) return;
+  const tocando = alertasTocando();
+  if (!tocando.length || vozFalando) return;
+  const lista = tocando.slice(0, 3);
+  vozFalando = true; if (alarmeAudio) alarmeAudio.volume = 0.12;
+  speechSynthesis.cancel();
+  lista.forEach((a, i) => {
+    const u = new SpeechSynthesisUtterance((i === 0 && tocando.length > 1 ? `Há ${tocando.length} alertas sem atendimento. ` : '') + fraseAlerta(a));
+    u.lang = 'pt-BR'; u.rate = 0.95; const vp = vozPt(); if (vp) u.voice = vp;
+    if (i === lista.length - 1) u.onend = u.onerror = () => { vozFalando = false; if (alarmeAudio) alarmeAudio.volume = 1; if (alertasTocando().length) vozTimer = setTimeout(falarAlarme, 20000); };
+    speechSynthesis.speak(u);
+  });
+}
+function pararVoz(){ clearTimeout(vozTimer); vozTimer = null; vozFalando = false; try { speechSynthesis.cancel(); } catch {} if (alarmeAudio) alarmeAudio.volume = 1; }
+let vozUltimo = '';
 function atualizarAlarme(){
   const tocando = alertasTocando();
   if (!tocando.length) { pararSom(); if (!$('banner').style.background) $('banner').classList.add('hidden'); return; }
@@ -619,6 +661,10 @@ function atualizarAlarme(){
     (tocando.length > 1 ? `   (+${tocando.length - 1} alerta(s) sem resolver)` : '');
   $('banner').style.background = ''; $('banner').classList.remove('hidden');
   tocarSom();
+  // alerta novo: fala na hora; senão continua repetindo a cada 20 s
+  const chave = tocando.map(x => x.id).join(',');
+  if (chave !== vozUltimo) { vozUltimo = chave; if (!vozFalando) setTimeout(falarAlarme, 1500); }
+  else if (!vozTimer && !vozFalando) vozTimer = setTimeout(falarAlarme, 20000);
 }
 function dispararAlarme(a){
   atualizarAlarme();

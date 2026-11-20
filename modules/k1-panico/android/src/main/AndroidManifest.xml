@@ -24,6 +24,13 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
+  <!-- Central: voz que explica o alerta (Android 11+ precisa declarar o leitor de texto) -->
+  <queries>
+    <intent>
+      <action android:name="android.intent.action.TTS_SERVICE" />
+    </intent>
+  </queries>
+
   <application>
     <service
       android:name="expo.modules.k1panico.PanicoService"
