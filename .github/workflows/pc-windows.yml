@@ -1,0 +1,30 @@
+name: Instalador PC (Windows)
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Copiar as páginas
+        shell: bash
+        run: |
+          mkdir -p desktop/paginas
+          cp painel/index.html desktop/paginas/painel.html
+          cp monitor/index.html desktop/paginas/monitor.html
+      - name: Gerar instalador
+        working-directory: desktop
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", CSC_IDENTITY_AUTO_DISCOVERY: "false" }
+        run: |
+          npm install --no-audit --no-fund
+          npm run dist
+      - name: Publicar
+        shell: bash
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+        run: |
+          TAG="pc-${{ github.run_number }}"
+          gh release create "$TAG" desktop/dist/K1-Seguranca-PC-Instalador.exe --title "K1 Segurança PC $TAG" --notes "Instalador Windows" --prerelease

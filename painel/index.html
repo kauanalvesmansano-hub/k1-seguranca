@@ -669,7 +669,7 @@ function atualizarAlarme(){
   if (aoVivo && !SOS_ABERTOS.has(aoVivo.id) && SOS.id !== aoVivo.id) { SOS_ABERTOS.add(aoVivo.id); verSos(aoVivo.id); }
   // alerta novo: fala na hora; senão continua repetindo a cada 20 s
   const chave = tocando.map(x => x.id).join(',');
-  if (chave !== vozUltimo) { vozUltimo = chave; if (!vozFalando) setTimeout(falarAlarme, 1500); }
+  if (chave !== vozUltimo) { vozUltimo = chave; try { window.k1desktop?.alerta(); } catch {} if (!vozFalando) setTimeout(falarAlarme, 1500); }
   else if (!vozTimer && !vozFalando) vozTimer = setTimeout(falarAlarme, 20000);
 }
 function dispararAlarme(a){

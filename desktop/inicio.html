@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><title>K1 Segurança</title>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:"Segoe UI",system-ui,sans-serif;color:#fff;
+    background:radial-gradient(1000px 600px at 0% 0%,rgba(225,6,0,.3),transparent 60%),radial-gradient(800px 500px at 100% 100%,rgba(225,6,0,.2),transparent 60%),#050505}
+  .box{display:flex;gap:40px;align-items:center;flex-wrap:wrap;justify-content:center;padding:30px}
+  img{width:300px;border-radius:16px;border:1.5px solid #4a0b08;box-shadow:0 0 30px rgba(225,6,0,.35)}
+  .opc{display:flex;flex-direction:column;gap:16px;min-width:340px}
+  h1{margin:0 0 6px;font-size:26px} p{margin:0 0 10px;color:#a1a1aa}
+  a{display:block;text-decoration:none;color:#fff;border:1.5px solid #e10600;border-radius:12px;padding:18px 20px;background:rgba(10,10,12,.9)}
+  a:hover{background:linear-gradient(90deg,#e10600,#9b0400)} a b{display:block;font-size:20px} a span{color:#d4d4d8;font-size:14px}
+  a:hover span{color:#fff}
+</style></head><body>
+<div class="box">
+  <img id="lobo" src="lobo.jpg" alt="K1 Segurança" draggable="false">
+  <div class="opc">
+    <h1>K1 Segurança</h1><p>Escolha o que você quer abrir neste computador:</p>
+    <a href="paginas/painel.html"><b>Painel da Empresa</b><span>Para a empresa de segurança: vigilantes, alertas, rondas, livro.</span></a>
+  </div>
+</div>
+<script>
+  // acesso oculto do dono do K1: segurar o lobo por 5 segundos abre o K1 Monitoramento
+  let t = null; const lobo = document.getElementById('lobo');
+  const soltar = () => { clearTimeout(t); t = null; };
+  lobo.addEventListener('mousedown', () => { t = setTimeout(() => location.href = 'paginas/monitor.html', 5000); });
+  ['mouseup', 'mouseleave'].forEach(ev => lobo.addEventListener(ev, soltar));
+</script>
+</body></html>

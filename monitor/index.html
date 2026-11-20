@@ -500,7 +500,7 @@ function atualizarAlarme(){
   $('bannerTxt').textContent = `⚠ ${tipoTxt(a.tipo)[0]} — ${a.pessoa} · ${a.empresa}${a.local ? ' (' + a.local + ')' : ''} — ${ha(a.criado_em)}` + (l.length > 1 ? `   (+${l.length - 1} alerta(s) esperando)` : '');
   $('banner').classList.remove('hidden'); tocarSom();
   const chave = l.map(x => x.id).join(',');
-  if (chave !== vozUltimo) { vozUltimo = chave; if (!vozFalando) setTimeout(falar, 1200); }
+  if (chave !== vozUltimo) { vozUltimo = chave; try { window.k1desktop?.alerta(); } catch {} if (!vozFalando) setTimeout(falar, 1200); }
   else if (!vozTimer && !vozFalando) vozTimer = setTimeout(falar, 20000);
 }
 function silenciarTodos(){ const s = silenciados(); alertasTocando().forEach(a => s.add(a.id)); salvarSil(s); pararSom(); $('banner').classList.add('hidden'); }
