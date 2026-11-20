@@ -5,7 +5,6 @@ import { TelaK1, BotaoVermelho, BotaoContorno } from '../components/ui';
 import { lerSessao } from '../lib/vigilante';
 import { supabase } from '../lib/supabase';
 import { configurado } from '../lib/config';
-import { souDono } from '../lib/monitor';
 
 /** Primeira tela: FUNCIONÁRIO, EMPRESA ou PESSOAL / FAMÍLIA. */
 export default function Escolha() {
@@ -19,7 +18,7 @@ export default function Escolha() {
       if (vig) { router.replace(vig.termo_aceito ? '/funcionario/inicio' : '/funcionario/termo'); return; }
       if (configurado) {
         const { data } = await supabase.auth.getSession();
-        if (data.session) { router.replace((await souDono()) ? '/monitor/mapa' : '/empresa/painel'); return; }
+        if (data.session) { router.replace('/empresa/painel'); return; }
       }
       setVerificando(false);
     })();

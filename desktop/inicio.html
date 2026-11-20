@@ -1,28 +1,97 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"><title>K1 Segurança</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:"Segoe UI",system-ui,sans-serif;color:#fff;
-    background:radial-gradient(1000px 600px at 0% 0%,rgba(225,6,0,.3),transparent 60%),radial-gradient(800px 500px at 100% 100%,rgba(225,6,0,.2),transparent 60%),#050505}
-  .box{display:flex;gap:40px;align-items:center;flex-wrap:wrap;justify-content:center;padding:30px}
-  img{width:300px;border-radius:16px;border:1.5px solid #4a0b08;box-shadow:0 0 30px rgba(225,6,0,.35)}
-  .opc{display:flex;flex-direction:column;gap:16px;min-width:340px}
-  h1{margin:0 0 6px;font-size:26px} p{margin:0 0 10px;color:#a1a1aa}
-  a{display:block;text-decoration:none;color:#fff;border:1.5px solid #e10600;border-radius:12px;padding:18px 20px;background:rgba(10,10,12,.9)}
-  a:hover{background:linear-gradient(90deg,#e10600,#9b0400)} a b{display:block;font-size:20px} a span{color:#d4d4d8;font-size:14px}
-  a:hover span{color:#fff}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#000;color:#f2f2f2;font-family:"Segoe UI",system-ui,sans-serif}
+  .tela{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(420px,.95fr);grid-template-rows:1fr auto}
+  .arte{position:relative;overflow:hidden;background:#000}
+  .arte img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top}
+  .arte:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 70%,#000),linear-gradient(180deg,transparent 80%,#000)}
+  .lado{display:flex;flex-direction:column;justify-content:center;padding:40px 56px;gap:18px;
+    background:radial-gradient(700px 500px at 100% 0%,rgba(225,6,0,.22),transparent 60%)}
+  .titulo{color:#cfcfcf;text-align:center;letter-spacing:4px;font-size:16px;font-weight:700;margin-bottom:6px}
+  .campo{display:flex;align-items:center;height:66px;border-radius:12px;border:1px solid #3a3d44;background:rgba(20,22,26,.92);padding:0 18px}
+  .campo svg{width:24px;height:24px;fill:#e8e8e8;flex:none}
+  .campo .div{width:1px;height:34px;background:#555a63;margin:0 16px}
+  .campo input{flex:1;background:transparent;border:0;outline:0;color:#f2f2f2;font-size:19px;letter-spacing:.5px}
+  .campo input::placeholder{color:#8d939c}
+  .campo button{background:none;border:0;cursor:pointer;padding:4px}
+  .btn{height:66px;border-radius:12px;border:1px solid #ff4d47;background:linear-gradient(180deg,#ff2a20,#b40500);color:#fff;font-size:21px;font-weight:800;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px}
+  .btn:disabled{opacity:.6}
+  .link{color:#cfcfcf;text-align:center;font-size:15px;font-weight:600;cursor:pointer;background:none;border:0}
+  .link span{color:#ff3b33}
+  .erro{color:#ff6b66;text-align:center;min-height:20px;font-size:15px}
+  .info{color:#8d939c;text-align:center;font-size:13px;line-height:1.5}
+  .rodape{grid-column:1 / span 2;background:#050505}
+  .rodape .linhaV{height:2px;background:#e10600}
+  .rodape .itens{display:flex;padding:14px 0 6px}
+  .rodape .item{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;user-select:none}
+  .rodape .item+.item{border-left:1px solid #5a0905}
+  .rodape .item svg{width:26px;height:26px;fill:#e8e8e8}
+  .rodape .item b{font-size:12px;letter-spacing:.6px;color:#e8e8e8}
+  .rodape .marca{text-align:center;color:#cfcfcf;font-weight:700;font-size:14px;letter-spacing:6px;padding:4px 0 12px}
+  #cad{cursor:default}
+  @media(max-width:900px){.tela{grid-template-columns:1fr}.arte{height:45vh}.rodape{grid-column:1}}
 </style></head><body>
-<div class="box">
-  <img id="lobo" src="lobo.jpg" alt="K1 Segurança" draggable="false">
-  <div class="opc">
-    <h1>K1 Segurança</h1><p>Escolha o que você quer abrir neste computador:</p>
-    <a href="paginas/painel.html"><b>Painel da Empresa</b><span>Para a empresa de segurança: vigilantes, alertas, rondas, livro.</span></a>
+<div class="tela">
+  <div class="arte"><img src="topo.jpg" alt="K1 Segurança"></div>
+  <div class="lado">
+    <div class="titulo">ÁREA DA EMPRESA</div>
+    <div class="campo"><svg viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5z"/></svg><div class="div"></div>
+      <input id="email" type="email" placeholder="E-MAIL" autocomplete="username"></div>
+    <div class="campo"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6a5 5 0 0 0-10 0v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zm-6 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm3.1-9H8.9V6a3.1 3.1 0 0 1 6.2 0z"/></svg><div class="div"></div>
+      <input id="senha" type="password" placeholder="SENHA" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrar()">
+      <button onclick="const i=document.getElementById('senha');i.type=i.type==='password'?'text':'password'" title="Mostrar senha"><svg viewBox="0 0 24 24" style="fill:#8d939c"><path d="M12 5C6.5 5 2.7 9.4 1.5 12c1.2 2.6 5 7 10.5 7s9.3-4.4 10.5-7C21.3 9.4 17.5 5 12 5zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/></svg></button></div>
+    <button class="btn" id="btn" onclick="entrar()">ENTRAR <svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:#fff"><path d="M10 17l5-5-5-5v10zM4 4h2v16H4z"/></svg></button>
+    <div class="erro" id="erro"></div>
+    <button class="link" onclick="esqueci()">ESQUECI A SENHA</button>
+    <button class="link" onclick="location.href='paginas/painel.html'">NÃO TEM CONTA? <span>CADASTRE SUA EMPRESA</span></button>
+    <div class="info">Funcionário, Pessoal / Família e Plano Individual do Vigilante:<br>use o aplicativo K1 Segurança no celular.</div>
+  </div>
+  <div class="rodape">
+    <div class="linhaV"></div>
+    <div class="itens">
+      <div class="item"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.9-4.9 1.4 1.4z"/></svg><b>DISCIPLINA</b></div>
+      <div class="item"><svg viewBox="0 0 24 24"><path d="M12.2 5.3 9.5 8a1.4 1.4 0 0 0 2 2l2.2-2.2 5 5 1.6-1.6-6.2-6.2a2.5 2.5 0 0 0-1.9.3zM3 11l4.3 4.3a1.4 1.4 0 1 0 2-2l1.1 1.1a1.4 1.4 0 1 0 2-2l.6.6a1.4 1.4 0 1 0 2-2L9.6 5.6 8 4 2 10zm18 1-2-2-5.3 5.3a1.4 1.4 0 1 0 2 2z"/></svg><b>COMPROMISSO</b></div>
+      <div class="item" id="cad" title=""><svg viewBox="0 0 24 24"><path d="M18 8h-1V6a5 5 0 0 0-10 0v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zm-6 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm3.1-9H8.9V6a3.1 3.1 0 0 1 6.2 0z"/></svg><b>SEGURANÇA</b></div>
+      <div class="item"><svg viewBox="0 0 24 24"><path d="M12 17.3 18.2 21l-1.6-7L22 9.2l-7.2-.6L12 2 9.2 8.6 2 9.2 7.5 14l-1.7 7z"/></svg><b>EXCELÊNCIA</b></div>
+    </div>
+    <div class="marca">K1  S E G U R A N Ç A</div>
   </div>
 </div>
 <script>
-  // acesso oculto do dono do K1: segurar o lobo por 5 segundos abre o K1 Monitoramento
-  let t = null; const lobo = document.getElementById('lobo');
+  const sb = supabase.createClient("https://ftswxxdhxjkwufdagkzd.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0c3d4eGRoeGprd3VmZGFna3pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4ODQxMTksImV4cCI6MjExMDQ2MDExOX0.VD2-2rIO9mjgQ0YzJgMRTkn3YvUv0W5VM7qFDvv8jWA");
+  const $ = id => document.getElementById(id);
+  const ERROS = { 'Invalid login credentials':'E-mail ou senha incorretos.', 'Email not confirmed':'Confirme o seu e-mail antes de entrar (veja também o Spam).' };
+  const traduz = e => { const m = e?.message || String(e); for (const k in ERROS) if (m.includes(k)) return ERROS[k]; return m; };
+  async function entrar(){
+    $('erro').textContent = '';
+    const email = $('email').value.trim(), senha = $('senha').value;
+    if (!email || !senha) return $('erro').textContent = 'Informe e-mail e senha.';
+    $('btn').disabled = true;
+    const { error } = await sb.auth.signInWithPassword({ email, password:senha });
+    $('btn').disabled = false;
+    if (error) return $('erro').textContent = traduz(error);
+    location.href = 'paginas/painel.html';
+  }
+  async function esqueci(){
+    const email = $('email').value.trim();
+    if (!email) return $('erro').textContent = 'Digite o seu e-mail no campo acima e toque de novo em ESQUECI A SENHA.';
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo:'k1seguranca://nova-senha' });
+    $('erro').style.color = error ? '#ff6b66' : '#4ade80';
+    $('erro').textContent = error ? traduz(error) : 'Enviamos um e-mail para trocar a senha (abra o link no celular com o app K1 instalado). Veja também o Spam.';
+  }
+  // já logado como empresa → vai direto para o painel
+  sb.auth.getSession().then(async ({ data }) => {
+    if (!data.session) return;
+    const { data:ue } = await sb.from('usuarios_empresa').select('empresa_id').maybeSingle();
+    if (ue) location.href = 'paginas/painel.html';
+  });
+  // ACESSO OCULTO: segurar o cadeado SEGURANÇA por 5 s abre o K1 Monitoramento (só neste programa do computador)
+  let t = null; const cad = $('cad');
   const soltar = () => { clearTimeout(t); t = null; };
-  lobo.addEventListener('mousedown', () => { t = setTimeout(() => location.href = 'paginas/monitor.html', 5000); });
-  ['mouseup', 'mouseleave'].forEach(ev => lobo.addEventListener(ev, soltar));
+  cad.addEventListener('mousedown', () => { t = setTimeout(async () => { await sb.auth.signOut(); location.href = 'paginas/monitor.html'; }, 5000); });
+  ['mouseup', 'mouseleave'].forEach(ev => cad.addEventListener(ev, soltar));
 </script>
 </body></html>

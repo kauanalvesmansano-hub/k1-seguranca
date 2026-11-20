@@ -10,7 +10,7 @@
   "build": {
     "appId": "br.com.k1seguranca.pc",
     "productName": "K1 Segurança",
-    "files": ["main.js", "preload.js", "inicio.html", "lobo.jpg", "icone.png", "paginas/**"],
+    "files": ["main.js", "preload.js", "inicio.html", "topo.jpg", "icone.png", "paginas/**"],
     "win": { "icon": "icone.png", "target": "nsis" },
     "nsis": {
       "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true,

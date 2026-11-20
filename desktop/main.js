@@ -1,6 +1,26 @@
 // K1 Segurança para computador (Windows): abre o K1 Monitoramento ou o Painel da Empresa.
-const { app, BrowserWindow, shell, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, Menu, ipcMain, safeStorage } = require('electron');
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
+const crypto = require('crypto');
+
+// Chave secreta DESTE computador (autoriza o K1 Monitoramento). Fica guardada criptografada pelo Windows (DPAPI).
+function chaveDoComputador() {
+  const arq = path.join(app.getPath('userData'), 'k1-aparelho.bin');
+  try {
+    if (fs.existsSync(arq)) {
+      const bruto = fs.readFileSync(arq);
+      return safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(bruto) : bruto.toString('utf8');
+    }
+  } catch { /* recria abaixo */ }
+  const nova = crypto.randomBytes(48).toString('hex');
+  fs.mkdirSync(path.dirname(arq), { recursive: true });
+  fs.writeFileSync(arq, safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(nova) : Buffer.from(nova, 'utf8'));
+  return nova;
+}
+ipcMain.handle('k1-chave', () => chaveDoComputador());
+ipcMain.handle('k1-nome', () => `${os.hostname()} (${os.userInfo().username})`);
 
 // alarme toca sem precisar clicar e continua com a janela minimizada
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
