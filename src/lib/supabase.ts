@@ -30,7 +30,7 @@ const ERROS: Record<string, string> = {
   'Password should be': 'A senha precisa ter pelo menos 8 caracteres, com letras e números.',
   'weak_password': 'Senha fraca: use pelo menos 8 caracteres, com letras e números.',
   empresa_inativa: 'Acesso suspenso. Procure sua empresa.',
-  empresa_bloqueada: 'Acesso suspenso. Procure sua empresa.',
+  empresa_bloqueada: 'Aplicativo bloqueado por falta de pagamento. Funcionário: procure seu encarregado. Autônomo ou família: pague o Pix da K1 (fale no WhatsApp da K1) e o acesso volta assim que o pagamento for confirmado.',
   fatura_nao_encontrada: 'Fatura não encontrada.',
   ponto_invalido: 'QR code não é um ponto de ronda desta empresa.',
   inicie_o_turno: 'Inicie o turno primeiro (na aba Início).',
