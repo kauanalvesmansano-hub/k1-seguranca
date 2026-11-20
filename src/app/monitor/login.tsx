@@ -24,7 +24,7 @@ export default function LoginMonitor() {
         setErro('Esta conta não é do dono do K1. O K1 Monitoramento é só para a central geral.');
         return;
       }
-      router.replace('/monitor/alertas');
+      router.replace('/monitor/mapa');
     } catch (e) { setErro(traduzErro(e)); } finally { setCarregando(false); }
   }
 

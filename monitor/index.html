@@ -3,62 +3,108 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https://unpkg.com https://*.openstreetmap.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.openstreetmap.org; media-src 'self' blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https://unpkg.com https://*.openstreetmap.org https://server.arcgisonline.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.openstreetmap.org https://api.bigdatacloud.net; media-src 'self' blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <title>K1 Monitoramento</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root{--bg:#07090d;--panel:#10151d;--panel2:#0c1118;--line:#1f2a38;--txt:#e6edf3;--mut:#8b98a8;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--red:#e10600;--acc:#3b82f6}
-  *{box-sizing:border-box} html,body{height:100%} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
-  button{font:inherit;cursor:pointer;border:0;border-radius:8px;padding:7px 12px;background:var(--red);color:#fff;font-weight:600}
-  button.sec{background:#18202b;border:1px solid var(--line);color:var(--txt)} button.ok{background:#15803d} button.acc{background:#1d4ed8} button.sm{padding:4px 9px;font-size:12px}
+  :root{--bg:#050505;--panel:#0b0b0e;--panel2:#08080a;--line:#3a0b08;--line2:#26262b;--txt:#f2f2f2;--mut:#a1a1aa;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--red:#e10600;--acc:#3b82f6}
+  *{box-sizing:border-box} html,body{height:100%} body{margin:0;font-family:"Rajdhani","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;background:radial-gradient(1200px 600px at 0% 0%,rgba(225,6,0,.22),transparent 60%),radial-gradient(900px 500px at 100% 100%,rgba(225,6,0,.16),transparent 60%),var(--bg);color:var(--txt);font-size:14px}
+  button{font:inherit;cursor:pointer;border:0;border-radius:8px;padding:7px 12px;background:var(--red);color:#fff;font-weight:700}
+  button.sec{background:#141418;border:1px solid var(--line2);color:var(--txt)} button.ok{background:#15803d} button.acc{background:#1d4ed8} button.sm{padding:4px 9px;font-size:12px}
+  button.contorno{background:rgba(10,10,12,.9);border:1.5px solid var(--red);height:48px;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px}
   button:disabled{opacity:.5;cursor:default}
-  input,select,textarea{font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:#0b1017;color:var(--txt)}
+  input,select,textarea{font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--line2);background:#0b0b0e;color:var(--txt)}
   label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
-  a{color:#93c5fd}
+  a{color:#fca5a5}
   .hidden{display:none!important} .mut{color:var(--mut)} .small{font-size:12px} .err{color:var(--bad);min-height:1em;margin-top:8px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card{background:rgba(11,11,14,.94);border:1.5px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 0 18px rgba(225,6,0,.12)}
   .center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
   .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
   .b-ok{background:#14532d;color:#86efac}.b-warn{background:#78350f;color:#fcd34d}.b-bad{background:#7f1d1d;color:#fca5a5}.b-off{background:#1e293b;color:#94a3b8}.b-acc{background:#1e3a8a;color:#bfdbfe}.b-pur{background:#4c1d95;color:#ddd6fe}
-  table{width:100%;border-collapse:collapse} th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top} th{color:var(--mut);font-size:12px;font-weight:600;position:sticky;top:0;background:var(--panel)}
-  tr.click{cursor:pointer} tr.click:hover{background:#141c27}
+  table{width:100%;border-collapse:collapse} th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line2);vertical-align:top} th{color:var(--mut);font-size:12px;font-weight:600;position:sticky;top:0;background:#0b0b0e}
+  tr.click{cursor:pointer} tr.click:hover{background:#151519}
+  .linha{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+  .emp{cursor:pointer} .emp:hover{border-color:#7a0a06}
+  .emp h3{margin:0 0 6px;font-size:15px;display:flex;justify-content:space-between;gap:8px}
+  .ponto{width:10px;height:10px;border-radius:50%;display:inline-block}
 
-  /* layout */
-  #app{display:grid;grid-template-rows:auto auto 1fr;height:100vh}
-  header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 16px;border-bottom:2px solid var(--red);background:var(--panel)}
-  header .logo{font-weight:900;letter-spacing:1px} header .logo span{color:var(--red)}
-  #banner{background:#991b1b;color:#fff;padding:10px 16px;display:flex;gap:10px;align-items:center;font-weight:700;animation:pisca 1s infinite}
+  /* ===== layout da central (igual à arte K1) ===== */
+  #app{display:grid;grid-template-columns:300px 1fr;height:100vh;gap:14px;padding:14px}
+  #lateral{display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(40,4,2,.55),rgba(8,8,10,.95) 40%);border:1.5px solid var(--line);border-radius:16px;overflow:hidden}
+  #lateral .logo{display:block;width:100%;aspect-ratio:325/380;object-fit:cover}
+  .menu{display:flex;flex-direction:column;gap:4px;padding:10px}
+  .menu button{display:flex;align-items:center;gap:14px;background:transparent;color:#e5e5e5;font-size:17px;font-weight:600;padding:11px 14px;text-align:left;border:1px solid transparent}
+  .menu button svg{width:24px;height:24px;flex:none;fill:var(--red)}
+  .menu button.on{background:linear-gradient(90deg,#e10600,#9b0400);color:#fff;border-color:#ff4d47;box-shadow:0 0 16px rgba(225,6,0,.45)}
+  .menu button.on svg{fill:#fff}
+  .menu button .qtd{margin-left:auto;background:var(--red);color:#fff;border-radius:999px;min-width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;padding:0 6px}
+  #lateral .lema{margin-top:auto;text-align:center;padding:14px;font-weight:900;font-size:18px;line-height:1.2}
+  #lateral .lema span{color:var(--red)}
+  #direita{display:flex;flex-direction:column;gap:12px;min-height:0;min-width:0}
+  #topo{display:grid;grid-template-columns:1fr 1fr 1fr auto;align-items:center;gap:10px;padding:10px 16px}
+  .st{display:flex;align-items:center;gap:12px} .st b{display:block;font-size:17px} .st small{color:#d4d4d8;font-size:14px}
+  .bola{width:18px;height:18px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok);flex:none}
+  .st svg{width:34px;height:34px;flex:none}
+  .icoBtn{width:46px;height:46px;border-radius:10px;background:#111114;border:1px solid var(--line2);display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .icoBtn svg{width:24px;height:24px;fill:#d4d4d8}
+  #banner{background:#991b1b;color:#fff;padding:10px 16px;display:flex;gap:10px;align-items:center;font-weight:800;font-size:16px;border-radius:12px;animation:pisca 1s infinite}
   @keyframes pisca{50%{background:#dc2626}}
-  #corpo{display:grid;grid-template-columns:400px 1fr;min-height:0}
-  #fila{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:var(--panel2)}
-  #filaTopo{padding:10px 12px;border-bottom:1px solid var(--line)}
-  #filaLista{overflow:auto;padding:10px;display:grid;gap:8px;align-content:start}
-  .al{border:1px solid var(--line);border-left:5px solid var(--warn);border-radius:10px;padding:10px;background:var(--panel)}
+  .aba{flex:1;overflow:auto;min-height:0}
+  /* aba mapa */
+  #aba-mapa{display:grid;grid-template-columns:1fr 290px;grid-template-rows:1fr auto;gap:12px;overflow:hidden}
+  #mapaBox{position:relative;border:1.5px solid var(--line);border-radius:16px;overflow:hidden;min-height:360px}
+  #mapaGeral{position:absolute;inset:0;background:#050505}
+  #mapaGeral .leaflet-tile-pane{filter:brightness(.62) saturate(.75) contrast(1.08)}
+  .ctl{position:absolute;z-index:500}
+  .tog{top:12px;left:12px;display:flex;background:rgba(10,10,12,.9);border-radius:10px;overflow:hidden}
+  .tog button{background:transparent;border-radius:0;padding:10px 18px;font-size:16px;display:flex;gap:8px;align-items:center}
+  .tog button.on{background:var(--red)} .tog svg{width:20px;height:20px;fill:#fff}
+  .zoomCtl{left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px}
+  .zoomCtl button{width:46px;height:46px;background:rgba(10,10,12,.9);font-size:24px;padding:0;display:flex;align-items:center;justify-content:center}
+  .zoomCtl svg{width:24px;height:24px;fill:#fff}
+  .norte{right:12px;top:12px;background:rgba(10,10,12,.88);border-radius:8px;padding:6px 10px;text-align:center;font-weight:900}
+  #listaBox{position:absolute;inset:0;padding:64px 14px 14px;overflow:auto;background:#08080a;display:grid;gap:8px;align-content:start}
+  #painelDisp{display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto}
+  .tit{display:flex;align-items:center;gap:10px;font-size:19px;font-weight:800;margin-bottom:10px}
+  .tit svg{width:28px;height:28px;fill:var(--red)}
+  .lin{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:16px}
+  .lin span:first-child{color:#d4d4d8}
+  #numeros{grid-column:1 / span 2;display:grid;grid-template-columns:repeat(3,1fr) 270px;gap:12px}
+  .num{display:flex;align-items:center;gap:16px;padding:14px 18px}
+  .num svg{width:46px;height:46px;fill:var(--red);flex:none}
+  .num small{display:block;color:#d4d4d8;font-size:15px} .num b{font-size:30px;font-weight:800}
+  .cyber{display:flex;align-items:center;justify-content:center} .cyber img{max-width:100%;max-height:80px}
+  /* pinos */
+  .pino{position:relative;width:46px;height:58px}
+  .pino .gota{position:absolute;left:5px;top:0;width:36px;height:36px;background:#e10600;border:3px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 0 14px #ff1a1a}
+  .pino .gota.off{background:#52525b;box-shadow:none}
+  .pino .gota svg{position:absolute;left:6px;top:6px;width:18px;height:18px;transform:rotate(45deg);fill:#fff}
+  .pino .onda{position:absolute;left:3px;top:38px;width:40px;height:16px;border:2px solid #ff2a2a;border-radius:50%;opacity:0;animation:onda 2s infinite}
+  .pino .onda.b{animation-delay:.7s}.pino .onda.c{animation-delay:1.4s}
+  @keyframes onda{0%{transform:scale(.3);opacity:.9}100%{transform:scale(2.6);opacity:0}}
+  .balao{position:absolute;bottom:64px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(10,10,12,.93);border:1.5px solid #e10600;border-radius:8px;padding:7px 12px;font:600 14px system-ui;color:#fff;box-shadow:0 0 12px rgba(225,6,0,.5)}
+  .balao b{color:#4ade80}.balao.al b{color:#f87171}.balao.off b{color:#a1a1aa}
+  .balao small{display:block;font-weight:500;color:#e5e5e5;margin-top:2px}
+  /* fila de alertas */
+  #filaLista{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px;align-content:start}
+  .al{border:1.5px solid var(--line2);border-left:6px solid var(--warn);border-radius:12px;padding:12px;background:rgba(11,11,14,.94)}
   .al.crit{border-left-color:var(--red)} .al.atend{border-left-color:var(--acc);opacity:.92}
-  .al.novo{box-shadow:0 0 0 2px #ef4444 inset}
+  .al.novo{box-shadow:0 0 0 2px #ef4444 inset,0 0 18px rgba(225,6,0,.5)}
   .al h4{margin:0 0 4px;font-size:14px;display:flex;justify-content:space-between;gap:6px}
   .al .acoes{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-  #principal{display:flex;flex-direction:column;min-height:0}
-  nav{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap;background:var(--panel)}
-  nav button{background:transparent;color:var(--mut);border:1px solid transparent} nav button.on{background:#18202b;color:#fff;border-color:var(--line)}
-  .aba{flex:1;overflow:auto;padding:14px;min-height:0}
-  .stats{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
-  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--mut)} .stat b{display:block;font-size:20px;color:var(--txt);margin-top:2px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
-  .emp{cursor:pointer} .emp:hover{border-color:#334155}
-  .emp h3{margin:0 0 6px;font-size:15px;display:flex;justify-content:space-between;gap:8px}
-  .linha{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  #mapaGeral{height:calc(100vh - 230px);min-height:420px;border-radius:12px;border:1px solid var(--line)}
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:flex-start;justify-content:center;padding:30px 16px;overflow:auto;z-index:2000}
   .modal .card{width:100%;max-width:1100px}
   .bar{height:16px;background:var(--red);border-radius:4px;min-width:2px}
   .barras td{padding:4px 8px}
-  .ponto{width:10px;height:10px;border-radius:50%;display:inline-block}
-  @media(max-width:1000px){#corpo{grid-template-columns:1fr} #fila{max-height:45vh;border-right:0;border-bottom:1px solid var(--line)} .stats{grid-template-columns:repeat(3,1fr)}}
-  @media print{header,#banner,#fila,nav,.stats,.noprint{display:none!important} #corpo{display:block} .aba{overflow:visible} body{background:#fff;color:#000} .card{border-color:#ccc;background:#fff}}
+  .stats{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:12px}
+  .stat{background:rgba(11,11,14,.94);border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--mut)} .stat b{display:block;font-size:20px;color:var(--txt);margin-top:2px}
+  @media(max-width:1200px){#app{grid-template-columns:220px 1fr} #aba-mapa{grid-template-columns:1fr} #numeros{grid-column:auto;grid-template-columns:repeat(3,1fr)} .cyber{display:none} #topo{grid-template-columns:1fr 1fr auto} #topo .st.marca{display:none}}
+  @media(max-width:800px){#app{grid-template-columns:1fr;height:auto} #lateral .logo{display:none}}
+  @media print{#lateral,#topo,#banner,.noprint{display:none!important} #app{display:block;height:auto} .aba{overflow:visible} body{background:#fff;color:#000} .card{border-color:#ccc;background:#fff;box-shadow:none}}
 </style>
 </head>
 <body>
@@ -77,64 +123,86 @@
 </div></section>
 
 <div id="app" class="hidden">
-  <div>
-    <header>
-      <div class="logo">K1 <span>MONITORAMENTO</span> <span class="mut small" id="hora" style="font-weight:400;letter-spacing:0"></span></div>
-      <div class="linha">
-        <label class="small mut" style="margin:0;display:flex;gap:6px;align-items:center"><input type="checkbox" id="vozLig" checked> Voz</label>
-        <button class="sec sm" onclick="testarAlarme()">Testar alarme</button>
-        <button class="sec sm" onclick="carregarTudo()">Atualizar</button>
-        <button class="sec sm" onclick="sair()">Sair</button>
-      </div>
-    </header>
+  <aside id="lateral">
+    <img class="logo" src="lobo.jpg" alt="K1 Segurança">
+    <div class="menu">
+      <button data-tab="mapa" class="on" onclick="aba('mapa')"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Mapa</button>
+      <button data-tab="historico" onclick="aba('historico')"><svg viewBox="0 0 24 24"><path d="M3 21h4V11H3zm7 0h4V3h-4zm7 0h4v-7h-4z"/></svg>Eventos</button>
+      <button data-tab="alertas" onclick="aba('alertas')"><svg viewBox="0 0 24 24"><path d="M12 22a2.5 2.5 0 0 0 2.5-2.5h-5A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5-6.7V3.5a2 2 0 0 0-4 0v.8A7 7 0 0 0 5 11v5l-2 2v1h18v-1z"/></svg>Alertas <span class="qtd hidden" id="menuQtd">0</span></button>
+      <button data-tab="empresas" onclick="aba('empresas')"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.9-4.9 1.4 1.4z"/></svg>Empresas</button>
+      <button data-tab="individuais" onclick="aba('individuais')"><svg viewBox="0 0 24 24"><path d="M16 1H8a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm-4 21a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4-5H8V4h8z"/></svg>Individuais / caminhões</button>
+      <button data-tab="familias" onclick="aba('familias')"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.9-4.9 1.4 1.4z"/></svg>Família</button>
+      <button data-tab="ocorrencias" onclick="aba('ocorrencias')"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zm-1 7V3.5L18.5 9z"/></svg>Ocorrências</button>
+      <button data-tab="livro" onclick="aba('livro')"><svg viewBox="0 0 24 24"><path d="M18 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM8 6h8v2H8zm0 4h8v2H8zm0 4h5v2H8z"/></svg>Livro</button>
+      <button data-tab="relatorios" onclick="aba('relatorios')"><svg viewBox="0 0 24 24"><path d="M3 3h2v16h16v2H3zm4 12 4-5 3 3 5-7 1.6 1.2-6.4 9-3-3-2.6 3.3z"/></svg>Relatórios</button>
+      <button data-tab="config" onclick="aba('config')"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.6 7.6 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.6 7.6 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.6 7.6 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>Configurações</button>
+    </div>
+    <div class="lema">SUA SEGURANÇA,<br><span>NOSSO COMPROMISSO!</span></div>
+  </aside>
+  <div id="direita">
+    <div id="topo" class="card">
+      <div class="st"><div class="bola" id="stBola"></div><div><b id="stTit" style="color:#4ade80">Monitoramento Ativo</b><small id="stSub">Sistema Online</small></div></div>
+      <div class="st marca"><svg viewBox="0 0 24 24"><path fill="#e10600" d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5z"/><path fill="#fbbf24" d="m10.8 16.2-3.5-3.5 1.4-1.4 2.1 2.1 4.9-4.9 1.4 1.4z"/></svg><div><b>K1 Segurança</b><small>Protegendo o que importa · <span id="hora"></span></small></div></div>
+      <div class="st"><svg viewBox="0 0 24 24" fill="#e10600"><path d="M12 18.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM2 8.8a14.5 14.5 0 0 1 20 0l-1.9 2A11.8 11.8 0 0 0 3.9 10.8zm3.8 3.8a9.2 9.2 0 0 1 12.4 0l-1.9 2a6.5 6.5 0 0 0-8.6 0z"/></svg><div><b id="conTit">Conexão Estável</b><small id="conPct" style="color:#4ade80;font-weight:800">—</small></div></div>
+      <div class="linha"><button class="icoBtn" title="Configurações" onclick="aba('config')"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.6 7.6 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.6 7.6 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.6 7.6 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></button><button class="icoBtn" title="Sair" onclick="sair()"><svg viewBox="0 0 24 24"><path d="M11 2h2v10h-2zm6.6 3 1.4 1.4A8 8 0 1 1 5 6.4L6.4 5A6 6 0 1 0 17.6 5z"/></svg></button></div>
+    </div>
     <div id="banner" class="hidden"><span id="bannerTxt" style="flex:1"></span><button class="sec sm" onclick="atenderPrimeiro()">Atender</button><button class="sec sm" onclick="silenciarTodos()">Silenciar</button></div>
-  </div>
-  <div class="stats">
-    <div class="stat">Empresas<b id="sEmp">0</b></div>
-    <div class="stat">Individuais / caminhoneiros<b id="sInd">0</b></div>
-    <div class="stat">Pessoas em turno<b id="sTurno">0</b></div>
-    <div class="stat">Sem sinal (&gt;10 min)<b id="sSinal" style="color:var(--warn)">0</b></div>
-    <div class="stat">Alertas abertos (24 h)<b id="sAlertas" style="color:var(--bad)">0</b></div>
-    <div class="stat">SOS ao vivo<b id="sSos" style="color:var(--red)">0</b></div>
-  </div>
-  <div id="corpo">
-    <aside id="fila">
-      <div id="filaTopo">
-        <div class="linha" style="justify-content:space-between"><b>Fila de alertas <span id="filaQtd" class="mut"></span></b>
-          <button class="sec sm" id="btnVarios" onclick="modoVarios()">Selecionar vários</button></div>
-        <div class="linha" style="margin-top:8px">
-          <select id="filaFiltro" onchange="renderFila()" style="flex:1">
-            <option value="">Todos os tipos</option><option value="crit">Só críticos (pânico, coação, homem caído, batida)</option>
-          </select>
-          <input id="filaBusca" placeholder="Buscar pessoa / empresa" oninput="renderFila()" style="flex:1;min-width:0">
+
+    <div class="aba" id="aba-mapa">
+      <div id="mapaBox">
+        <div id="mapaGeral"></div>
+        <div id="listaBox" class="hidden"></div>
+        <div class="ctl tog"><button id="togMapa" class="on" onclick="modoMapa('mapa')"><svg viewBox="0 0 24 24"><path d="M15 5 9 3 3 5v16l6-2 6 2 6-2V3zm0 14-6-2V5l6 2z"/></svg>Mapa</button><button id="togLista" onclick="modoMapa('lista')"><svg viewBox="0 0 24 24"><path d="M3 5h2v2H3zm4 0h14v2H7zM3 11h2v2H3zm4 0h14v2H7zm-4 6h2v2H3zm4 0h14v2H7z"/></svg>Lista</button></div>
+        <div class="ctl zoomCtl" id="zoomCtl"><button onclick="M.geral.zoomIn()">+</button><button onclick="M.geral.zoomOut()">−</button><button onclick="centralizar()"><svg viewBox="0 0 24 24"><path d="M11 2v2.1A8 8 0 0 0 4.1 11H2v2h2.1a8 8 0 0 0 6.9 6.9V22h2v-2.1a8 8 0 0 0 6.9-6.9H22v-2h-2.1A8 8 0 0 0 13 4.1V2zm1 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12zm0 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg></button></div>
+        <div class="ctl norte"><svg width="18" height="22" viewBox="0 0 16 18"><path d="M8 0 L16 18 L8 13 L0 18Z" fill="#e10600"/></svg><br>N</div>
+      </div>
+      <div id="painelDisp">
+        <div class="card">
+          <div class="tit"><svg viewBox="0 0 24 24"><path d="M16 1H8a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm-4 21a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4-5H8V4h8z"/></svg>Dispositivo</div>
+          <div id="dVazio" class="mut">Clique num pino do mapa.</div>
+          <div id="dInfo" class="hidden">
+            <div style="font-weight:800;font-size:17px" id="dNome"></div>
+            <div class="mut small" id="dConta" style="margin-bottom:6px"></div>
+            <div class="lin"><span>Status:</span><span id="dStatus"></span></div>
+            <div class="lin"><span>Bateria:</span><span id="dBat"></span></div>
+            <div class="lin"><span>Última Conexão:</span><span id="dUlt"></span></div>
+            <div class="lin" style="display:block"><span>Endereço:</span><div id="dEnd" style="margin-top:4px;font-size:15px"></div></div>
+            <div style="margin-top:8px"><a href="#" onclick="if(SEL)abrirPessoa(SEL);return false">Ver trajeto e detalhes ›</a></div>
+          </div>
         </div>
+        <div class="card" id="cardMov">
+          <div class="tit"><svg viewBox="0 0 24 24"><path d="M3 21h4V11H3zm7 0h4V3h-4zm7 0h4v-7h-4z"/></svg>Movimentação</div>
+          <div class="linha" style="gap:14px;flex-wrap:nowrap"><span style="width:38px;height:38px;flex:none"><svg style="width:38px;height:38px;fill:#e10600" viewBox="0 0 24 24"><path d="M13.5 5.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM9.8 8.9 7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A7.3 7.3 0 0 0 19 13v-2a5 5 0 0 1-4.3-2.4l-1-1.6a2 2 0 0 0-1.7-1c-.3 0-.5 0-.8.1L6 8.3V13h2V9.6z"/></svg></span><div><div id="mTxt" style="font-size:16px">—</div><div id="mQuando" style="color:#4ade80;font-weight:700"></div></div></div>
+        </div>
+        <button class="contorno" onclick="centralizar()"><svg style="width:26px;height:26px;fill:#e10600" viewBox="0 0 24 24"><path d="M11 2v2.1A8 8 0 0 0 4.1 11H2v2h2.1a8 8 0 0 0 6.9 6.9V22h2v-2.1a8 8 0 0 0 6.9-6.9H22v-2h-2.1A8 8 0 0 0 13 4.1V2zm1 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12zm0 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>Centralizar</button>
+        <button class="contorno" onclick="carregarPessoas();carregarResumo()"><svg style="width:26px;height:26px;fill:#e10600" viewBox="0 0 24 24"><path d="M17.7 6.3A8 8 0 1 0 19.7 14h-2.1a6 6 0 1 1-1.3-6.3L13 11h7V4z"/></svg>Atualizar Mapa</button>
+        <label style="display:flex;gap:8px;align-items:center;margin:0"><input type="checkbox" id="mapaSoAlerta" onchange="renderMapa()"> mostrar só quem tem alerta</label>
+      </div>
+      <div id="numeros">
+        <div class="card num"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.9-4.9 1.4 1.4z"/></svg><div><small>Dispositivos Ativos</small><b id="nAtivos">0 / 0</b></div></div>
+        <div class="card num" style="cursor:pointer" onclick="aba('alertas')"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2zm12-3h-2v-2h2zm0-4h-2v-4h2z"/></svg><div><small>Alertas Recentes</small><b id="nAlertas">0</b></div></div>
+        <div class="card num"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7z"/></svg><div><small>Tempo Online</small><b id="nTempo">00:00:00</b></div></div>
+        <div class="cyber"><img src="k1-cyber.jpg" alt="K1 Cyber"></div>
+      </div>
+    </div>
+
+    <div class="aba hidden" id="aba-alertas">
+      <div class="card" style="margin-bottom:10px">
+        <div class="linha" style="justify-content:space-between"><b style="font-size:18px">Fila de alertas <span id="filaQtd" class="mut"></span></b>
+          <div class="linha"><select id="filaFiltro" onchange="renderFila()"><option value="">Todos os tipos</option><option value="crit">Só críticos</option></select>
+          <input id="filaBusca" placeholder="Buscar pessoa / empresa" oninput="renderFila()">
+          <button class="sec sm" id="btnVarios" onclick="modoVarios()">Selecionar vários</button></div></div>
         <div id="variosBar" class="linha hidden" style="margin-top:8px"><span class="small mut" id="variosQtd">0 selecionados</span>
           <button class="ok sm" onclick="resolverSelecionados()">Resolver selecionados</button><button class="sec sm" onclick="modoVarios()">Cancelar</button></div>
       </div>
       <div id="filaLista"></div>
-    </aside>
-    <section id="principal">
-      <nav>
-        <button data-tab="mapa" class="on" onclick="aba('mapa')">Mapa geral</button>
-        <button data-tab="empresas" onclick="aba('empresas')">Empresas</button>
-        <button data-tab="individuais" onclick="aba('individuais')">Individuais e caminhoneiros</button>
-        <button data-tab="familias" onclick="aba('familias')">Família</button>
-        <button data-tab="historico" onclick="aba('historico')">Histórico de alertas</button>
-        <button data-tab="ocorrencias" onclick="aba('ocorrencias')">Ocorrências</button>
-        <button data-tab="livro" onclick="aba('livro')">Livro</button>
-        <button data-tab="relatorios" onclick="aba('relatorios')">Relatórios</button>
-      </nav>
-      <div class="aba" id="aba-mapa">
-        <div class="linha small mut" style="margin-bottom:8px">
-          <span><span class="ponto" style="background:#22c55e"></span> em turno</span>
-          <span><span class="ponto" style="background:#f59e0b"></span> bateria baixa</span>
-          <span><span class="ponto" style="background:#64748b"></span> sem sinal</span>
-          <span><span class="ponto" style="background:#ef4444"></span> com alerta</span>
-          <span style="margin-left:auto"><label style="display:inline;margin:0"><input type="checkbox" id="mapaSoAlerta" onchange="renderMapa()"> só quem tem alerta</label></span>
-        </div>
-        <div id="mapaGeral"></div>
+    </div>
+    <div class="aba hidden" id="aba-empresas">
+      <div class="stats">
+        <div class="stat">Empresas<b id="sEmp">0</b></div><div class="stat">Individuais / caminhoneiros<b id="sInd">0</b></div>
+        <div class="stat">Pessoas em turno<b id="sTurno">0</b></div><div class="stat">Sem sinal (&gt;10 min)<b id="sSinal" style="color:var(--warn)">0</b></div>
+        <div class="stat">Alertas abertos (24 h)<b id="sAlertas" style="color:var(--bad)">0</b></div><div class="stat">SOS ao vivo<b id="sSos" style="color:var(--red)">0</b></div>
       </div>
-      <div class="aba hidden" id="aba-empresas">
         <div class="linha" style="margin-bottom:10px"><input id="empBusca" placeholder="Buscar empresa" oninput="renderEmpresas()" style="flex:1;max-width:360px">
           <select id="empOrdem" onchange="renderEmpresas()"><option value="alertas">Mais alertas primeiro</option><option value="nome">Nome</option><option value="turno">Mais gente em turno</option></select></div>
         <div class="grid" id="gEmp"></div>
@@ -177,7 +245,14 @@
           <button class="sec sm" onclick="window.print()">Imprimir / PDF</button></div>
         <div id="relat"></div>
       </div>
-    </section>
+    <div class="aba hidden" id="aba-config">
+      <div class="card" style="max-width:640px">
+        <h2 style="margin-top:0">Configurações</h2>
+        <label style="display:flex;gap:8px;align-items:center;font-size:15px;color:#fff"><input type="checkbox" id="vozLig" checked> Voz falando quem disparou, a empresa, o posto e o motivo</label>
+        <p class="mut">O alarme toca e a voz fala a cada 20 s até você Atender, Resolver ou Silenciar. Deixe esta aba aberta e o som do computador ligado.</p>
+        <div class="linha"><button onclick="testarAlarme()">Testar alarme</button><button class="sec" onclick="carregarTudo()">Atualizar tudo</button><button class="sec" onclick="sair()">Sair</button></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -273,8 +348,10 @@ async function iniciar(){
   setInterval(carregarAlertas, 5000);
   setInterval(() => { carregarResumo(); carregarPessoas(); }, 20000);
   setInterval(() => { carregarEmpresas(); }, 60000);
-  setInterval(() => { $('hora').textContent = new Date().toLocaleString('pt-BR'); renderFila(); atualizarAlarme(); }, 15000);
+  setInterval(() => { $('hora').textContent = new Date().toLocaleString('pt-BR', { hour:'2-digit', minute:'2-digit' }); renderFila(); atualizarAlarme(); }, 15000);
   $('hora').textContent = new Date().toLocaleString('pt-BR');
+  const inicio = Date.now();
+  setInterval(() => { const t = Math.floor((Date.now() - inicio) / 1000); $('nTempo').textContent = [Math.floor(t / 3600), Math.floor(t % 3600 / 60), t % 60].map(n => String(n).padStart(2, '0')).join(':'); }, 1000);
 }
 sb.auth.getSession().then(({ data }) => { if (data.session) iniciar(); });
 
@@ -285,6 +362,9 @@ async function carregarResumo(){
   const { data } = await sb.rpc('mon_resumo'); if (!data) return;
   $('sEmp').textContent = data.empresas; $('sInd').textContent = data.individuais; $('sTurno').textContent = data.em_turno;
   $('sSinal').textContent = data.sem_sinal; $('sAlertas').textContent = data.alertas_abertos; $('sSos').textContent = data.sos_ao_vivo;
+  $('nAtivos').textContent = `${data.em_turno} / ${data.pessoas}`; $('nAlertas').textContent = data.alertas_abertos;
+  $('nAlertas').style.color = data.alertas_abertos ? '#ef4444' : ''; $('menuQtd').textContent = data.alertas_abertos;
+  $('menuQtd').classList.toggle('hidden', !data.alertas_abertos);
 }
 async function carregarEmpresas(){
   const { data } = await sb.rpc('mon_empresas'); S.empresas = data || [];
@@ -299,8 +379,18 @@ async function carregarPessoas(){
 }
 
 // ================= FILA DE ALERTAS =================
+function conexao(ok, ms){
+  const pct = !ok ? 0 : ms < 900 ? 100 : ms < 2500 ? 70 : 40;
+  $('conTit').textContent = !ok ? 'Sem conexão' : pct === 100 ? 'Conexão Estável' : 'Conexão lenta';
+  $('conPct').textContent = pct + '%'; $('conPct').style.color = !ok ? '#ef4444' : pct === 100 ? '#4ade80' : '#f59e0b';
+  $('stTit').textContent = ok ? 'Monitoramento Ativo' : 'Monitoramento Parado'; $('stTit').style.color = ok ? '#4ade80' : '#ef4444';
+  $('stSub').textContent = ok ? 'Sistema Online' : 'Sistema offline';
+  $('stBola').style.background = ok ? '#22c55e' : '#ef4444'; $('stBola').style.boxShadow = '0 0 10px ' + (ok ? '#22c55e' : '#ef4444');
+}
 async function carregarAlertas(){
+  const t0 = Date.now();
   const { data, error } = await sb.rpc('mon_alertas', { p_todos:false, p_empresa_id:null, p_limite:300 });
+  conexao(!error, Date.now() - t0);
   if (error) return;
   const novos = [];
   if (S.conhecidos) (data || []).forEach(a => { if (!S.conhecidos.has(a.id)) novos.push(a); });
@@ -455,7 +545,7 @@ document.addEventListener('click', () => { if (window.Notification && Notificati
 
 // ================= ABAS =================
 function aba(t){
-  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.querySelectorAll('.menu button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.querySelectorAll('.aba').forEach(x => x.classList.toggle('hidden', x.id !== 'aba-' + t));
   if (t === 'mapa' && M.geral) setTimeout(() => M.geral.invalidateSize(), 50);
   if (t === 'historico') carregarHistorico();
@@ -467,23 +557,94 @@ function fechar(id){ $(id).classList.add('hidden'); if (id === 'mEmp') S.empAber
 
 // ================= MAPAS =================
 const M = { geral:null, camada:null, emp:null, empCamada:null, pes:null, pesCamada:null, centrou:false };
-function novoMapa(el){ const m = L.map(el).setView([-23.55, -46.63], 5); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(m); return m; }
+let SEL = null, MODO = 'mapa';
+function novoMapa(el){
+  const m = L.map(el, { zoomControl:el !== 'mapaGeral' }).setView([-15.8, -47.9], 4);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, attribution:'Imagens © Esri' }).addTo(m);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, opacity:.75 }).addTo(m);
+  return m;
+}
 function iniciarMapa(){ M.geral = novoMapa('mapaGeral'); M.camada = L.layerGroup().addTo(M.geral); }
+const online = p => !!p.atualizado && Date.now() - new Date(p.atualizado) <= 10 * 60000;
 function corPessoa(p){ return p.alerta ? '#ef4444' : semSinal(p) ? '#64748b' : (p.bateria != null && p.bateria < 20) ? '#f59e0b' : '#22c55e'; }
+const PESSOA_SVG = '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21c0-4.7 3.8-7.5 8.5-7.5s8.5 2.8 8.5 7.5z"/></svg>';
+function pino(p, ativo){
+  const vivo = online(p) || p.alerta, cls = p.alerta ? 'al' : (vivo ? '' : 'off');
+  const tit = p.alerta ? tipoTxt(p.alerta.tipo)[0] : (vivo ? 'Dispositivo Online' : 'Sem sinal');
+  return L.divIcon({ className:'', iconSize:[46,58], iconAnchor:[23,52], html:'<div class="pino">' +
+    (vivo ? '<div class="onda"></div><div class="onda b"></div><div class="onda c"></div>' : '') +
+    '<div class="gota ' + (vivo ? '' : 'off') + '">' + PESSOA_SVG + '</div>' +
+    (ativo ? '<div class="balao ' + cls + '"><b>● ' + esc(tit) + '</b> ' + esc(p.nome) + '<small>Última Atualização: ' + esc(ha(p.atualizado).replace(/^agora$/, 'Agora')) + '</small></div>' : '') + '</div>' });
+}
 function marcador(p){
   return L.circleMarker([p.lat, p.lng], { radius:p.alerta ? 10 : 7, color:'#000', weight:1, fillColor:corPessoa(p), fillOpacity:.95 })
     .bindPopup(`<b>${esc(p.nome)}</b>${p.profissao === 'caminhoneiro' ? ' 🚚' : ''}<br>${esc(p.empresa)}${p.local ? '<br>' + esc(p.local) : ''}<br>Bateria: ${p.bateria ?? '—'}% · sinal ${ha(p.atualizado)}${p.alerta ? '<br><b style="color:#ef4444">' + tipoTxt(p.alerta.tipo)[0] + '</b>' : ''}<br><a href="#" onclick="abrirPessoa('${p.id}');return false">Ver trajeto</a> · <a href="${mapsUrl(p.lat, p.lng)}" target="_blank" rel="noopener">Google Maps</a>`);
 }
+function visiveis(){
+  const so = $('mapaSoAlerta').checked;
+  return S.pessoas.filter(p => p.lat != null && (p.em_turno || p.alerta) && (!so || p.alerta));
+}
 function renderMapa(){
   if (!M.geral) return;
+  const pts = visiveis();
+  if (!SEL || !pts.some(p => p.id === SEL)) SEL = (pts.find(p => p.alerta) || pts.find(online) || pts[0] || {}).id || null;
   M.camada.clearLayers();
-  const so = $('mapaSoAlerta').checked;
-  const pts = S.pessoas.filter(p => p.lat != null && (p.em_turno || p.alerta) && (!so || p.alerta));
-  pts.forEach(p => marcador(p).addTo(M.camada));
-  S.alertas.filter(a => a.lat != null && a.status !== 'resolvido').forEach(a => {
-    L.marker([a.lat, a.lng]).bindPopup(`<b style="color:#ef4444">${tipoTxt(a.tipo)[0]}</b><br>${esc(a.pessoa)} · ${esc(a.empresa)}<br>${dt(a.criado_em)}`).addTo(M.camada);
+  pts.forEach(p => {
+    const mk = L.marker([p.lat, p.lng], { icon:pino(p, p.id === SEL), zIndexOffset:p.id === SEL ? 1000 : (p.alerta ? 500 : 0) }).addTo(M.camada);
+    mk.on('click', () => selecionar(p.id));
   });
-  if (!M.centrou && pts.length) { M.geral.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lng])).pad(0.2), { maxZoom:13 }); M.centrou = true; }
+  if (!M.centrou && pts.length) { centralizar(); M.centrou = true; }
+  renderDispositivo(); renderLista();
+}
+function selecionar(id){ SEL = id; renderMapa(); const p = S.pessoas.find(x => x.id === id); if (p && p.lat != null) M.geral.flyTo([p.lat, p.lng], Math.max(M.geral.getZoom(), 15), { duration:.8 }); }
+function centralizar(){
+  modoMapa('mapa');
+  const p = S.pessoas.find(x => x.id === SEL), pts = visiveis();
+  if (p && p.lat != null) M.geral.flyTo([p.lat, p.lng], 16, { duration:.8 });
+  else if (pts.length) M.geral.fitBounds(L.latLngBounds(pts.map(x => [x.lat, x.lng])).pad(0.25), { maxZoom:15 });
+}
+function modoMapa(m){
+  MODO = m; $('togMapa').classList.toggle('on', m === 'mapa'); $('togLista').classList.toggle('on', m === 'lista');
+  $('listaBox').classList.toggle('hidden', m !== 'lista'); $('zoomCtl').classList.toggle('hidden', m !== 'mapa');
+  if (m === 'mapa') setTimeout(() => M.geral.invalidateSize(), 50);
+}
+function renderLista(){
+  const l = S.pessoas.filter(p => p.em_turno || p.alerta).sort((a, b) => Number(!!b.alerta) - Number(!!a.alerta));
+  $('listaBox').innerHTML = l.map(p => `<div class="card" style="cursor:pointer;padding:10px 12px;${p.alerta ? 'border-color:#ef4444' : ''}" onclick="modoMapa('mapa');selecionar('${p.id}')">
+    <div class="linha" style="justify-content:space-between"><b>${p.profissao === 'caminhoneiro' ? '🚚 ' : ''}${esc(p.nome)}</b>${p.alerta ? `<span class="badge b-bad">${tipoTxt(p.alerta.tipo)[0]}</span>` : online(p) ? '<span class="badge b-ok">online</span>' : '<span class="badge b-off">sem sinal</span>'}</div>
+    <div class="small mut">${esc(p.empresa)}${p.local ? ' · ' + esc(p.local) : ''} · 🔋 ${p.bateria ?? '—'}% · ${ha(p.atualizado)}</div></div>`).join('') || '<div class="mut">Ninguém em turno agora.</div>';
+}
+const cacheEnd = new Map();
+async function endereco(lat, lng){
+  const k = lat.toFixed(3) + ',' + lng.toFixed(3); if (cacheEnd.has(k)) return cacheEnd.get(k);
+  try {
+    const d = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=pt`).then(r => r.json());
+    const uf = String(d.principalSubdivisionCode || '').replace('BR-', '');
+    const t = [d.locality && d.locality !== d.city ? d.locality : '', [d.city, uf].filter(Boolean).join(' - ')].filter(Boolean).join(', ');
+    if (t) { cacheEnd.set(k, t); return t; }
+  } catch {}
+  return lat.toFixed(5) + ', ' + lng.toFixed(5);
+}
+let endPara = '';
+function renderDispositivo(){
+  const p = S.pessoas.find(x => x.id === SEL);
+  $('dVazio').classList.toggle('hidden', !!p); $('dInfo').classList.toggle('hidden', !p); $('cardMov').classList.toggle('hidden', !p);
+  if (!p) return;
+  $('dNome').textContent = (p.profissao === 'caminhoneiro' ? '🚚 ' : '') + p.nome;
+  $('dConta').textContent = p.empresa + (p.local ? ' · ' + p.local : '');
+  const vivo = online(p);
+  $('dStatus').innerHTML = p.alerta ? `<b style="color:#ef4444">● ${tipoTxt(p.alerta.tipo)[0]}</b>` : vivo ? '<b style="color:#4ade80">● Online</b>' : '<b style="color:#a1a1aa">● Sem sinal</b>';
+  $('dBat').innerHTML = p.bateria == null ? '—' : `<b style="color:${p.bateria < 20 ? '#ef4444' : p.bateria < 40 ? '#f59e0b' : '#4ade80'}">🔋 ${p.bateria}%${p.carregando ? ' ⚡' : ''}</b>`;
+  $('dUlt').textContent = ha(p.atualizado).replace(/^agora$/, 'Agora');
+  const chave = p.id + (p.lat != null ? p.lat.toFixed(3) + p.lng.toFixed(3) : '');
+  if (chave !== endPara) {
+    endPara = chave;
+    if (p.lat == null) $('dEnd').innerHTML = '<span class="mut">sem localização</span>';
+    else { $('dEnd').innerHTML = '📍 buscando…'; endereco(p.lat, p.lng).then(t => { if (endPara === chave) $('dEnd').innerHTML = '<span style="color:#e10600">📍</span> ' + esc(t); }); }
+  }
+  const parado = !p.movimento_em || Date.now() - new Date(p.movimento_em) > 10 * 60000;
+  $('mTxt').textContent = p.movimento_em ? (parado ? 'Parado' : 'Movimento detectado') : 'Sem movimento nas últimas 6 h';
+  $('mQuando').textContent = p.movimento_em ? (parado ? 'último movimento ' : '') + ha(p.movimento_em) : '';
 }
 
 // ================= EMPRESAS =================

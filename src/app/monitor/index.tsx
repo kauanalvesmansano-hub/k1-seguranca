@@ -9,7 +9,7 @@ export default function EntradaMonitor() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getSession();
-      router.replace(data.session && (await souDono()) ? '/monitor/alertas' : '/monitor/login');
+      router.replace(data.session && (await souDono()) ? '/monitor/mapa' : '/monitor/login');
     })();
   }, []);
   return <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center' }}><ActivityIndicator color="#e10600" /></View>;

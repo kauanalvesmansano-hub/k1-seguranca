@@ -21,6 +21,7 @@ export type MonPessoa = {
   telefone: string | null; profissao: string; local: string; em_turno: boolean; turno_iniciado_em: string | null;
   lat: number | null; lng: number | null; precisao: number | null; bateria: number | null; carregando: boolean | null;
   wifi: boolean | null; atualizado: string | null; fora_do_posto: boolean; dispositivo_ativo: boolean; termo: boolean;
+  movimento_em: string | null;
   alerta: { id: string; tipo: string; status: string; criado_em: string } | null;
 };
 
@@ -79,3 +80,20 @@ export function pontosDe(lista: MonPessoa[], soTurno = true) {
     texto: `${p.empresa}${p.local ? ' · ' + p.local : ''} · 🔋 ${p.bateria ?? '—'}% · ${ha(p.atualizado)}${p.alerta ? ' · ⚠ ' + tipo(p.alerta.tipo).txt : ''}`,
   }));
 }
+
+/** Endereço aproximado (bairro, cidade - UF) da posição, para o painel. Guarda em memória para não repetir. */
+const cacheEnd = new Map<string, string>();
+export async function endereco(lat: number, lng: number): Promise<string> {
+  const chave = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+  const c = cacheEnd.get(chave); if (c) return c;
+  try {
+    const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=pt`);
+    const d = await r.json();
+    const uf = String(d.principalSubdivisionCode ?? '').replace('BR-', '');
+    const txt = [d.locality && d.locality !== d.city ? d.locality : '', [d.city, uf].filter(Boolean).join(' - ')].filter(Boolean).join(', ');
+    if (txt) { cacheEnd.set(chave, txt); return txt; }
+  } catch { /* sem internet */ }
+  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+}
+/** Online = mandou sinal nos últimos 10 minutos. */
+export const online = (p: MonPessoa) => !!p.atualizado && Date.now() - new Date(p.atualizado).getTime() <= 10 * 60000;

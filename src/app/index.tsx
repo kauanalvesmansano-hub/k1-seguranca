@@ -19,7 +19,7 @@ export default function Escolha() {
       if (vig) { router.replace(vig.termo_aceito ? '/funcionario/inicio' : '/funcionario/termo'); return; }
       if (configurado) {
         const { data } = await supabase.auth.getSession();
-        if (data.session) { router.replace((await souDono()) ? '/monitor/alertas' : '/empresa/painel'); return; }
+        if (data.session) { router.replace((await souDono()) ? '/monitor/mapa' : '/empresa/painel'); return; }
       }
       setVerificando(false);
     })();
