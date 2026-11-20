@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TelaK1, Campo, BotaoVermelho, Erro } from '../../components/ui';
 import { contaParaCadastro, supabase, traduzErro } from '../../lib/supabase';
+import { AjudaEmail } from '../../components/AjudaEmail';
 import { TERMO_VERSAO } from '../../lib/config';
 import { entrar, salvarContato } from '../../lib/vigilante';
 
@@ -84,6 +85,7 @@ export default function CadastroAutonomo() {
 
       <BotaoVermelho titulo="CRIAR E COMEÇAR O TESTE" icone="checkmark-circle-outline" onPress={cadastrar} carregando={carregando} />
       <Erro texto={erro} />
+      <AjudaEmail email={email} />
       <Pressable onPress={() => router.back()} hitSlop={10}><Text style={s.voltar}>VOLTAR</Text></Pressable>
       <View style={{ height: 30 }} />
     </TelaK1>

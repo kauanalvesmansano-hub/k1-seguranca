@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
+import { AjudaEmail } from '../../components/AjudaEmail';
 import { router } from 'expo-router';
 import { TelaK1, Campo, BotaoVermelho, Erro } from '../../components/ui';
 import { supabase, traduzErro } from '../../lib/supabase';
@@ -30,6 +31,7 @@ export default function LoginEmpresa() {
       <Campo icone="lock-closed" placeholder="SENHA" senha value={senha} onChangeText={setSenha} onSubmitEditing={entrar} />
       <BotaoVermelho titulo="ENTRAR" onPress={entrar} carregando={carregando} />
       <Erro texto={erro} />
+      <AjudaEmail email={email} />
       <Pressable onPress={() => router.push('/empresa/cadastro')} hitSlop={10}>
         <Text style={s.link}>NÃO TEM CONTA? <Text style={{ color: '#ff3b33' }}>CADASTRE SUA EMPRESA</Text></Text>
       </Pressable>

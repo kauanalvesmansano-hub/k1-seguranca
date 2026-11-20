@@ -49,6 +49,13 @@ const ERROS: Record<string, string> = {
   'Invalid login credentials': 'E-mail ou senha incorretos.',
   'User already registered': 'Este e-mail já tem conta. Use "Entrar".',
   'Network request failed': 'Sem internet. Verifique a conexão.',
+  'For security purposes, you can only request this after': 'Aguarde 1 minuto para pedir outro e-mail.',
+  'Email rate limit exceeded': 'Muitos e-mails pedidos agora. Aguarde alguns minutos e tente de novo.',
+  'email rate limit exceeded': 'Muitos e-mails pedidos agora. Aguarde alguns minutos e tente de novo.',
+  'Error sending confirmation email': 'Não foi possível enviar o e-mail agora. Tente de novo em instantes.',
+  'Error sending recovery email': 'Não foi possível enviar o e-mail agora. Tente de novo em instantes.',
+  'Email not confirmed': 'Falta confirmar o e-mail. Toque em "Reenviar e-mail de confirmação".',
+  'New password should be different': 'A senha nova precisa ser diferente da antiga.',
 };
 
 export function traduzErro(e: unknown): string {
@@ -82,5 +89,27 @@ export async function contaParaCadastro(email: string, senha: string) {
   const r = await supabase.auth.signUp({ email: e, password: senha, options: { emailRedirectTo: LINK_CONFIRMACAO } });
   if (r.error) throw r.error;
   if (r.data.session) return r.data.session;
+  // o Supabase não avisa direto que o e-mail já existe: devolve um usuário sem "identities"
+  if (r.data.user && (r.data.user.identities?.length ?? 0) === 0) {
+    throw new Error('Este e-mail já tem conta no K1, mas a senha não confere. Use a mesma senha que você criou ou toque em "Esqueci a senha".');
+  }
   return null; // precisa confirmar o e-mail
+}
+
+export const LINK_NOVA_SENHA = 'k1seguranca://nova-senha';
+
+/** Reenvia o e-mail de confirmação do cadastro. */
+export async function reenviarConfirmacao(email: string) {
+  const e = email.trim().toLowerCase();
+  if (!e.includes('@')) throw new Error('Digite o seu e-mail primeiro.');
+  const { error } = await supabase.auth.resend({ type: 'signup', email: e, options: { emailRedirectTo: LINK_CONFIRMACAO } });
+  if (error) throw error;
+}
+
+/** Manda o e-mail para criar uma senha nova. */
+export async function esqueciSenha(email: string) {
+  const e = email.trim().toLowerCase();
+  if (!e.includes('@')) throw new Error('Digite o seu e-mail primeiro.');
+  const { error } = await supabase.auth.resetPasswordForEmail(e, { redirectTo: LINK_NOVA_SENHA });
+  if (error) throw error;
 }
