@@ -186,7 +186,7 @@ async function carregar(){
       : `<button class="ok sm" onclick="definir('${e.id}','ativo')">Liberar</button>`}</td></tr>`).join('') : '<tr><td colspan="5" class="mut">Nenhuma empresa.</td></tr>';
 
   $('cChave').value = cfg.pix_chave; $('cNome').value = cfg.pix_nome; $('cCidade').value = cfg.pix_cidade;
-  $('cZap').value = cfg.whatsapp || ''; $('cValor').value = cfg.valor_por_vigilante; $('cVolume').value = cfg.valor_volume ?? 20; $('cVolA').value = cfg.volume_a_partir ?? 16; $('cTeste').value = cfg.dias_teste ?? 7; $('cDia').value = cfg.dia_fechamento; $('cDias').value = cfg.dias_para_pagar;
+  $('cZap').value = cfg.whatsapp || ''; $('cValor').value = cfg.valor_por_vigilante; $('cVolume').value = cfg.valor_volume ?? 20; $('cVolA').value = cfg.volume_a_partir ?? 16; $('cTeste').value = cfg.dias_teste ?? 30; $('cDia').value = cfg.dia_fechamento; $('cDias').value = cfg.dias_para_pagar;
 }
 
 async function confirmar(id){

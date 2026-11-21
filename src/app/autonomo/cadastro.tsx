@@ -79,7 +79,7 @@ export default function CadastroAutonomo() {
         <Ionicons name={aceite ? 'checkbox' : 'square-outline'} size={24} color={aceite ? '#e10600' : '#9aa0aa'} />
         <Text style={s.aceiteTxt}>
           Li e aceito: o app usa minha localização durante o turno para pedir socorro; meus contatos recebem mensagens no WhatsApp quando eu
-          acionar o pânico; o app não substitui o 190; após 7 dias o plano custa R$ 20,00 por mês e posso cancelar quando quiser.
+          acionar o pânico; o app não substitui o 190; após 30 dias grátis o plano custa R$ 20,00 por mês e posso cancelar quando quiser.
         </Text>
       </Pressable>
 

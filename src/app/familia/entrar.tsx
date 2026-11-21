@@ -35,7 +35,7 @@ export default function EntrarFamilia() {
 
       <View style={s.linha} />
       <Text style={s.secao}>SOU O RESPONSÁVEL</Text>
-      <Text style={s.preco}>7 dias grátis · depois R$ {FAMILIA_PRIMEIRO},00/mês a 1ª pessoa + R$ {FAMILIA_ADICIONAL},00 cada pessoa a mais</Text>
+      <Text style={s.preco}>30 dias grátis · depois R$ {FAMILIA_PRIMEIRO},00/mês a 1ª pessoa + R$ {FAMILIA_ADICIONAL},00 cada pessoa a mais</Text>
       <BotaoContorno titulo="CRIAR MINHA FAMÍLIA" icone="add-circle-outline" onPress={() => router.push('/familia/cadastro')} />
       <BotaoContorno titulo="JÁ TENHO CONTA" icone="log-in-outline" onPress={() => router.push('/empresa/login')} />
       <Pressable onPress={() => router.back()} hitSlop={10}><Text style={s.voltar}>VOLTAR</Text></Pressable>

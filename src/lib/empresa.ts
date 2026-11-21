@@ -9,7 +9,7 @@ export type Fatura = {
 export const PRECO_PADRAO = 25;
 export const PRECO_VOLUME = 20;
 export const VOLUME_A_PARTIR = 16;
-export const DIAS_TESTE = 7;
+export const DIAS_TESTE = 30;
 export const precoVigilante = (qtd: number) => (qtd >= VOLUME_A_PARTIR ? PRECO_VOLUME : PRECO_PADRAO);
 
 export type Plano = {
