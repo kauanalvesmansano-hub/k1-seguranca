@@ -1,0 +1,28 @@
+name: Publicar downloads
+on:
+  push:
+    branches: [envio]
+permissions:
+  contents: write
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: envio
+      - name: Montar arquivos
+        run: |
+          cd envio
+          cat apk.parte.* > K1-Seguranca.apk
+          cat pc.parte.* > K1-Seguranca-PC-Instalador.exe
+          sha256sum -c SHA256SUMS
+      - name: Criar releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd envio
+          gh release view pc-atual >/dev/null 2>&1 || gh release create pc-atual --target main --title "K1 Segurança PC (atualização automática)" --notes "Não apagar: o programa do PC se atualiza por aqui." --prerelease
+          gh release upload pc-atual latest.yml K1-Seguranca-PC-Instalador.exe K1-Seguranca-PC-Instalador.exe.blockmap --clobber
+          gh release view teste-44 >/dev/null 2>&1 || gh release create teste-44 --target main --title "K1 Segurança — app Android" --notes "Baixe K1-Seguranca.apk e instale no Android." --latest
+          gh release upload teste-44 K1-Seguranca.apk --clobber
