@@ -229,6 +229,17 @@ export default function InicioVigilante() {
         </CardK1>
       )}
 
+      {plano?.tipo === 'autonomo' && (
+        <CardK1 style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }} onPress={() => router.push('/planos')}>
+          <Ionicons name="albums" size={26} color={K1.vermelho} />
+          <View style={{ flex: 1 }}>
+            <Text style={k.titulo}>Meus planos</Text>
+            <Text style={k.mut}>Ver pagamentos e contratar plano Família ou Empresa com o mesmo e-mail</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={K1.mutado} />
+        </CardK1>
+      )}
+
       {emTurno && !bloqueado && (
         <Pressable
           onPress={() => Alert.alert('Encerrar turno?', 'O monitoramento, a localização e o pânico pelo Power serão desligados.', [

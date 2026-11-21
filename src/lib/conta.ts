@@ -4,6 +4,9 @@ import { supabase } from './supabase';
 export type TipoConta = 'seguranca' | 'familia';
 let cache: { userId: string; tipo: TipoConta } | null = null;
 
+/** Esquece o tipo guardado (chamar ao trocar de plano). */
+export function limparTipoConta() { cache = null; }
+
 /** Tipo da conta logada: empresa de segurança ou família (muda os textos das telas). */
 export function useTipoConta() {
   const [tipo, setTipo] = useState<TipoConta | null>(cache?.tipo ?? null);

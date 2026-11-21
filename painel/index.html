@@ -134,6 +134,7 @@
     <h2 id="blTitulo" style="color:var(--bad)">Acesso bloqueado</h2>
     <p id="blTexto" class="mut"></p>
     <div id="blFatura"></div>
+    <select id="bPlanos" class="hidden" style="width:100%;margin-top:14px" onchange="trocarPlanoWeb(this.value)"></select>
     <button class="sec" style="margin-top:14px" onclick="sair()">Sair</button>
   </div>
 </section>
@@ -145,7 +146,7 @@
       <div class="brand">K1 <span>SEGURANÇA</span></div>
       <div class="small mut"><span id="hEmpresa"></span></div>
     </div>
-    <div class="row"><span id="hAlertas"></span><button class="sec sm" onclick="sair()">Sair</button></div>
+    <div class="row"><span id="hAlertas"></span><select id="hPlanos" class="hidden" title="Trocar de plano" onchange="trocarPlanoWeb(this.value)"></select><button class="sec sm" onclick="sair()">Sair</button></div>
   </header>
   <nav>
     <button data-tab="vivo" class="on" onclick="aba('vivo')">Ao vivo</button>
@@ -401,6 +402,7 @@ const ERROS = {
   'Password should be': 'A senha precisa ter pelo menos 8 caracteres, com letras e números.',
   termo_nao_aceito: 'É preciso aceitar o termo.',
   usuario_ja_vinculado_a_empresa: 'Este usuário já tem uma empresa cadastrada.',
+  ja_tem_plano_deste_tipo: 'Esta conta já tem um plano deste tipo.',
   sem_permissao: 'Você não tem permissão para isso.',
   senha_deve_ter_4_a_8_numeros: 'As senhas devem ter de 4 a 8 números.',
   senha_e_coacao_devem_ser_diferentes: 'A senha normal e a de coação precisam ser diferentes.',
@@ -483,6 +485,7 @@ async function iniciar(){
   const { data: vinc } = await sb.from('usuarios_empresa').select('empresa_id,papel,nome').eq('user_id', S.user.id).maybeSingle();
   if (!vinc) { mostrar('telaCadastro'); calcValor(); return; }
   S.papel = vinc.papel;
+  await carregarPlanosConta();
   const { data: plano } = await sb.rpc('empresa_plano');
   S.plano = plano;
   if (plano && plano.plano_status !== 'ativo') { mostrarBloqueio(plano); return; }
@@ -494,6 +497,23 @@ async function iniciar(){
   atualizarAlarme(); // alerta sem resolver continua tocando mesmo depois de recarregar a página
   setInterval(atualizarAlarme, 15000);
   setInterval(renderVivo, 30000); // atualiza "há X min"
+}
+
+// ================= VÁRIOS PLANOS NA MESMA CONTA =================
+const TIPO_PLANO = { seguranca:'Empresa', familia:'Família', autonomo:'Vigilante individual' };
+async function carregarPlanosConta(){
+  const { data } = await sb.rpc('meus_planos');
+  const l = (data || []).filter(p => p.tipo !== 'autonomo');
+  for (const id of ['hPlanos', 'bPlanos']) {
+    const el = $(id); if (!el) continue;
+    el.classList.toggle('hidden', l.length < 2);
+    el.innerHTML = l.map(p => `<option value="${p.empresa_id}" ${p.atual ? 'selected' : ''}>${esc(TIPO_PLANO[p.tipo] || p.tipo)}: ${esc(p.nome)}${p.plano_status === 'bloqueado' ? ' (bloqueado — falta pagar)' : p.em_teste ? ' (teste grátis)' : ''}</option>`).join('');
+  }
+}
+async function trocarPlanoWeb(id){
+  const { error } = await sb.rpc('trocar_plano', { p_empresa_id:id });
+  if (error) return alert(traduz(error));
+  location.reload();
 }
 
 // ================= CADASTRO EMPRESA =================

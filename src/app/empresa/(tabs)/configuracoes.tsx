@@ -76,6 +76,15 @@ export default function Configuracoes() {
         <Ionicons name="chevron-forward" size={22} color="#888" />
       </CardK1>
 
+      <CardK1 onPress={() => router.push('/planos')} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <Ionicons name="albums" size={30} color={K1.vermelho} />
+        <View style={{ flex: 1 }}>
+          <Text style={k.titulo}>Meus planos</Text>
+          <Text style={k.mut}>Trocar de plano ou contratar outro (empresa, vigilante individual, família)</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={22} color="#888" />
+      </CardK1>
+
       <CardCentral />
 
       <CardK1 style={{ gap: 16 }}>

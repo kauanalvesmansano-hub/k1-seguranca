@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { TelaK1, Campo, BotaoVermelho, Erro } from '../../components/ui';
 import { contaParaCadastro, supabase, traduzErro } from '../../lib/supabase';
 import { AjudaEmail } from '../../components/AjudaEmail';
+import { ContaAtual } from '../../components/ContaAtual';
 import { TERMO_VERSAO } from '../../lib/config';
 import { entrar, salvarContato } from '../../lib/vigilante';
 
@@ -51,13 +52,15 @@ export default function CadastroAutonomo() {
     <TelaK1 rodape={false}>
       <Text style={s.titulo}>PLANO DO VIGILANTE</Text>
       <View style={s.teste}>
-        <Text style={s.testeTit}>🎁 7 DIAS GRÁTIS · depois R$ 20,00/mês</Text>
+        <Text style={s.testeTit}>🎁 30 DIAS GRÁTIS · depois R$ 20,00/mês</Text>
         <Text style={s.testeTxt}>Apertou o Power 4x: WhatsApp automático para a sua família e para a sua empresa, com a sua localização.</Text>
       </View>
 
       <Text style={s.sec}>SUA CONTA</Text>
-      <Campo icone="mail" placeholder="SEU E-MAIL" keyboardType="email-address" value={email} onChangeText={setEmail} />
-      <Campo icone="lock-closed" placeholder="SENHA DA CONTA (8+, LETRAS E NÚMEROS)" senha value={senhaConta} onChangeText={setSenhaConta} />
+      <ContaAtual>
+        <Campo icone="mail" placeholder="SEU E-MAIL" keyboardType="email-address" value={email} onChangeText={setEmail} />
+        <Campo icone="lock-closed" placeholder="SENHA DA CONTA (8+, LETRAS E NÚMEROS)" senha value={senhaConta} onChangeText={setSenhaConta} />
+      </ContaAtual>
       <Campo icone="person" placeholder="SEU NOME COMPLETO" autoCapitalize="words" value={nome} onChangeText={setNome} />
       <Campo icone="call" placeholder="SEU CELULAR COM DDD" keyboardType="phone-pad" value={telefone} onChangeText={setTelefone} />
 

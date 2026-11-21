@@ -41,6 +41,7 @@ const ERROS: Record<string, string> = {
   termo_nao_aceito: 'É preciso aceitar o termo.',
   sem_permissao: 'Você não tem permissão para isso.',
   usuario_ja_vinculado_a_empresa: 'Este usuário já tem uma empresa cadastrada.',
+  ja_tem_plano_deste_tipo: 'Esta conta já tem um plano deste tipo. Abra "Meus planos" para usar o plano que você já tem.',
   senha_deve_ter_4_a_8_numeros: 'As senhas devem ter de 4 a 8 números.',
   whatsapp_invalido: 'WhatsApp inválido. Use DDD + número, ex.: 43 99999-1234.',
   no_maximo_6_contatos: 'Você pode ter no máximo 6 contatos.',

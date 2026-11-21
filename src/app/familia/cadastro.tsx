@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { TelaK1, Campo, BotaoVermelho, Erro } from '../../components/ui';
 import { contaParaCadastro, supabase, traduzErro } from '../../lib/supabase';
 import { AjudaEmail } from '../../components/AjudaEmail';
+import { ContaAtual } from '../../components/ContaAtual';
+import { limparTipoConta } from '../../lib/conta';
 import { TERMO_VERSAO } from '../../lib/config';
 import { FAMILIA_ADICIONAL, FAMILIA_PRIMEIRO, precoFamilia } from '../../lib/familia';
 
@@ -34,6 +36,7 @@ export default function CadastroFamilia() {
         p_nome: nome, p_qtd_pessoas: pessoas, p_nome_responsavel: responsavel, p_aceite_termo: true, p_termo_versao: TERMO_VERSAO,
       });
       if (error) throw error;
+      limparTipoConta();
       router.replace('/empresa/painel');
     } catch (e) { setErro(traduzErro(e)); } finally { setCarregando(false); }
   }
@@ -42,11 +45,13 @@ export default function CadastroFamilia() {
     <TelaK1 rodape={false}>
       <Text style={s.titulo}>CRIAR MINHA FAMÍLIA</Text>
       <View style={s.teste}>
-        <Text style={s.testeTit}>🎁 7 DIAS GRÁTIS</Text>
+        <Text style={s.testeTit}>🎁 30 DIAS GRÁTIS</Text>
         <Text style={s.testeTxt}>Depois: {brl(FAMILIA_PRIMEIRO)}/mês a 1ª pessoa + {brl(FAMILIA_ADICIONAL)} cada pessoa a mais.</Text>
       </View>
-      <Campo icone="mail" placeholder="SEU E-MAIL" keyboardType="email-address" value={email} onChangeText={setEmail} />
-      <Campo icone="lock-closed" placeholder="CRIE UMA SENHA (8+, LETRAS E NÚMEROS)" senha value={senha} onChangeText={setSenha} />
+      <ContaAtual>
+        <Campo icone="mail" placeholder="SEU E-MAIL" keyboardType="email-address" value={email} onChangeText={setEmail} />
+        <Campo icone="lock-closed" placeholder="CRIE UMA SENHA (8+, LETRAS E NÚMEROS)" senha value={senha} onChangeText={setSenha} />
+      </ContaAtual>
       <Campo icone="home" placeholder="NOME DO GRUPO (EX.: FAMÍLIA SILVA)" autoCapitalize="words" value={nome} onChangeText={setNome} />
       <Campo icone="person" placeholder="SEU NOME" autoCapitalize="words" value={responsavel} onChangeText={setResponsavel} />
       <Campo icone="people" placeholder="QUANTAS PESSOAS (CONTANDO VOCÊ)" keyboardType="number-pad" value={qtd} onChangeText={setQtd} />

@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { TelaK1, Campo, BotaoVermelho, Erro } from '../../components/ui';
 import { contaParaCadastro, supabase, traduzErro } from '../../lib/supabase';
 import { AjudaEmail } from '../../components/AjudaEmail';
+import { ContaAtual } from '../../components/ContaAtual';
+import { limparTipoConta } from '../../lib/conta';
 import { TERMO_VERSAO } from '../../lib/config';
 
 /** Cadastro da empresa: conta + dados + aceite do termo. */
@@ -39,6 +41,7 @@ export default function CadastroEmpresa() {
         p_aceite_termo: true, p_termo_versao: TERMO_VERSAO,
       });
       if (error) throw error;
+      limparTipoConta();
       router.replace('/empresa/painel');
     } catch (e) { setErro(traduzErro(e)); } finally { setCarregando(false); }
   }
@@ -46,8 +49,10 @@ export default function CadastroEmpresa() {
   return (
     <TelaK1 rodape={false}>
       <Text style={s.titulo}>CADASTRO DA EMPRESA</Text>
-      <Campo icone="mail" placeholder="E-MAIL" keyboardType="email-address" value={email} onChangeText={setEmail} />
-      <Campo icone="lock-closed" placeholder="CRIE UMA SENHA" senha value={senha} onChangeText={setSenha} />
+      <ContaAtual>
+        <Campo icone="mail" placeholder="E-MAIL" keyboardType="email-address" value={email} onChangeText={setEmail} />
+        <Campo icone="lock-closed" placeholder="CRIE UMA SENHA" senha value={senha} onChangeText={setSenha} />
+      </ContaAtual>
       <Campo icone="business" placeholder="NOME DA EMPRESA" autoCapitalize="words" value={nome} onChangeText={setNome} />
       <Campo icone="document-text" placeholder="CNPJ" keyboardType="number-pad" value={cnpj} onChangeText={setCnpj} />
       <Campo icone="person" placeholder="SEU NOME (RESPONSÁVEL)" autoCapitalize="words" value={responsavel} onChangeText={setResponsavel} />
