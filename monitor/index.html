@@ -349,9 +349,10 @@ const TIPOS = {
   panico:['PÂNICO','b-bad'], coacao:['COAÇÃO','b-bad'], sem_movimento:['HOMEM CAÍDO','b-bad'], batida:['BATIDA / TOMBAMENTO','b-bad'],
   senha_errada:['SENHA ERRADA','b-warn'], sem_resposta:['SEM RESPOSTA','b-warn'], fora_do_posto:['FORA DO POSTO','b-warn'],
   bateria_baixa:['BATERIA BAIXA','b-warn'], atraso_chegada:['NÃO CHEGOU NO HORÁRIO','b-bad'], ronda_perdida:['RONDA NÃO CONCLUÍDA','b-warn'],
-  plantao_nao_assumido:['PLANTÃO NÃO ASSUMIDO','b-bad'], parada_sem_resposta:['PARADA SEM RESPOSTA','b-bad'], desvio_rota:['DESVIO DE ROTA','b-warn'], parada_longa:['PARADA FORA DO PLANO','b-warn']
+  plantao_nao_assumido:['PLANTÃO NÃO ASSUMIDO','b-bad'], parada_sem_resposta:['PARADA SEM RESPOSTA','b-bad'], desvio_rota:['DESVIO DE ROTA','b-warn'], parada_longa:['PARADA FORA DO PLANO','b-warn'],
+  sem_sinal:['SEM SINAL / SEM INTERNET','b-bad'], bateria_acabou:['BATERIA ACABOU','b-bad'], bateria_critica:['BATERIA CRÍTICA (5%)','b-bad'], celular_desligado:['CELULAR DESLIGADO','b-bad']
 };
-const CRITICOS = ['panico','coacao','sem_movimento','batida','atraso_chegada','plantao_nao_assumido','parada_sem_resposta'];
+const CRITICOS = ['panico','coacao','sem_movimento','batida','atraso_chegada','plantao_nao_assumido','parada_sem_resposta','sem_sinal','bateria_acabou','bateria_critica','celular_desligado'];
 const tipoTxt = t => TIPOS[t] || [String(t || '').toUpperCase(), 'b-warn'];
 const PLANO = { seguranca:['Empresa','b-acc'], autonomo:['Individual','b-pur'], familia:['Família','b-ok'], transportadora:['Transportadora','b-warn'] };
 const plano = p => PLANO[p] || [p, 'b-off'];
@@ -700,7 +701,10 @@ const MOTIVO = {
   fora_do_posto:'Saiu da área do posto', bateria_baixa:'A bateria do celular está acabando',
   atraso_chegada:'Não chegou ao posto no horário', ronda_perdida:'A ronda programada não foi concluída',
   plantao_nao_assumido:'O plantão não foi assumido no horário', parada_sem_resposta:'Está numa parada e não respondeu se está tudo bem',
-  desvio_rota:'Saiu do caminho da viagem', parada_longa:'Está parado há muito tempo fora de uma parada marcada'
+  desvio_rota:'Saiu do caminho da viagem', parada_longa:'Está parado há muito tempo fora de uma parada marcada',
+  sem_sinal:'Faz mais de 6 minutos que o celular não manda sinal: sem internet, sem bateria ou desligado à força',
+  bateria_acabou:'A bateria do celular acabou e o contato foi perdido', bateria_critica:'A bateria está em 5% ou menos e vai desligar a qualquer momento',
+  celular_desligado:'O celular foi desligado durante o turno com bateria. Alguém pode ter desligado à força'
 };
 function frase(a){
   return [`Atenção, K1 Monitoramento. Alerta de ${tipoTxt(a.tipo)[0].toLowerCase().replace(/[\/—]/g, ',')}.`,

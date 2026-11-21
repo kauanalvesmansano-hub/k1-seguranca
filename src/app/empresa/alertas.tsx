@@ -6,7 +6,7 @@ import { FundoK1, CardK1, K1, dataHora, s as k } from '../../components/k1';
 import { supabase, traduzErro } from '../../lib/supabase';
 
 type Alerta = {
-  id: string; tipo: 'panico' | 'coacao' | 'senha_errada' | 'sem_resposta' | 'bateria_baixa' | 'fora_do_posto' | 'sem_movimento' | 'atraso_chegada' | 'batida' | 'ronda_perdida' | 'plantao_nao_assumido';
+  id: string; tipo: 'panico' | 'coacao' | 'senha_errada' | 'sem_resposta' | 'bateria_baixa' | 'fora_do_posto' | 'sem_movimento' | 'atraso_chegada' | 'batida' | 'ronda_perdida' | 'plantao_nao_assumido' | 'sem_sinal' | 'bateria_acabou' | 'bateria_critica' | 'celular_desligado';
   detalhe?: string | null;
   lat: number | null; lng: number | null; observacao?: string | null;
   bateria: number | null; sos_gravando?: boolean; sos_encerrado_em?: string | null; status: 'aberto' | 'em_atendimento' | 'resolvido'; criado_em: string;
@@ -21,6 +21,10 @@ const TIPO: Record<Alerta['tipo'], { txt: string; cor: string }> = {
   ronda_perdida: { txt: 'RONDA NÃO CONCLUÍDA', cor: '#f59e0b' },
   plantao_nao_assumido: { txt: 'PLANTÃO NÃO ASSUMIDO', cor: '#ef4444' },
   batida: { txt: 'POSSÍVEL BATIDA DE CARRO/MOTO', cor: '#ef4444' },
+  sem_sinal: { txt: 'SEM SINAL / SEM INTERNET', cor: '#ef4444' },
+  bateria_acabou: { txt: 'BATERIA ACABOU', cor: '#ef4444' },
+  bateria_critica: { txt: 'BATERIA CRÍTICA (5%)', cor: '#ef4444' },
+  celular_desligado: { txt: 'CELULAR DESLIGADO', cor: '#ef4444' },
 };
 
 /** Alertas em aberto (sino do painel). */

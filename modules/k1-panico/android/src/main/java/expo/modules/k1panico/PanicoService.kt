@@ -178,10 +178,40 @@ class PanicoService : Service() {
 
   private val receptor = object : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-      if (intent.action == Intent.ACTION_SCREEN_OFF || intent.action == Intent.ACTION_SCREEN_ON) {
-        registrarToque()
+      when (intent.action) {
+        Intent.ACTION_SCREEN_OFF, Intent.ACTION_SCREEN_ON -> registrarToque()
+        Intent.ACTION_SHUTDOWN -> avisarDesligando()
+        Intent.ACTION_BATTERY_CHANGED -> bateriaMudou(intent)
       }
     }
+  }
+
+  // ---------- Celular desligando / bateria acabando ----------
+  @Volatile private var avisouBateriaCritica = false
+
+  /** Bateria em 5% ou menos: manda o sinal na hora (a central recebe o alerta de bateria crítica sem esperar 2 min). */
+  private fun bateriaMudou(intent: Intent) {
+    val nivel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+    val escala = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100).takeIf { it > 0 } ?: 100
+    if (nivel < 0) return
+    val pct = nivel * 100 / escala
+    val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+    val carregando = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+    if (pct <= 5 && !carregando && !avisouBateriaCritica) { avisouBateriaCritica = true; enviarTelemetria() }
+    else if (pct > 10 || carregando) avisouBateriaCritica = false
+  }
+
+  /** O Android vai desligar (bateria zerou ou alguém desligou): último aviso para a central, em até 4 s. */
+  private fun avisarDesligando() {
+    val token = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("token", null) ?: return
+    val t = thread(name = "k1-desligando") {
+      chamarRpc("vig_desligando", JSONObject().apply {
+        put("p_token", token)
+        put("p_bateria", nivelBateria() ?: JSONObject.NULL)
+        put("p_carregando", carregando() ?: JSONObject.NULL)
+      })
+    }
+    try { t.join(4_000L) } catch (_: Exception) {}
   }
 
   override fun onBind(intent: Intent?): IBinder? = null
@@ -193,6 +223,8 @@ class PanicoService : Service() {
     val filtro = IntentFilter().apply {
       addAction(Intent.ACTION_SCREEN_OFF)
       addAction(Intent.ACTION_SCREEN_ON)
+      addAction(Intent.ACTION_SHUTDOWN)
+      addAction(Intent.ACTION_BATTERY_CHANGED)
     }
     // Eventos de tela só podem ser recebidos com registro dinâmico
     ContextCompat.registerReceiver(this, receptor, filtro, ContextCompat.RECEIVER_NOT_EXPORTED)

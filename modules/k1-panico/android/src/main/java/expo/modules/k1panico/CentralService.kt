@@ -60,7 +60,8 @@ class CentralService : Service() {
     @Volatile var rodando = false
     @Volatile var instancia: CentralService? = null
 
-    val CRITICOS = setOf("panico", "coacao", "sem_movimento", "atraso_chegada", "batida", "plantao_nao_assumido")
+    val CRITICOS = setOf("panico", "coacao", "sem_movimento", "atraso_chegada", "batida", "plantao_nao_assumido",
+      "sem_sinal", "bateria_acabou", "bateria_critica", "celular_desligado")
 
     fun titulo(tipo: String): String = when (tipo) {
       "panico" -> "PÂNICO — ASSALTO"
@@ -74,6 +75,10 @@ class CentralService : Service() {
       "ronda_perdida" -> "RONDA NÃO CONCLUÍDA"
       "plantao_nao_assumido" -> "PLANTÃO NÃO ASSUMIDO"
       "batida" -> "POSSÍVEL BATIDA DE CARRO/MOTO"
+      "sem_sinal" -> "SEM SINAL — SEM INTERNET"
+      "bateria_acabou" -> "BATERIA ACABOU"
+      "bateria_critica" -> "BATERIA CRÍTICA"
+      "celular_desligado" -> "CELULAR DESLIGADO"
       "teste" -> "TESTE DE ALARME"
       else -> tipo.uppercase()
     }
@@ -91,6 +96,10 @@ class CentralService : Service() {
       "ronda_perdida" -> "A ronda programada não foi concluída no horário"
       "plantao_nao_assumido" -> "O plantão não foi assumido no horário. O posto pode estar sem vigilante"
       "batida" -> "O celular detectou um impacto forte, uma possível batida de carro ou moto, ou uma queda"
+      "sem_sinal" -> "Faz mais de 6 minutos que o celular dele não manda sinal. Pode estar sem internet, sem bateria ou ter sido desligado à força. Ligue para ele e, sem resposta, mande apoio ao último local"
+      "bateria_acabou" -> "A bateria do celular dele acabou e a central perdeu o contato. Ligue para ele em outro número ou mande apoio ao último local"
+      "bateria_critica" -> "A bateria do celular dele está em 5 por cento ou menos e vai desligar a qualquer momento"
+      "celular_desligado" -> "O celular dele foi desligado durante o turno com bateria. Alguém pode ter desligado à força. Ligue para ele e, sem resposta, mande apoio ao último local"
       "teste" -> "Este é apenas um teste do alarme da central"
       else -> "Foi disparado um alerta"
     }

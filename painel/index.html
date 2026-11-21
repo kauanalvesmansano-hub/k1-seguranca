@@ -439,7 +439,8 @@ const traduz = e => { const m = e?.message || String(e); for (const k in ERROS) 
 const TIPOS = {
   panico: ['PÂNICO', 'b-bad'], coacao: ['COAÇÃO', 'b-bad'],
   senha_errada: ['SENHA ERRADA', 'b-warn'], sem_resposta: ['SEM RESPOSTA', 'b-warn'],
-  sem_movimento: ['HOMEM CAÍDO / SEM MOVIMENTO', 'b-bad'], fora_do_posto: ['FORA DO POSTO', 'b-warn'], bateria_baixa: ['BATERIA BAIXA', 'b-warn'], atraso_chegada: ['NÃO CHEGOU NO HORÁRIO', 'b-bad'], batida: ['POSSÍVEL BATIDA', 'b-bad'], ronda_perdida: ['RONDA NÃO CONCLUÍDA', 'b-warn'], plantao_nao_assumido: ['PLANTÃO NÃO ASSUMIDO', 'b-bad']
+  sem_movimento: ['HOMEM CAÍDO / SEM MOVIMENTO', 'b-bad'], fora_do_posto: ['FORA DO POSTO', 'b-warn'], bateria_baixa: ['BATERIA BAIXA', 'b-warn'], atraso_chegada: ['NÃO CHEGOU NO HORÁRIO', 'b-bad'], batida: ['POSSÍVEL BATIDA', 'b-bad'], ronda_perdida: ['RONDA NÃO CONCLUÍDA', 'b-warn'], plantao_nao_assumido: ['PLANTÃO NÃO ASSUMIDO', 'b-bad'],
+  sem_sinal: ['SEM SINAL / SEM INTERNET', 'b-bad'], bateria_acabou: ['BATERIA ACABOU', 'b-bad'], bateria_critica: ['BATERIA CRÍTICA (5%)', 'b-bad'], celular_desligado: ['CELULAR DESLIGADO', 'b-bad']
 };
 const tipoTxt = t => (TIPOS[t] || [t, 'b-warn']);
 const ST_ALERTA = { aberto: ['Aberto', 'b-bad'], em_atendimento: ['Em atendimento', 'b-acc'], resolvido: ['Resolvido', 'b-ok'] };
@@ -666,6 +667,10 @@ const MOTIVO = {
   atraso_chegada: 'Ele não chegou ao posto no horário do turno',
   ronda_perdida: 'A ronda programada não foi concluída no horário',
   plantao_nao_assumido: 'O plantão não foi assumido no horário. O posto pode estar sem vigilante',
+  sem_sinal: 'Faz mais de 6 minutos que o celular dele não manda sinal. Pode estar sem internet, sem bateria ou ter sido desligado à força. Ligue para ele e, sem resposta, mande apoio ao último local',
+  bateria_acabou: 'A bateria do celular dele acabou e a central perdeu o contato. Ligue para ele em outro número ou mande apoio ao último local',
+  bateria_critica: 'A bateria do celular dele está em 5 por cento ou menos e vai desligar a qualquer momento',
+  celular_desligado: 'O celular dele foi desligado durante o turno com bateria. Alguém pode ter desligado à força. Ligue para ele e, sem resposta, mande apoio ao último local',
   batida: 'O celular detectou um impacto forte, uma possível batida de carro ou moto, ou uma queda'
 };
 let vozTimer = null, vozFalando = false;

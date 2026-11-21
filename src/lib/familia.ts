@@ -23,6 +23,7 @@ export const TIPO_ALERTA: Record<string, string> = {
   panico: 'SOS — PEDIU SOCORRO', sem_movimento: 'POSSÍVEL QUEDA / SEM MOVIMENTO', bateria_baixa: 'BATERIA BAIXA',
   fora_do_posto: 'SAIU DA ÁREA SEGURA', batida: 'POSSÍVEL BATIDA DE CARRO/MOTO', atraso_chegada: 'NÃO CHEGOU NO HORÁRIO', coacao: 'COAÇÃO',
   senha_errada: 'SENHA ERRADA', sem_resposta: 'SEM RESPOSTA',
+  sem_sinal: 'SEM SINAL / SEM INTERNET', bateria_acabou: 'BATERIA ACABOU', bateria_critica: 'BATERIA QUASE ACABANDO (5%)', celular_desligado: 'CELULAR DESLIGADO',
 };
 
 /** Entra com o código de convite que o responsável passou. */
