@@ -11,18 +11,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: envio
-      - name: Montar arquivos
+      - name: Montar e conferir os arquivos
         run: |
           cd envio
-          cat apk.parte.* > K1-Seguranca.apk
-          cat pc.parte.* > K1-Seguranca-PC-Instalador.exe
+          if ls pc.parte.* >/dev/null 2>&1; then cat pc.parte.* > K1-Seguranca-PC-Instalador.exe; fi
+          if ls apk.parte.* >/dev/null 2>&1; then cat apk.parte.* > K1-Seguranca.apk; fi
           sha256sum -c SHA256SUMS
-      - name: Criar releases
+      - name: Publicar
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cd envio
-          gh release view pc-atual >/dev/null 2>&1 || gh release create pc-atual --target main --title "K1 Segurança PC (atualização automática)" --notes "Não apagar: o programa do PC se atualiza por aqui." --prerelease
-          gh release upload pc-atual latest.yml K1-Seguranca-PC-Instalador.exe K1-Seguranca-PC-Instalador.exe.blockmap --clobber
-          gh release view teste-44 >/dev/null 2>&1 || gh release create teste-44 --target main --title "K1 Segurança — app Android" --notes "Baixe K1-Seguranca.apk e instale no Android." --latest
-          gh release upload teste-44 K1-Seguranca.apk --clobber
+          if [ -f K1-Seguranca-PC-Instalador.exe ]; then
+            gh release view pc-atual >/dev/null 2>&1 || gh release create pc-atual --target main --title "K1 Segurança PC (atualização automática)" --notes "Não apagar: o programa do PC se atualiza por aqui." --prerelease
+            gh release upload pc-atual latest.yml K1-Seguranca-PC-Instalador.exe K1-Seguranca-PC-Instalador.exe.blockmap --clobber
+          fi
+          if [ -f K1-Seguranca.apk ]; then
+            TAG=$(cat TAG_APK)
+            gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target main --title "K1 Segurança — app Android ($TAG)" --notes "Baixe K1-Seguranca.apk e instale no Android." --latest
+            gh release upload "$TAG" K1-Seguranca.apk --clobber
+          fi
