@@ -1,8 +1,8 @@
-version: 1.1.26
+version: 1.1.27
 files:
   - url: K1-Seguranca-PC-Instalador.exe
-    sha512: sUOHmhikE1putJxcgOgOIKjiyVER7DudY7YLONMcnfeX/+nT/7NWmnxtLhHxV+tn2XEfdrMhLOJEbAd9PMmDBA==
-    size: 82348229
+    sha512: 7pg4NluWeeXfUNDkj5Y4zce1f77IxMLWY8ZgnyfXt+yQ7+QEEp3E1u4+F+uyks8N/YW0ZzGYXrPoTzOIdI/axg==
+    size: 82348199
 path: K1-Seguranca-PC-Instalador.exe
-sha512: sUOHmhikE1putJxcgOgOIKjiyVER7DudY7YLONMcnfeX/+nT/7NWmnxtLhHxV+tn2XEfdrMhLOJEbAd9PMmDBA==
-releaseDate: '2026-11-25T16:48:42.939Z'
+sha512: 7pg4NluWeeXfUNDkj5Y4zce1f77IxMLWY8ZgnyfXt+yQ7+QEEp3E1u4+F+uyks8N/YW0ZzGYXrPoTzOIdI/axg==
+releaseDate: '2026-11-25T23:52:11.491Z'
