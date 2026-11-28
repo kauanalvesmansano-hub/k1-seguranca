@@ -1,5 +1,5 @@
 appId: com.k1.seguranca
-name: "Empresa: login vazio e senha errada"
+name: "Empresa — login vazio e senha errada"
 tags: [rapido, login]
 ---
 - runFlow: ../comum/abrir.yaml

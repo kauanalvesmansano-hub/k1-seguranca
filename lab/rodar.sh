@@ -34,4 +34,6 @@ grep -nE "FATAL EXCEPTION|ANR in $APP|Process: $APP|E/ReactNativeJS|E/AndroidRun
 grep -nE "Bearer [A-Za-z0-9._-]{20,}|access_token=|refresh_token=|senha=|password=" "$OUT/logcat.txt" | head -20 > "$OUT/vazamento-log.txt"
 adb shell pidof $APP > "$OUT/vivo.txt" 2>&1
 adb exec-out screencap -p > "$OUT/final.png" 2>/dev/null
+# nomes de pasta sem caracteres que o GitHub não aceita em artefatos
+find "$OUT" -depth -name '*[:<>|*?"]*' | while read -r f; do mv "$f" "$(dirname "$f")/$(basename "$f" | tr ':<>|*?"' '-------')"; done
 exit 0

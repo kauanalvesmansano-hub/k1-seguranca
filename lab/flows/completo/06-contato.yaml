@@ -1,5 +1,5 @@
 appId: com.k1.seguranca
-name: "Contato de emergência: código inválido"
+name: "Contato de emergência — código inválido"
 tags: [completo, contato]
 ---
 - runFlow: ../comum/abrir.yaml

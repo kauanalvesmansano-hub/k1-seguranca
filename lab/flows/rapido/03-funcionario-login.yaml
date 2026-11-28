@@ -1,5 +1,5 @@
 appId: com.k1.seguranca
-name: "Funcionário: login vazio e inválido"
+name: "Funcionário — login vazio e inválido"
 tags: [rapido, login]
 ---
 - runFlow: ../comum/abrir.yaml

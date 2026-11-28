@@ -1,5 +1,5 @@
 appId: com.k1.seguranca
-name: "Vigilante individual: validações do cadastro"
+name: "Vigilante individual — validações do cadastro"
 tags: [completo, cadastro]
 ---
 - runFlow: ../comum/abrir.yaml

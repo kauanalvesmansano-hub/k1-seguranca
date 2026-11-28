@@ -1,5 +1,5 @@
 appId: com.k1.seguranca
-name: "Cadastro da empresa: validações (sem criar conta)"
+name: "Cadastro da empresa — validações (sem criar conta)"
 tags: [completo, cadastro]
 ---
 - runFlow: ../comum/abrir.yaml

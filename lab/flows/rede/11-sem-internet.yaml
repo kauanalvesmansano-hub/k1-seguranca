@@ -1,5 +1,5 @@
 appId: com.k1.seguranca
-name: "Rede: login sem internet, depois reconecta"
+name: "Rede — login sem internet, depois reconecta"
 tags: [rede]
 ---
 - runFlow: ../comum/abrir.yaml

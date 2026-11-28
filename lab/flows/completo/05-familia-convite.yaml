@@ -1,5 +1,5 @@
 appId: com.k1.seguranca
-name: "Família: código de convite inválido"
+name: "Família — código de convite inválido"
 tags: [completo, familia]
 ---
 - runFlow: ../comum/abrir.yaml

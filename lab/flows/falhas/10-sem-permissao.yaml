@@ -1,5 +1,5 @@
 appId: com.k1.seguranca
-name: "Falhas: app sem nenhuma permissão"
+name: "Falhas — app sem nenhuma permissão"
 tags: [falhas]
 ---
 - launchApp:

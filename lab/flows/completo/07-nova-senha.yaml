@@ -1,5 +1,5 @@
 appId: com.k1.seguranca
-name: "Senha nova: abre por link e recusa código errado"
+name: "Senha nova — abre por link e recusa código errado"
 tags: [completo, senha]
 ---
 - runFlow: ../comum/abrir.yaml

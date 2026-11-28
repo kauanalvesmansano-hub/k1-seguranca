@@ -1,5 +1,5 @@
 appId: com.k1.seguranca
-name: "Falhas: minimizar, reabrir, girar, voltar e toques rápidos"
+name: "Falhas — minimizar, reabrir, girar, voltar e toques rápidos"
 tags: [falhas]
 ---
 - runFlow: ../comum/abrir.yaml

@@ -1,5 +1,5 @@
 appId: com.k1.seguranca
-name: "Início: 5 opções de acesso"
+name: "Início — 5 opções de acesso"
 tags: [rapido, telas]
 ---
 - runFlow: ../comum/abrir.yaml
