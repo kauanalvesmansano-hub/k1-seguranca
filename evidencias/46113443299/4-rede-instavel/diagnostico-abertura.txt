@@ -1,0 +1,42 @@
+--- 10s
+  mCurrentFocus=Window{587e85f u0 com.k1.seguranca/com.k1.seguranca.MainActivity}
+  mFocusedApp=ActivityRecord{756a9ad u0 com.k1.seguranca/.MainActivity} t14}
+text="COMO VOCÊ VAI ACESSAR?"
+text=""
+text="SOU FUNCIONÁRIO"
+text=""
+text="SOU EMPRESA"
+text=""
+text="PESSOAL / FAMÍLIA"
+text=""
+text="SOU VIGILANTE · PLANO INDIVIDUAL"
+text=""
+text="SOU CONTATO DE EMERGÊNCIA"
+--- 30s
+  mCurrentFocus=Window{587e85f u0 com.k1.seguranca/com.k1.seguranca.MainActivity}
+  mFocusedApp=ActivityRecord{756a9ad u0 com.k1.seguranca/.MainActivity} t14}
+text="COMO VOCÊ VAI ACESSAR?"
+text=""
+text="SOU FUNCIONÁRIO"
+text=""
+text="SOU EMPRESA"
+text=""
+text="PESSOAL / FAMÍLIA"
+text=""
+text="SOU VIGILANTE · PLANO INDIVIDUAL"
+text=""
+text="SOU CONTATO DE EMERGÊNCIA"
+--- 60s
+  mCurrentFocus=Window{587e85f u0 com.k1.seguranca/com.k1.seguranca.MainActivity}
+  mFocusedApp=ActivityRecord{756a9ad u0 com.k1.seguranca/.MainActivity} t14}
+text="COMO VOCÊ VAI ACESSAR?"
+text=""
+text="SOU FUNCIONÁRIO"
+text=""
+text="SOU EMPRESA"
+text=""
+text="PESSOAL / FAMÍLIA"
+text=""
+text="SOU VIGILANTE · PLANO INDIVIDUAL"
+text=""
+text="SOU CONTATO DE EMERGÊNCIA"

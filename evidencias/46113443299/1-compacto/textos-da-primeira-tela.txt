@@ -1,0 +1,7 @@
+text="COMO VOCÊ VAI ACESSAR?"
+text=""
+text="SOU FUNCIONÁRIO"
+text=""
+text="SOU EMPRESA"
+text=""
+text="PESSOAL / FAMÍLIA"

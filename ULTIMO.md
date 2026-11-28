@@ -1,17 +1,17 @@
 # K1 LAB — relatório
 
-- Quando: 28/11/2026 05:30 UTC
-- APK testado: **teste-76**
+- Quando: 28/11/2026 05:57 UTC
+- APK testado: **teste-77**
 - Modo: completo
-- Execução: https://github.com/kauanalvesmansano-hub/k1-seguranca/actions/runs/46111341173
+- Execução: https://github.com/kauanalvesmansano-hub/k1-seguranca/actions/runs/46113443299
 
 **Celulares usados: 5 · testes: 33 · passaram: 32 · falharam: 1 · crashes: 0**
 
 | Celular | Android | Tela | Testes | Falhas | Crashes | Erros no log | Vazamento no log |
 |---|---|---|---|---|---|---|---|
 | 1-compacto | 10 | Physical size: 480x800 · Physical density: 240 | 8 | 0 | 0 | 0 | 0 |
-| 2-padrao | 13 | Physical size: 1080x2400 · Physical density: 420 | 8 | 0 | 0 | 0 | 0 |
-| 3-tela-grande | 14 | Physical size: 2560x1800 · Physical density: 320 | 8 | 1 | 0 | 0 | 0 |
+| 2-padrao | 13 | Physical size: 1080x2400 · Physical density: 420 | 8 | 1 | 0 | 0 | 0 |
+| 3-tela-grande | 14 | Physical size: 2560x1800 · Physical density: 320 | 8 | 0 | 0 | 0 | 0 |
 | 4-rede-instavel | 13 | Physical size: 1080x2340 · Physical density: 440 | 4 | 0 | 0 | 0 | 0 |
 | 5-falhas | 12 | Physical size: 1080x2280 · Physical density: 440 | 5 | 0 | 0 | 0 | 0 |
 
@@ -28,5 +28,5 @@
 | Funcionário — login vazio e inválido | 1-compacto: ✅ · 2-padrao: ✅ · 3-tela-grande: ✅ · 4-rede-instavel: ✅ · 5-falhas: ✅ |
 | Início — 5 opções de acesso | 1-compacto: ✅ · 2-padrao: ✅ · 3-tela-grande: ✅ · 4-rede-instavel: ✅ · 5-falhas: ✅ |
 | Rede — login sem internet, depois reconecta | 4-rede-instavel: ✅ |
-| Senha nova — abre por link e recusa código errado | 1-compacto: ✅ · 2-padrao: ✅ · 3-tela-grande: ❌ No visible element found: "SALVAR SENHA NOVA" |
+| Senha nova — abre por link e recusa código errado | 1-compacto: ✅ · 2-padrao: ❌ Element not found: Text matching regex: CÓDIGO DO E-MAIL · 3-tela-grande: ✅ |
 | Vigilante individual — validações do cadastro | 1-compacto: ✅ · 2-padrao: ✅ · 3-tela-grande: ✅ |
