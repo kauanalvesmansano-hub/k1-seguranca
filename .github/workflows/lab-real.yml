@@ -1,0 +1,57 @@
+name: K1 LAB - celulares REAIS (Firebase Test Lab)
+# Celulares físicos do Google. Plano grátis: 5 testes/dia em celular real -> no máximo 2 celulares por execução.
+on:
+  workflow_dispatch:
+    inputs:
+      celulares:
+        description: "quantos celulares reais (1 ou 2)"
+        default: "2"
+      tempo:
+        description: "tempo de exploração por celular (ex.: 300s)"
+        default: "300s"
+concurrency: { group: k1-lab-real, cancel-in-progress: false }
+permissions: { contents: write }
+jobs:
+  real:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { ref: envio, path: envio-ramo }
+      - name: Monta o APK publicado (confere o SHA256)
+        id: apk
+        run: |
+          cd envio-ramo/envio
+          cat apk.parte.* > ../../K1-Seguranca.apk
+          grep ' K1-Seguranca.apk$' SHA256SUMS | sed 's|K1-Seguranca.apk|../../K1-Seguranca.apk|' | sha256sum -c -
+          echo "tag=$(cat TAG_APK)" >> $GITHUB_OUTPUT
+      - uses: google-github-actions/auth@v2
+        with: { credentials_json: "${{ secrets.GCP_TESTLAB_KEY }}" }
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Escolhe celulares reais disponíveis
+        id: cel
+        run: |
+          gcloud firebase test android models list --filter="form=PHYSICAL" --format=json > modelos.json
+          python3 lab/escolher_reais.py modelos.json "${{ inputs.celulares || '2' }}" > devices.txt
+          cat devices.txt
+          echo "args=$(tr '\n' ' ' < devices.txt)" >> $GITHUB_OUTPUT
+      - name: Roda no Firebase Test Lab (instala, abre, explora todas as telas)
+        id: run
+        continue-on-error: true
+        run: |
+          gcloud firebase test android run --type robo --app K1-Seguranca.apk \
+            ${{ steps.cel.outputs.args }} \
+            --timeout "${{ inputs.tempo || '300s' }}" \
+            --results-history-name "K1 LAB" --format=json --quiet 2>&1 | tee saida-ftl.txt
+      - name: Baixa os resultados (logcat, crashes, mapa de telas)
+        run: python3 lab/resultado_reais.py saida-ftl.txt "${{ steps.apk.outputs.tag }}" "${{ github.run_id }}" > relatorio-real.md || true; cat relatorio-real.md >> $GITHUB_STEP_SUMMARY
+      - name: Guarda no histórico
+        env: { S1: "${{ secrets.K1_LAB_SENHA }}", S2: "${{ secrets.K1_LAB_PIN }}" }
+        run: |
+          cp lab/limpar_segredos.py /tmp/l.py; cp relatorio-real.md /tmp/r.md; cp -r reais /tmp/reais 2>/dev/null || mkdir -p /tmp/reais
+          git config user.name "K1 LAB"; git config user.email "lab@k1.invalid"
+          git fetch origin lab-resultados && git checkout lab-resultados
+          d="reais/${{ github.run_id }}"; mkdir -p "$d"; cp -r /tmp/reais/. "$d/"; cp /tmp/r.md "$d/RELATORIO.md"; cp /tmp/r.md REAIS-ULTIMO.md
+          python3 /tmp/l.py "$d" REAIS-ULTIMO.md
+          git add reais REAIS-ULTIMO.md && git commit -qm "LAB real: ${{ steps.apk.outputs.tag }}" && git push -q origin HEAD:lab-resultados
