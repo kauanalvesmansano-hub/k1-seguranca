@@ -10,7 +10,7 @@ tags: [falhas]
 - launchApp:
     clearState: false
 - scrollUntilVisible: { element: "ÁREA DA EMPRESA", direction: DOWN }
-- setOrientation: LANDSCAPE
+- setOrientation: LANDSCAPE_LEFT
 - setOrientation: PORTRAIT
 - scrollUntilVisible: { element: "ENTRAR", direction: DOWN }
 - tapOn:
@@ -21,7 +21,8 @@ tags: [falhas]
 - tapOn: "E-MAIL"
 - inputRandomText:
     length: 400
-- hideKeyboard
+- hideKeyboard:
+    optional: true
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: "ENTRAR" }

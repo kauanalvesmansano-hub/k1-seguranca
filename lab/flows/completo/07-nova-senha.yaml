@@ -4,9 +4,9 @@ tags: [completo, senha]
 ---
 - runFlow: ../comum/abrir.yaml
 - openLink: "k1seguranca://nova-senha"
-- extendedWaitUntil:
-    visible: "CRIAR NOVA SENHA"
-    timeout: 20000
+- runFlow:
+    file: ../comum/ver.yaml
+    env: { TEXTO: "CRIAR NOVA SENHA" }
 - scrollUntilVisible:
     element: "CÓDIGO DO E-MAIL"
     direction: DOWN
@@ -27,10 +27,13 @@ tags: [completo, senha]
 - inputText: "LabTeste123"
 - pressKey: Tab
 - inputText: "LabTeste123"
-- hideKeyboard
+- hideKeyboard:
+    optional: true
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: "SALVAR SENHA NOVA" }
-- extendedWaitUntil:
-    visible: ".*(vencid|errad|inválid|internet|instantes).*"
-    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 45000
+- runFlow:
+    file: ../comum/ver.yaml
+    env: { TEXTO: ".*(vencid|errad|inválid|internet|instantes).*" }

@@ -7,6 +7,6 @@ tags: [completo, cadastro]
     element: "SOU VIGILANTE · PLANO INDIVIDUAL"
     direction: DOWN
 - tapOn: "SOU VIGILANTE · PLANO INDIVIDUAL"
-- extendedWaitUntil:
-    visible: ".*30 DIAS GRÁTIS.*"
-    timeout: 15000
+- runFlow:
+    file: ../comum/ver.yaml
+    env: { TEXTO: ".*30 DIAS GRÁTIS.*" }

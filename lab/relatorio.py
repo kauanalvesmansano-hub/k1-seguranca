@@ -24,6 +24,11 @@ for d in sorted(glob.glob(os.path.join(raiz, '*', '*'))):
                 casos.append((tc.get('name'), ok, msg.replace('\n', ' ').replace('|', '/')))
         except Exception as ex:
             casos.append((os.path.basename(x), False, f'junit ilegível: {ex}'))
+    # suíte que não gerou resultado (arquivo de teste com erro, travou, etc.) conta como falha — nunca some do relatório
+    for linha in ler('suites.txt').splitlines():
+        nome_s = linha.split()[1] if len(linha.split()) > 1 else '?'
+        if not os.path.exists(os.path.join(d, f'junit-{nome_s}.xml')):
+            casos.append((f'suíte {nome_s} (sem resultado)', False, ler(f'maestro-{nome_s}.txt')[-200:].replace('\n', ' ').replace('|', '/')))
     t = len(casos); fl = sum(1 for c in casos if not c[1])
     fatais = [p for p in probs if 'FATAL EXCEPTION' in p or 'ANR in' in p]
     total += t; falhas += fl; crashes += len(fatais)

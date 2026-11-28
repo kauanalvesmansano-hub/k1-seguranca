@@ -20,7 +20,8 @@ tags: [completo, familia]
     direction: UP
 - tapOn: "CÓDIGO \\(EX.: AB3K-9QXZ\\)"
 - inputText: "OOOO0000"   # O e 0 não existem nos convites reais
-- hideKeyboard
+- hideKeyboard:
+    optional: true
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: "ENTRAR NA FAMÍLIA" }

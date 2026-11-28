@@ -19,7 +19,8 @@ tags: [rapido, login]
 - inputText: "LAB0000"
 - pressKey: Tab
 - inputText: "1234"
-- hideKeyboard
+- hideKeyboard:
+    optional: true
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: "ENTRAR" }

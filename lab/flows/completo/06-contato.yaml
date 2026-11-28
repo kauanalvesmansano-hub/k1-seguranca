@@ -14,7 +14,8 @@ tags: [completo, contato]
 - inputText: "12345"   # 5 dígitos: nunca bate com um convite real (6 dígitos)
 - tapOn: "Seu nome \\(ex.: Mãe, João\\)"
 - inputText: "Lab Teste"
-- hideKeyboard
+- hideKeyboard:
+    optional: true
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: "RECEBER OS ALERTAS NESTE CELULAR" }
