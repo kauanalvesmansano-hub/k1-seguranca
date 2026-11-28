@@ -1,0 +1,32 @@
+appId: com.k1.seguranca
+name: "Falhas: minimizar, reabrir, girar, voltar e toques rápidos"
+tags: [falhas]
+---
+- runFlow: ../comum/abrir.yaml
+- tapOn: "SOU EMPRESA"
+- pressKey: Home
+- launchApp:
+    clearState: false
+- assertVisible: "ÁREA DA EMPRESA"
+- setOrientation: LANDSCAPE
+- takeScreenshot: 09-paisagem
+- setOrientation: PORTRAIT
+- tapOn:
+    text: "ENTRAR"
+    repeat: 8
+    delay: 50
+- assertVisible: "ÁREA DA EMPRESA"
+- tapOn: "E-MAIL"
+- inputRandomText:
+    length: 400
+- hideKeyboard
+- tapOn: "ENTRAR"
+- takeScreenshot: 09-texto-grande
+- back
+- back
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "COMO VOCÊ VAI ACESSAR?"
+    timeout: 60000

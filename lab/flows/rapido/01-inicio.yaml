@@ -1,0 +1,13 @@
+appId: com.k1.seguranca
+name: "Início: 5 opções de acesso"
+tags: [rapido, telas]
+---
+- runFlow: ../comum/abrir.yaml
+- takeScreenshot: 01-inicio
+- assertVisible: "SOU FUNCIONÁRIO"
+- assertVisible: "SOU EMPRESA"
+- assertVisible: "PESSOAL / FAMÍLIA"
+- scrollUntilVisible:
+    element: "SOU CONTATO DE EMERGÊNCIA"
+    direction: DOWN
+- assertVisible: "SOU VIGILANTE · PLANO INDIVIDUAL"

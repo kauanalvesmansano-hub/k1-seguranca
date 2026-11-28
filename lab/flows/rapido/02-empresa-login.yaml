@@ -1,0 +1,20 @@
+appId: com.k1.seguranca
+name: "Empresa: login vazio e senha errada"
+tags: [rapido, login]
+---
+- runFlow: ../comum/abrir.yaml
+- tapOn: "SOU EMPRESA"
+- assertVisible: "ÁREA DA EMPRESA"
+- tapOn: "ENTRAR"
+- assertVisible: "Informe e-mail e senha."
+- tapOn: "E-MAIL"
+- inputText: "lab-inexistente@k1lab.test"
+- tapOn: "SENHA"
+- inputText: "SenhaErrada123"
+- hideKeyboard
+- tapOn: "ENTRAR"
+- extendedWaitUntil:
+    visible: ".*(incorretos|cadastrado|internet|instantes).*"
+    timeout: 30000
+- takeScreenshot: 02-empresa-senha-errada
+- assertVisible: "ÁREA DA EMPRESA"

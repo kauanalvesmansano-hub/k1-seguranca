@@ -1,0 +1,10 @@
+name: K1 LAB - monitoramento (a cada 6 h)
+# INICIAR LAB = habilitar este workflow; PARAR LAB = desabilitar (lab/k1lab.sh iniciar|parar)
+on:
+  schedule:
+    - cron: "41 */6 * * *"
+permissions: { contents: write }
+jobs:
+  rapido:
+    uses: ./.github/workflows/lab.yml
+    with: { modo: rapido }

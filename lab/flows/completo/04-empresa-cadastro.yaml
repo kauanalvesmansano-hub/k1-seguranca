@@ -1,0 +1,15 @@
+appId: com.k1.seguranca
+name: "Cadastro da empresa: validações (sem criar conta)"
+tags: [completo, cadastro]
+---
+- runFlow: ../comum/abrir.yaml
+- tapOn: "SOU EMPRESA"
+- tapOn: "CADASTRE SUA EMPRESA"
+- assertVisible: "CADASTRO DA EMPRESA"
+- takeScreenshot: 04-cadastro-empresa
+- scrollUntilVisible:
+    element: "CADASTRAR EMPRESA"
+    direction: DOWN
+- tapOn: "CADASTRAR EMPRESA"
+- assertVisible: ".*Preencha empresa, responsável e quantidade.*"
+- takeScreenshot: 04-cadastro-validacao

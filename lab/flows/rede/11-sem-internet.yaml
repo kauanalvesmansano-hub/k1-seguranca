@@ -1,0 +1,25 @@
+appId: com.k1.seguranca
+name: "Rede: login sem internet, depois reconecta"
+tags: [rede]
+---
+- runFlow: ../comum/abrir.yaml
+- tapOn: "SOU EMPRESA"
+- setAirplaneMode: enabled
+- tapOn: "E-MAIL"
+- inputText: "lab-inexistente@k1lab.test"
+- tapOn: "SENHA"
+- inputText: "SenhaErrada123"
+- hideKeyboard
+- tapOn: "ENTRAR"
+- extendedWaitUntil:
+    visible: ".*(internet|conexão|instantes).*"
+    timeout: 45000
+- takeScreenshot: 11-sem-internet
+- setAirplaneMode: disabled
+- waitForAnimationToEnd:
+    timeout: 8000
+- tapOn: "ENTRAR"
+- extendedWaitUntil:
+    visible: ".*(incorretos|cadastrado).*"
+    timeout: 45000
+- takeScreenshot: 11-reconectou

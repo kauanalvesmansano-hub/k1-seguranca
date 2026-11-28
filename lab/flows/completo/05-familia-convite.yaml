@@ -1,0 +1,17 @@
+appId: com.k1.seguranca
+name: "Família: código de convite inválido"
+tags: [completo, familia]
+---
+- runFlow: ../comum/abrir.yaml
+- tapOn: "PESSOAL / FAMÍLIA"
+- assertVisible: "K1 FAMÍLIA · PROTEÇÃO PESSOAL"
+- tapOn: "ENTRAR NA FAMÍLIA"
+- assertVisible: ".*O código tem 8 letras e números.*"
+- tapOn: "CÓDIGO (EX.: AB3K-9QXZ)"
+- inputText: "OOOO0000"   # O e 0 não existem nos convites reais
+- hideKeyboard
+- tapOn: "ENTRAR NA FAMÍLIA"
+- extendedWaitUntil:
+    visible: "K1 FAMÍLIA · PROTEÇÃO PESSOAL"
+    timeout: 30000
+- takeScreenshot: 05-familia-convite-invalido

@@ -1,0 +1,119 @@
+name: K1 LAB - testes no Android
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "rapido | completo | telas | funcionalidade"
+        default: completo
+      funcionalidade:
+        description: "só no modo funcionalidade: nome do arquivo do teste (ex.: 07-nova-senha)"
+        default: ""
+  workflow_call:
+    inputs:
+      modo: { type: string, default: rapido }
+      funcionalidade: { type: string, default: "" }
+
+concurrency: { group: k1-lab, cancel-in-progress: false }
+permissions: { contents: write }
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.m.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: envio, path: envio-ramo }
+      - id: m
+        run: |
+          cd envio-ramo/envio
+          cat apk.parte.* > ../../K1-Seguranca.apk
+          esperado=$(grep ' K1-Seguranca.apk$' SHA256SUMS | cut -d' ' -f1)
+          echo "$esperado  ../../K1-Seguranca.apk" | sha256sum -c -
+          echo "tag=$(cat TAG_APK)" >> $GITHUB_OUTPUT
+      - uses: actions/upload-artifact@v4
+        with: { name: apk, path: K1-Seguranca.apk, retention-days: 3 }
+
+  celular:
+    needs: apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        include:
+          - { nome: "1-compacto", api: 29, perfil: "Nexus S", rede: "-netspeed full", suites: "rapido completo" }
+          - { nome: "2-padrao", api: 33, perfil: "pixel_6", rede: "-netspeed full", suites: "rapido completo" }
+          - { nome: "3-tela-grande", api: 34, perfil: "pixel_c", rede: "-netspeed full", suites: "rapido completo" }
+          - { nome: "4-rede-instavel", api: 33, perfil: "pixel_5", rede: "-netdelay umts -netspeed edge", suites: "rapido rede" }
+          - { nome: "5-falhas", api: 31, perfil: "pixel_4", rede: "-netspeed full", suites: "rapido falhas" }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decide se este celular roda neste modo
+        id: d
+        run: |
+          modo="${{ inputs.modo || 'completo' }}"; n="${{ matrix.nome }}"; s="${{ matrix.suites }}"
+          case "$modo" in
+            rapido) [ "$n" = "2-padrao" ] || [ "$n" = "4-rede-instavel" ] && s="rapido" || s="" ;;
+            telas) s="rapido completo" ;;
+            funcionalidade) [ "$n" = "2-padrao" ] && s="so:${{ inputs.funcionalidade }}" || s="" ;;
+          esac
+          echo "suites=$s" >> $GITHUB_OUTPUT
+      - if: steps.d.outputs.suites != ''
+        uses: actions/download-artifact@v4
+        with: { name: apk }
+      - if: steps.d.outputs.suites != ''
+        uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - if: steps.d.outputs.suites != ''
+        name: Liga a aceleração (KVM)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - if: steps.d.outputs.suites != ''
+        name: Instala o Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+      - if: steps.d.outputs.suites != ''
+        name: Liga o Android, instala o K1 e testa
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          target: google_apis
+          profile: ${{ matrix.perfil }}
+          ram-size: 3072M
+          disk-size: 4096M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim ${{ matrix.rede }}
+          disable-animations: true
+          script: bash lab/rodar.sh "${{ matrix.nome }}" "${{ matrix.api }}" "${{ steps.d.outputs.suites }}"
+      - if: always() && steps.d.outputs.suites != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultado-${{ matrix.nome }}
+          path: saida/
+          retention-days: 30
+
+  relatorio:
+    needs: [apk, celular]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { pattern: resultado-*, path: resultados }
+      - name: Monta o relatório
+        run: python3 lab/relatorio.py resultados "${{ needs.apk.outputs.tag }}" "${{ inputs.modo || 'completo' }}" "${{ github.run_id }}" > relatorio.md; cat relatorio.md >> $GITHUB_STEP_SUMMARY
+      - name: Guarda no histórico (ramo lab-resultados)
+        run: |
+          git config user.name "K1 LAB"; git config user.email "lab@k1.invalid"
+          git fetch origin lab-resultados && git checkout lab-resultados || git checkout --orphan lab-resultados
+          git rm -rq --cached . 2>/dev/null || true
+          mkdir -p historico
+          nome="historico/$(date -u +%Y%m%d-%H%M)-${{ github.run_id }}.md"
+          cp relatorio.md "$nome"; cp relatorio.md ULTIMO.md
+          git add historico ULTIMO.md && git commit -qm "LAB: ${{ inputs.modo || 'completo' }} em ${{ needs.apk.outputs.tag }}" && git push -q origin HEAD:lab-resultados

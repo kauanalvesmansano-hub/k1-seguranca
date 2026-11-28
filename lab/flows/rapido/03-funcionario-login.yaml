@@ -1,0 +1,19 @@
+appId: com.k1.seguranca
+name: "Funcionário: login vazio e inválido"
+tags: [rapido, login]
+---
+- runFlow: ../comum/abrir.yaml
+- tapOn: "SOU FUNCIONÁRIO"
+- tapOn: "ENTRAR"
+- assertVisible: "Informe matrícula e senha."
+- tapOn: "MATRÍCULA"
+- inputText: "LAB0000"
+- tapOn: "SENHA"
+- inputText: "1234"
+- hideKeyboard
+- tapOn: "ENTRAR"
+- extendedWaitUntil:
+    notVisible: "ENTRANDO..."
+    timeout: 30000
+- takeScreenshot: 03-funcionario-invalido
+- assertVisible: "MATRÍCULA"

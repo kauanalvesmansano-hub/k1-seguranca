@@ -1,0 +1,9 @@
+appId: com.k1.seguranca
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- extendedWaitUntil:
+    visible: "COMO VOCÊ VAI ACESSAR?"
+    timeout: 90000
