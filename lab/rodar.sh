@@ -20,6 +20,13 @@ adb shell dumpsys package $APP | sed -n '/requested permissions:/,/install permi
 # 2) logs do sistema durante todos os testes
 adb logcat -c; adb logcat -v time > "$OUT/logcat.txt" 2>&1 & LOGPID=$!
 
+# 2b) abre o app uma vez e guarda a primeira tela (print + textos da tela)
+adb shell monkey -p $APP -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1; sleep 25
+adb exec-out screencap -p > "$OUT/00-primeira-tela.png" 2>/dev/null
+adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 && adb pull /sdcard/ui.xml "$OUT/00-primeira-tela.xml" >/dev/null 2>&1
+grep -oE 'text="[^"]+"' "$OUT/00-primeira-tela.xml" 2>/dev/null | head -40
+adb shell am force-stop $APP
+
 # 3) testes
 for s in $SUITES; do
   if [[ "$s" == so:* ]]; then alvo=$(ls lab/flows/*/"${s#so:}"*.yaml | head -1); s=unico; else alvo="lab/flows/$s"; fi

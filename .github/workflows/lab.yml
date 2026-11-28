@@ -116,4 +116,10 @@ jobs:
           mkdir -p historico
           nome="historico/$(date -u +%Y%m%d-%H%M)-${{ github.run_id }}.md"
           cp relatorio.md "$nome"; cp relatorio.md ULTIMO.md
-          git add historico ULTIMO.md && git commit -qm "LAB: ${{ inputs.modo || 'completo' }} em ${{ needs.apk.outputs.tag }}" && git push -q origin HEAD:lab-resultados
+          ev="evidencias/${{ github.run_id }}"; mkdir -p "$ev"
+          find resultados -name '*.png' | while read -r f; do
+            cel=$(echo "$f" | cut -d/ -f3); b=$(basename "$f" .png | tr -c 'A-Za-z0-9._-' '_')
+            mkdir -p "$ev/$cel"; convert "$f" -resize 540x -quality 70 "$ev/$cel/$b.jpg" 2>/dev/null || cp "$f" "$ev/$cel/$b.png"
+          done
+          find resultados -name '00-primeira-tela.xml' | while read -r f; do cel=$(echo "$f" | cut -d/ -f3); mkdir -p "$ev/$cel"; grep -oE 'text="[^"]+"' "$f" > "$ev/$cel/textos-da-primeira-tela.txt" || true; done
+          git add historico ULTIMO.md evidencias && git commit -qm "LAB: ${{ inputs.modo || 'completo' }} em ${{ needs.apk.outputs.tag }}" && git push -q origin HEAD:lab-resultados
