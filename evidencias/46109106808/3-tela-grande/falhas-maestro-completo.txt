@@ -1,0 +1,9 @@
+04:56:08.853 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.READ_EXTERNAL_STORAGE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.SecurityException: Package com.k1.seguranca has not requested permission android.permission.READ_EXTERNAL_STORAGE
+04:56:09.435 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.WRITE_EXTERNAL_STORAGE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.SecurityException: Package com.k1.seguranca has not requested permission android.permission.WRITE_EXTERNAL_STORAGE
+04:56:25.257 [ WARN] maestro.orchestra.Orchestra.scrollUntilVisible: Error: maestro.MaestroException$ElementNotFound: Element not found: Text matching regex: .*8 ou mais caracteres.*
+04:57:23.795 [ERROR] maestro.orchestra.Orchestra.executeCommands: [Command execution] CommandFailed: Couldn't hide the keyboard. This can happen if the app uses a custom input or doesn't expose a standard dismiss action.
+04:57:24.543 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Hide Keyboard FAILED
