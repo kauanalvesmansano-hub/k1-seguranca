@@ -25,7 +25,7 @@ for s in $SUITES; do
   if [[ "$s" == so:* ]]; then alvo=$(ls lab/flows/*/"${s#so:}"*.yaml | head -1); s=unico; else alvo="lab/flows/$s"; fi
   [ -n "$alvo" ] || continue
   timeout 1500 maestro test "$alvo" --format junit --output "$OUT/junit-$s.xml" --test-output-dir "$OUT/maestro-$s" > "$OUT/maestro-$s.txt" 2>&1
-  echo "suite $s terminou com código $?" >> "$OUT/suites.txt"
+  echo "suite $s terminou com código $?" >> "$OUT/suites.txt"; tail -80 "$OUT/maestro-$s.txt"
 done
 kill $LOGPID 2>/dev/null; sleep 1
 
