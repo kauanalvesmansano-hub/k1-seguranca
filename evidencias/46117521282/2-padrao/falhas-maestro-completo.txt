@@ -1,0 +1,48 @@
+06:46:39.181 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.READ_EXTERNAL_STORAGE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.SecurityException: Package com.k1.seguranca has not requested permission android.permission.READ_EXTERNAL_STORAGE
+06:46:39.250 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.WRITE_EXTERNAL_STORAGE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.SecurityException: Package com.k1.seguranca has not requested permission android.permission.WRITE_EXTERNAL_STORAGE
+06:46:39.300 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_LOCATION for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_LOCATION
+06:46:39.312 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_SPECIAL_USE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_SPECIAL_USE
+06:46:39.452 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_CAMERA for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_CAMERA
+06:46:39.466 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_MICROPHONE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_MICROPHONE
+06:46:44.391 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:46:45.906 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:46:47.421 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:46:48.936 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:46:50.453 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:46:51.968 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:46:53.482 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:46:54.996 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:46:56.511 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:47:36.162 [ERROR] maestro.orchestra.Orchestra.executeCommands: [Command execution] CommandFailed: Element not found: Text matching regex: CÓDIGO DO E-MAIL
+06:47:37.810 [ WARN] maestro.orchestra.debug.ArtifactsGenerator.captureScreenshot: Failed to capture screenshot screenshots/step-024-tapOnElement-CÓDIGO_DO_E-MAIL.png
+06:47:37.810 [ INFO] maestro.cli.runner.CliConsoleListener.onCommandFinished: Tap on "CÓDIGO DO E-MAIL" FAILED

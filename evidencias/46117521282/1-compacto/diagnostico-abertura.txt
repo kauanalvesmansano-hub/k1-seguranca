@@ -1,0 +1,30 @@
+--- 10s
+  mCurrentFocus=Window{93bf467 u0 com.k1.seguranca/com.k1.seguranca.MainActivity}
+  mFocusedApp=AppWindowToken{25754a1 token=Token{9f4d508 ActivityRecord{c660aab u0 com.k1.seguranca/.MainActivity t15}}}
+text="COMO VOCÊ VAI ACESSAR?"
+text=""
+text="SOU FUNCIONÁRIO"
+text=""
+text="SOU EMPRESA"
+text=""
+text="PESSOAL / FAMÍLIA"
+--- 30s
+  mCurrentFocus=Window{93bf467 u0 com.k1.seguranca/com.k1.seguranca.MainActivity}
+  mFocusedApp=AppWindowToken{25754a1 token=Token{9f4d508 ActivityRecord{c660aab u0 com.k1.seguranca/.MainActivity t15}}}
+text="COMO VOCÊ VAI ACESSAR?"
+text=""
+text="SOU FUNCIONÁRIO"
+text=""
+text="SOU EMPRESA"
+text=""
+text="PESSOAL / FAMÍLIA"
+--- 60s
+  mCurrentFocus=Window{93bf467 u0 com.k1.seguranca/com.k1.seguranca.MainActivity}
+  mFocusedApp=AppWindowToken{25754a1 token=Token{9f4d508 ActivityRecord{c660aab u0 com.k1.seguranca/.MainActivity t15}}}
+text="COMO VOCÊ VAI ACESSAR?"
+text=""
+text="SOU FUNCIONÁRIO"
+text=""
+text="SOU EMPRESA"
+text=""
+text="PESSOAL / FAMÍLIA"

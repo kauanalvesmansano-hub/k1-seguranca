@@ -1,0 +1,58 @@
+06:41:01.493 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_LOCATION for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing:
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_LOCATION
+06:41:01.504 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_SPECIAL_USE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing:
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_SPECIAL_USE
+06:41:01.518 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.POST_NOTIFICATIONS for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing:
+java.lang.IllegalArgumentException: Unknown permission: android.permission.POST_NOTIFICATIONS
+06:41:01.651 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_CAMERA for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing:
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_CAMERA
+06:41:01.665 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_MICROPHONE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing:
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_MICROPHONE
+06:41:01.733 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.BLUETOOTH_SCAN for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing:
+java.lang.IllegalArgumentException: Unknown permission: android.permission.BLUETOOTH_SCAN
+06:41:01.746 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.BLUETOOTH_ADVERTISE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing:
+java.lang.IllegalArgumentException: Unknown permission: android.permission.BLUETOOTH_ADVERTISE
+06:41:01.759 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.BLUETOOTH_CONNECT for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing:
+java.lang.IllegalArgumentException: Unknown permission: android.permission.BLUETOOTH_CONNECT
+06:41:01.772 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.NEARBY_WIFI_DEVICES for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing:
+java.lang.IllegalArgumentException: Unknown permission: android.permission.NEARBY_WIFI_DEVICES
+06:41:04.298 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:41:05.836 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:41:07.352 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:41:08.866 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:41:10.380 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:41:11.894 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:41:13.408 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:41:14.922 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:41:16.436 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:41:17.951 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:41:19.088 [ WARN] maestro.orchestra.Orchestra.scrollUntilVisible: Error: maestro.MaestroException$ElementNotFound: Element not found: Text matching regex: SOU VIGILANTE · PLANO INDIVIDUAL

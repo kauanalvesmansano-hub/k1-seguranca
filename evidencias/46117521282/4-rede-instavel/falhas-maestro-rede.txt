@@ -1,0 +1,60 @@
+06:43:52.135 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_LOCATION for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_LOCATION
+06:43:52.149 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_SPECIAL_USE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_SPECIAL_USE
+06:43:52.304 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_CAMERA for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_CAMERA
+06:43:52.319 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_MICROPHONE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_MICROPHONE
+06:43:56.829 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:43:58.347 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:43:59.866 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:44:01.387 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:44:02.908 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:44:04.428 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:44:05.950 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:44:07.471 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:44:08.990 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:44:10.510 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:44:32.798 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:44:34.316 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:44:35.835 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:44:37.353 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:44:38.870 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:44:40.387 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException

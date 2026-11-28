@@ -1,0 +1,39 @@
+06:42:02.641 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.READ_EXTERNAL_STORAGE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.SecurityException: Package com.k1.seguranca has not requested permission android.permission.READ_EXTERNAL_STORAGE
+06:42:02.730 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.WRITE_EXTERNAL_STORAGE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.SecurityException: Package com.k1.seguranca has not requested permission android.permission.WRITE_EXTERNAL_STORAGE
+06:42:02.827 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_LOCATION for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_LOCATION
+06:42:02.844 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_SPECIAL_USE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_SPECIAL_USE
+06:42:03.084 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_CAMERA for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_CAMERA
+06:42:03.106 [DEBUG] maestro.Maestro.setPermissionInternal: Failed to set permission android.permission.FOREGROUND_SERVICE_MICROPHONE for app com.k1.seguranca: shell command failed (exit -1): 
+Exception occurred while executing 'grant':
+java.lang.IllegalArgumentException: Unknown permission: android.permission.FOREGROUND_SERVICE_MICROPHONE
+06:42:10.770 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:42:12.304 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:42:13.845 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:42:15.481 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:42:17.020 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:42:18.574 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
+06:42:20.101 [ WARN] maestro.utils.ScreenshotUtils.tryTakingScreenshot: Failed to take screenshot
+maestro.android.DeviceCallFailedException: 'takeScreenshot' failed: INTERNAL - Screenshot returned null — window may not be ready
+  error-type=java.lang.NullPointerException
