@@ -25,6 +25,8 @@ tags: [completo, senha]
 - inputText: "000000"
 - pressKey: Tab
 - inputText: "LabTeste123"
+# o botão do "olho" da 1ª senha também recebe o TAB: dois TABs até o campo "repita"
+- pressKey: Tab
 - pressKey: Tab
 - inputText: "LabTeste123"
 - hideKeyboard:

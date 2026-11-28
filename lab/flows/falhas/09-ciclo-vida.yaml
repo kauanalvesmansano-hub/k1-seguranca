@@ -7,8 +7,10 @@ tags: [falhas]
     file: ../comum/tocar-inicio.yaml
     env: { BOTAO: "SOU EMPRESA" }
 - pressKey: Home
+# volta pelo ícone sem matar o app: tem que continuar na mesma tela
 - launchApp:
     clearState: false
+    stopApp: false
 - scrollUntilVisible: { element: "ÁREA DA EMPRESA", direction: DOWN }
 - setOrientation: LANDSCAPE_LEFT
 - setOrientation: PORTRAIT
