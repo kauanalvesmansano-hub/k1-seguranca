@@ -9,4 +9,4 @@ appId: com.k1.seguranca
 - scrollUntilVisible:
     element: ${TEXTO}
     direction: DOWN
-    timeout: 15000
+    timeout: 25000
