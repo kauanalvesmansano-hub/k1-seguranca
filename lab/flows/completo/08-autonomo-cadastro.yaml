@@ -10,4 +10,3 @@ tags: [completo, cadastro]
 - extendedWaitUntil:
     visible: ".*30 DIAS GRÁTIS.*"
     timeout: 15000
-- takeScreenshot: 08-autonomo-cadastro

@@ -11,7 +11,6 @@ tags: [falhas]
     clearState: false
 - assertVisible: "ÁREA DA EMPRESA"
 - setOrientation: LANDSCAPE
-- takeScreenshot: 09-paisagem
 - setOrientation: PORTRAIT
 - tapOn:
     text: "ENTRAR"
@@ -21,9 +20,9 @@ tags: [falhas]
 - tapOn: "E-MAIL"
 - inputRandomText:
     length: 400
-- hideKeyboard
-- tapOn: "ENTRAR"
-- takeScreenshot: 09-texto-grande
+- runFlow:
+    file: ../comum/tocar.yaml
+    env: { ALVO: "ENTRAR" }
 - back
 - back
 - stopApp

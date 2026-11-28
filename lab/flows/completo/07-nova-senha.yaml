@@ -8,19 +8,26 @@ tags: [completo, senha]
     visible: "CRIAR NOVA SENHA"
     timeout: 20000
 - assertVisible: "CÓDIGO DO E-MAIL"
-- tapOn: "SALVAR SENHA NOVA"
-- assertVisible: ".*8 ou mais caracteres.*"
+- runFlow:
+    file: ../comum/tocar.yaml
+    env: { ALVO: "SALVAR SENHA NOVA" }
+- scrollUntilVisible:
+    element: ".*8 ou mais caracteres.*"
+    direction: DOWN
+- scrollUntilVisible:
+    element: "E-MAIL"
+    direction: UP
 - tapOn: "E-MAIL"
 - inputText: "lab-inexistente@k1lab.test"
 - tapOn: "CÓDIGO DO E-MAIL"
 - inputText: "000000"
-- tapOn: "SENHA NOVA (8+, LETRAS E NÚMEROS)"
+- pressKey: Tab
 - inputText: "LabTeste123"
-- tapOn: "REPITA A SENHA NOVA"
+- pressKey: Tab
 - inputText: "LabTeste123"
-- hideKeyboard
-- tapOn: "SALVAR SENHA NOVA"
+- runFlow:
+    file: ../comum/tocar.yaml
+    env: { ALVO: "SALVAR SENHA NOVA" }
 - extendedWaitUntil:
     visible: ".*(vencid|errad|inválid|internet|instantes).*"
     timeout: 30000
-- takeScreenshot: 07-nova-senha-codigo-errado

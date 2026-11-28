@@ -6,16 +6,23 @@ tags: [rapido, login]
 - runFlow:
     file: ../comum/tocar-inicio.yaml
     env: { BOTAO: "SOU FUNCIONÁRIO" }
-- tapOn: "ENTRAR"
-- assertVisible: "Informe matrícula e senha."
+- runFlow:
+    file: ../comum/tocar.yaml
+    env: { ALVO: "ENTRAR" }
+- scrollUntilVisible:
+    element: "Informe matrícula e senha."
+    direction: DOWN
+- scrollUntilVisible:
+    element: "MATRÍCULA"
+    direction: UP
 - tapOn: "MATRÍCULA"
 - inputText: "LAB0000"
-- tapOn: "SENHA"
+- pressKey: Tab
 - inputText: "1234"
-- hideKeyboard
-- tapOn: "ENTRAR"
+- runFlow:
+    file: ../comum/tocar.yaml
+    env: { ALVO: "ENTRAR" }
 - extendedWaitUntil:
     notVisible: "ENTRANDO..."
     timeout: 30000
-- takeScreenshot: 03-funcionario-invalido
 - assertVisible: "MATRÍCULA"

@@ -9,19 +9,20 @@ tags: [rede]
 - setAirplaneMode: enabled
 - tapOn: "E-MAIL"
 - inputText: "lab-inexistente@k1lab.test"
-- tapOn: "SENHA"
+- pressKey: Tab
 - inputText: "SenhaErrada123"
-- hideKeyboard
-- tapOn: "ENTRAR"
+- runFlow:
+    file: ../comum/tocar.yaml
+    env: { ALVO: "ENTRAR" }
 - extendedWaitUntil:
     visible: ".*(internet|conexão|instantes).*"
     timeout: 45000
-- takeScreenshot: 11-sem-internet
 - setAirplaneMode: disabled
 - waitForAnimationToEnd:
     timeout: 8000
-- tapOn: "ENTRAR"
+- runFlow:
+    file: ../comum/tocar.yaml
+    env: { ALVO: "ENTRAR" }
 - extendedWaitUntil:
     visible: ".*(incorretos|cadastrado).*"
     timeout: 45000
-- takeScreenshot: 11-reconectou

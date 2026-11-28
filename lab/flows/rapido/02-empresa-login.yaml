@@ -7,16 +7,23 @@ tags: [rapido, login]
     file: ../comum/tocar-inicio.yaml
     env: { BOTAO: "SOU EMPRESA" }
 - assertVisible: "ÁREA DA EMPRESA"
-- tapOn: "ENTRAR"
-- assertVisible: "Informe e-mail e senha."
+- runFlow:
+    file: ../comum/tocar.yaml
+    env: { ALVO: "ENTRAR" }
+- scrollUntilVisible:
+    element: "Informe e-mail e senha."
+    direction: DOWN
+- scrollUntilVisible:
+    element: "E-MAIL"
+    direction: UP
 - tapOn: "E-MAIL"
 - inputText: "lab-inexistente@k1lab.test"
-- tapOn: "SENHA"
+- pressKey: Tab
 - inputText: "SenhaErrada123"
-- hideKeyboard
-- tapOn: "ENTRAR"
+- runFlow:
+    file: ../comum/tocar.yaml
+    env: { ALVO: "ENTRAR" }
 - extendedWaitUntil:
     visible: ".*(incorretos|cadastrado|internet|instantes).*"
     timeout: 30000
-- takeScreenshot: 02-empresa-senha-errada
 - assertVisible: "ÁREA DA EMPRESA"

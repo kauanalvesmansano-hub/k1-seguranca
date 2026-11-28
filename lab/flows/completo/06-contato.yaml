@@ -8,16 +8,15 @@ tags: [completo, contato]
     direction: DOWN
 - tapOn: "SOU CONTATO DE EMERGÊNCIA"
 - assertVisible: "Sou contato de emergência"
-- takeScreenshot: 06-contato
 - tapOn: "000000"
 - inputText: "12345"   # 5 dígitos: nunca bate com um convite real (6 dígitos)
-- tapOn: "Seu nome (ex.: Mãe, João)"
+- tapOn: "Seu nome \\(ex.: Mãe, João\\)"
 - inputText: "Lab Teste"
-- hideKeyboard
-- tapOn: "RECEBER OS ALERTAS NESTE CELULAR"
+- runFlow:
+    file: ../comum/tocar.yaml
+    env: { ALVO: "RECEBER OS ALERTAS NESTE CELULAR" }
 - extendedWaitUntil:
     visible: ".*Digite os 6 números.*"
     timeout: 15000
-- takeScreenshot: 06-contato-codigo-curto
 - tapOn: "OK"
 - assertVisible: "Sou contato de emergência"

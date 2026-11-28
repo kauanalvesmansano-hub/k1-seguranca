@@ -6,12 +6,16 @@ tags: [completo, cadastro]
 - runFlow:
     file: ../comum/tocar-inicio.yaml
     env: { BOTAO: "SOU EMPRESA" }
-- tapOn: ".*CADASTRE SUA EMPRESA.*"
+- runFlow:
+    file: ../comum/tocar.yaml
+    env: { ALVO: ".*CADASTRE SUA EMPRESA.*" }
 - assertVisible: "CADASTRO DA EMPRESA"
-- takeScreenshot: 04-cadastro-empresa
 - scrollUntilVisible:
     element: "CADASTRAR EMPRESA"
     direction: DOWN
-- tapOn: "CADASTRAR EMPRESA"
-- assertVisible: ".*Preencha empresa, responsável e quantidade.*"
-- takeScreenshot: 04-cadastro-validacao
+- runFlow:
+    file: ../comum/tocar.yaml
+    env: { ALVO: "CADASTRAR EMPRESA" }
+- scrollUntilVisible:
+    element: ".*Preencha empresa, responsável e quantidade.*"
+    direction: DOWN
