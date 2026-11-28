@@ -1,0 +1,46 @@
+appId: com.k1.seguranca
+name: "Empresa LAB — entra, abre todas as abas, reabre logado"
+tags: [logado]
+---
+- runFlow: ../comum/abrir.yaml
+- runFlow:
+    file: ../comum/tocar-inicio.yaml
+    env: { BOTAO: "SOU EMPRESA" }
+- runFlow:
+    file: ../comum/ver.yaml
+    env: { TEXTO: "E-MAIL" }
+- tapOn: "E-MAIL"
+- inputText: ${LAB_EMAIL}
+- pressKey: Tab
+- inputText: ${LAB_SENHA}
+- hideKeyboard:
+    optional: true
+- runFlow:
+    file: ../comum/tocar.yaml
+    env: { ALVO: "ENTRAR" }
+# termo (só na primeira vez)
+- runFlow:
+    when: { visible: "LI E ACEITO" }
+    commands:
+      - tapOn: "LI E ACEITO"
+- extendedWaitUntil:
+    visible: "Painel"
+    timeout: 90000
+- tapOn: "Relatórios"
+- waitForAnimationToEnd: { timeout: 8000 }
+- tapOn: "Livro"
+- waitForAnimationToEnd: { timeout: 8000 }
+- tapOn: "Funcionários"
+- runFlow:
+    file: ../comum/ver.yaml
+    env: { TEXTO: ".*Vigilante LAB.*" }
+- tapOn: "Ajustes"
+- waitForAnimationToEnd: { timeout: 8000 }
+- tapOn: "Painel"
+# fecha e abre de novo: continua logado, direto no painel
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Painel"
+    timeout: 60000

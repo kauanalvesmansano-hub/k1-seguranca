@@ -1,0 +1,44 @@
+appId: com.k1.seguranca
+name: "Vigilante LAB — entra e abre as abas (sem tocar no SOS)"
+tags: [logado]
+---
+- runFlow: ../comum/abrir.yaml
+- runFlow:
+    file: ../comum/tocar-inicio.yaml
+    env: { BOTAO: "SOU FUNCIONÁRIO" }
+- runFlow:
+    file: ../comum/ver.yaml
+    env: { TEXTO: "MATRÍCULA" }
+- tapOn: "MATRÍCULA"
+- inputText: ${LAB_MATRICULA}
+- pressKey: Tab
+- inputText: ${LAB_PIN}
+- hideKeyboard:
+    optional: true
+- runFlow:
+    file: ../comum/tocar.yaml
+    env: { ALVO: "ENTRAR" }
+- runFlow:
+    when: { visible: "LI E ACEITO" }
+    commands:
+      - runFlow:
+          file: ../comum/tocar.yaml
+          env: { ALVO: "LI E ACEITO" }
+- extendedWaitUntil:
+    visible: "Início"
+    timeout: 90000
+- tapOn: "Ronda"
+- waitForAnimationToEnd: { timeout: 8000 }
+- tapOn: "Portaria"
+- waitForAnimationToEnd: { timeout: 8000 }
+- tapOn: "Livro"
+- waitForAnimationToEnd: { timeout: 8000 }
+- tapOn: "Ocorrências"
+- waitForAnimationToEnd: { timeout: 8000 }
+- tapOn: "Início"
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: "Início"
+    timeout: 60000

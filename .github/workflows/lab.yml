@@ -45,7 +45,7 @@ jobs:
       matrix:
         include:
           - { nome: "1-compacto", api: 29, perfil: "Nexus S", rede: "-netspeed full -gpu guest", suites: "rapido completo" }
-          - { nome: "2-padrao", api: 33, perfil: "pixel_6", rede: "-netspeed full -gpu guest", suites: "rapido completo" }
+          - { nome: "2-padrao", api: 33, perfil: "pixel_6", rede: "-netspeed full -gpu guest", suites: "rapido completo logado" }
           - { nome: "3-tela-grande", api: 34, perfil: "pixel_c", rede: "-netspeed full -gpu guest", suites: "rapido completo" }
           - { nome: "4-rede-instavel", api: 33, perfil: "pixel_5", rede: "-netdelay umts -netspeed edge -gpu swiftshader_indirect", suites: "rapido rede" }
           - { nome: "5-falhas", api: 31, perfil: "pixel_4", rede: "-netspeed full -gpu guest", suites: "rapido falhas" }
@@ -57,7 +57,7 @@ jobs:
           modo="${{ inputs.modo || 'completo' }}"; n="${{ matrix.nome }}"; s="${{ matrix.suites }}"
           case "$modo" in
             rapido) [ "$n" = "2-padrao" ] || [ "$n" = "4-rede-instavel" ] && s="rapido" || s="" ;;
-            telas) s="rapido completo" ;;
+            telas) [ "$n" = "2-padrao" ] && s="rapido completo logado" || s="rapido completo" ;;
             funcionalidade) [ "$n" = "2-padrao" ] && s="so:${{ inputs.funcionalidade }}" || s="" ;;
           esac
           echo "suites=$s" >> $GITHUB_OUTPUT
@@ -80,6 +80,10 @@ jobs:
       - if: steps.d.outputs.suites != ''
         name: Liga o Android, instala o K1 e testa
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          LAB_SENHA: ${{ secrets.K1_LAB_SENHA }}
+          LAB_PIN: ${{ secrets.K1_LAB_PIN }}
+          LAB_MATRICULA: ${{ secrets.K1_LAB_MATRICULA }}
         with:
           api-level: ${{ matrix.api }}
           arch: x86_64
@@ -109,8 +113,12 @@ jobs:
       - name: Monta o relatório
         run: python3 lab/relatorio.py resultados "${{ needs.apk.outputs.tag }}" "${{ inputs.modo || 'completo' }}" "${{ github.run_id }}" > relatorio.md; cat relatorio.md >> $GITHUB_STEP_SUMMARY
       - name: Guarda no histórico (ramo lab-resultados)
+        env:
+          S1: ${{ secrets.K1_LAB_SENHA }}
+          S2: ${{ secrets.K1_LAB_PIN }}
         run: |
           git config user.name "K1 LAB"; git config user.email "lab@k1.invalid"
+          cp lab/limpar_segredos.py /tmp/limpar_segredos.py
           git fetch origin lab-resultados && git checkout lab-resultados || git checkout --orphan lab-resultados
           git rm -rq --cached . 2>/dev/null || true
           mkdir -p historico
@@ -125,4 +133,5 @@ jobs:
           find resultados -name 'tela-final-*.json' | while read -r f; do cel=$(echo "$f" | cut -d/ -f3); mkdir -p "$ev/$cel"; grep -oE '"text" *: *"[^"]+"|"hintText" *: *"[^"]+"' "$f" | head -80 > "$ev/$cel/$(basename "$f" .json).txt" || true; done
           find resultados -name 'maestro.log' | while read -r f; do cel=$(echo "$f" | cut -d/ -f3); mkdir -p "$ev/$cel"; grep -E "FAILED|Failed|Exception|not found|Assertion" "$f" | tail -60 > "$ev/$cel/falhas-$(echo "$f" | cut -d/ -f4).txt" || true; done
           find resultados -name '00-primeira-tela.xml' | while read -r f; do cel=$(echo "$f" | cut -d/ -f3); mkdir -p "$ev/$cel"; grep -oE 'text="[^"]+"' "$f" > "$ev/$cel/textos-da-primeira-tela.txt" || true; done
+          python3 /tmp/limpar_segredos.py "$ev" relatorio.md "$nome" ULTIMO.md
           git add historico ULTIMO.md evidencias && git commit -qm "LAB: ${{ inputs.modo || 'completo' }} em ${{ needs.apk.outputs.tag }}" && git push -q origin HEAD:lab-resultados
