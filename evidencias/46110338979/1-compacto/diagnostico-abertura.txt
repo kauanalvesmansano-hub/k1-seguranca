@@ -1,0 +1,9 @@
+--- 10s
+  mCurrentFocus=Window{2757e4c u0 com.k1.seguranca/com.k1.seguranca.MainActivity}
+  mFocusedApp=AppWindowToken{a386e3e token=Token{bc0ef9 ActivityRecord{85921c0 u0 com.k1.seguranca/.MainActivity t15}}}
+--- 30s
+  mCurrentFocus=Window{2757e4c u0 com.k1.seguranca/com.k1.seguranca.MainActivity}
+  mFocusedApp=AppWindowToken{a386e3e token=Token{bc0ef9 ActivityRecord{85921c0 u0 com.k1.seguranca/.MainActivity t15}}}
+--- 60s
+  mCurrentFocus=Window{2757e4c u0 com.k1.seguranca/com.k1.seguranca.MainActivity}
+  mFocusedApp=AppWindowToken{a386e3e token=Token{bc0ef9 ActivityRecord{85921c0 u0 com.k1.seguranca/.MainActivity t15}}}
