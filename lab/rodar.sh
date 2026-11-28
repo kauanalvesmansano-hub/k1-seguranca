@@ -35,6 +35,14 @@ for s in $SUITES; do
   maestro hierarchy --compact > "$OUT/tela-final-$s.json" 2>/dev/null || true
   echo "suite $s terminou com código $?" >> "$OUT/suites.txt"; tail -80 "$OUT/maestro-$s.txt"
 done
+# 3b) diagnóstico: o que fica na frente logo depois de abrir com todas as permissões
+adb shell pm clear $APP >/dev/null 2>&1
+for p in $(adb shell dumpsys package $APP | sed -n '/requested permissions:/,/install permissions:/p' | grep -oE 'android\.permission\.[A-Z_]+'); do adb shell pm grant $APP $p >/dev/null 2>&1; done
+adb shell monkey -p $APP -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+for t in 10 30 60; do sleep $([ $t = 10 ] && echo 10 || echo 20)
+  { echo "--- ${t}s"; adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" | head -2
+    adb shell uiautomator dump /sdcard/d.xml >/dev/null 2>&1 && adb shell cat /sdcard/d.xml | grep -oE 'text="[^"]+"' | head -25; } >> "$OUT/diagnostico-abertura.txt"
+done
 kill $LOGPID 2>/dev/null; sleep 1
 
 # 4) caçador de problemas no log

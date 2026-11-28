@@ -1,7 +1,6 @@
 appId: com.k1.seguranca
 # Toca num texto rolando até ele aparecer (telas de celular ficam com parte abaixo da dobra / atrás do teclado)
 ---
-- hideKeyboard
 - scrollUntilVisible:
     element: ${ALVO}
     direction: DOWN

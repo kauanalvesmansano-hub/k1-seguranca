@@ -7,7 +7,9 @@ tags: [completo, senha]
 - extendedWaitUntil:
     visible: "CRIAR NOVA SENHA"
     timeout: 20000
-- assertVisible: "CÓDIGO DO E-MAIL"
+- scrollUntilVisible:
+    element: "CÓDIGO DO E-MAIL"
+    direction: DOWN
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: "SALVAR SENHA NOVA" }
