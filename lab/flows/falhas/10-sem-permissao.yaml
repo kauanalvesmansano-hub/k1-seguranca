@@ -6,13 +6,18 @@ tags: [falhas]
     clearState: true
     permissions:
       all: deny
-- extendedWaitUntil:
-    visible: "COMO VOCÊ VAI ACESSAR?"
-    timeout: 90000
+- waitForAnimationToEnd:
+    timeout: 15000
+- scrollUntilVisible:
+    element: "COMO VOCÊ VAI ACESSAR?"
+    direction: DOWN
+    timeout: 60000
 - runFlow:
     file: ../comum/tocar-inicio.yaml
     env: { BOTAO: "SOU FUNCIONÁRIO" }
-- assertVisible: "MATRÍCULA"
+- runFlow:
+    file: ../comum/ver.yaml
+    env: { TEXTO: "MATRÍCULA" }
 - back
 - scrollUntilVisible:
     element: "SOU CONTATO DE EMERGÊNCIA"

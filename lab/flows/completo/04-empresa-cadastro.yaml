@@ -9,7 +9,9 @@ tags: [completo, cadastro]
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: ".*CADASTRE SUA EMPRESA.*" }
-- assertVisible: "CADASTRO DA EMPRESA"
+- runFlow:
+    file: ../comum/ver.yaml
+    env: { TEXTO: "CADASTRO DA EMPRESA" }
 - scrollUntilVisible:
     element: "CADASTRAR EMPRESA"
     direction: DOWN

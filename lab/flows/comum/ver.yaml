@@ -1,0 +1,12 @@
+appId: com.k1.seguranca
+# Confere que um texto está na tela, rolando para cima ou para baixo (o celular pequeno não mostra tudo de uma vez)
+---
+- scrollUntilVisible:
+    element: ${TEXTO}
+    direction: UP
+    timeout: 6000
+    optional: true
+- scrollUntilVisible:
+    element: ${TEXTO}
+    direction: DOWN
+    timeout: 15000

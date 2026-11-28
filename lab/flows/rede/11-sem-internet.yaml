@@ -11,6 +11,7 @@ tags: [rede]
 - inputText: "lab-inexistente@k1lab.test"
 - pressKey: Tab
 - inputText: "SenhaErrada123"
+- hideKeyboard
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: "ENTRAR" }

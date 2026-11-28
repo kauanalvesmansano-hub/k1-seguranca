@@ -4,6 +4,10 @@ appId: com.k1.seguranca
     clearState: true
     permissions:
       all: allow
-- extendedWaitUntil:
-    visible: "COMO VOCÊ VAI ACESSAR?"
-    timeout: 90000
+- waitForAnimationToEnd:
+    timeout: 15000
+# em celular pequeno a foto do topo empurra o título para baixo da dobra: rola até ele
+- scrollUntilVisible:
+    element: "COMO VOCÊ VAI ACESSAR?"
+    direction: DOWN
+    timeout: 60000

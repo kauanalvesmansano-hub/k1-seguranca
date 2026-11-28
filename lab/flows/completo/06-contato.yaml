@@ -7,11 +7,14 @@ tags: [completo, contato]
     element: "SOU CONTATO DE EMERGÊNCIA"
     direction: DOWN
 - tapOn: "SOU CONTATO DE EMERGÊNCIA"
-- assertVisible: "Sou contato de emergência"
+- runFlow:
+    file: ../comum/ver.yaml
+    env: { TEXTO: "Sou contato de emergência" }
 - tapOn: "000000"
 - inputText: "12345"   # 5 dígitos: nunca bate com um convite real (6 dígitos)
 - tapOn: "Seu nome \\(ex.: Mãe, João\\)"
 - inputText: "Lab Teste"
+- hideKeyboard
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: "RECEBER OS ALERTAS NESTE CELULAR" }
@@ -19,4 +22,6 @@ tags: [completo, contato]
     visible: ".*Digite os 6 números.*"
     timeout: 15000
 - tapOn: "OK"
-- assertVisible: "Sou contato de emergência"
+- runFlow:
+    file: ../comum/ver.yaml
+    env: { TEXTO: "Sou contato de emergência" }

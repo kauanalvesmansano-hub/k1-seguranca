@@ -6,7 +6,9 @@ tags: [completo, familia]
 - runFlow:
     file: ../comum/tocar-inicio.yaml
     env: { BOTAO: "PESSOAL / FAMÍLIA" }
-- assertVisible: "K1 FAMÍLIA · PROTEÇÃO PESSOAL"
+- runFlow:
+    file: ../comum/ver.yaml
+    env: { TEXTO: "K1 FAMÍLIA · PROTEÇÃO PESSOAL" }
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: "ENTRAR NA FAMÍLIA" }
@@ -18,6 +20,7 @@ tags: [completo, familia]
     direction: UP
 - tapOn: "CÓDIGO \\(EX.: AB3K-9QXZ\\)"
 - inputText: "OOOO0000"   # O e 0 não existem nos convites reais
+- hideKeyboard
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: "ENTRAR NA FAMÍLIA" }

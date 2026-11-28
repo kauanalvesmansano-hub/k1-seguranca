@@ -9,17 +9,19 @@ tags: [falhas]
 - pressKey: Home
 - launchApp:
     clearState: false
-- assertVisible: "ÁREA DA EMPRESA"
+- scrollUntilVisible: { element: "ÁREA DA EMPRESA", direction: DOWN }
 - setOrientation: LANDSCAPE
 - setOrientation: PORTRAIT
+- scrollUntilVisible: { element: "ENTRAR", direction: DOWN }
 - tapOn:
     text: "ENTRAR"
     repeat: 8
     delay: 50
-- assertVisible: "ÁREA DA EMPRESA"
+- scrollUntilVisible: { element: "E-MAIL", direction: UP }
 - tapOn: "E-MAIL"
 - inputRandomText:
     length: 400
+- hideKeyboard
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: "ENTRAR" }
@@ -28,6 +30,7 @@ tags: [falhas]
 - stopApp
 - launchApp:
     clearState: false
-- extendedWaitUntil:
-    visible: "COMO VOCÊ VAI ACESSAR?"
+- scrollUntilVisible:
+    element: "COMO VOCÊ VAI ACESSAR?"
+    direction: DOWN
     timeout: 60000

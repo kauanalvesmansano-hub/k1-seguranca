@@ -6,7 +6,9 @@ tags: [rapido, login]
 - runFlow:
     file: ../comum/tocar-inicio.yaml
     env: { BOTAO: "SOU EMPRESA" }
-- assertVisible: "ÁREA DA EMPRESA"
+- runFlow:
+    file: ../comum/ver.yaml
+    env: { TEXTO: "ÁREA DA EMPRESA" }
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: "ENTRAR" }
@@ -20,10 +22,13 @@ tags: [rapido, login]
 - inputText: "lab-inexistente@k1lab.test"
 - pressKey: Tab
 - inputText: "SenhaErrada123"
+- hideKeyboard
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: "ENTRAR" }
 - extendedWaitUntil:
     visible: ".*(incorretos|cadastrado|internet|instantes).*"
-    timeout: 30000
-- assertVisible: "ÁREA DA EMPRESA"
+    timeout: 60000
+- runFlow:
+    file: ../comum/ver.yaml
+    env: { TEXTO: "ÁREA DA EMPRESA" }

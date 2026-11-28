@@ -27,6 +27,7 @@ tags: [completo, senha]
 - inputText: "LabTeste123"
 - pressKey: Tab
 - inputText: "LabTeste123"
+- hideKeyboard
 - runFlow:
     file: ../comum/tocar.yaml
     env: { ALVO: "SALVAR SENHA NOVA" }
