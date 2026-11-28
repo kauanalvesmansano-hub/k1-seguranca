@@ -1,9 +1,9 @@
 # K1 LAB — relatório
 
-- Quando: 28/11/2026 03:43 UTC
+- Quando: 28/11/2026 03:59 UTC
 - APK testado: **teste-76**
 - Modo: completo
-- Execução: https://github.com/kauanalvesmansano-hub/k1-seguranca/actions/runs/46102816262
+- Execução: https://github.com/kauanalvesmansano-hub/k1-seguranca/actions/runs/46103835617
 
 **Celulares usados: 5 · testes: 31 · passaram: 4 · falharam: 27 · crashes: 0**
 
