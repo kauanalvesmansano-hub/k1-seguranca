@@ -1,0 +1,8 @@
+appId: com.k1.seguranca
+# Toca num botão da tela inicial, rolando até ele aparecer (em celular pequeno os botões ficam abaixo da dobra)
+---
+- scrollUntilVisible:
+    element: ${BOTAO}
+    direction: DOWN
+    timeout: 20000
+- tapOn: ${BOTAO}

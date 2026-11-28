@@ -3,7 +3,9 @@ name: "Empresa — login vazio e senha errada"
 tags: [rapido, login]
 ---
 - runFlow: ../comum/abrir.yaml
-- tapOn: "SOU EMPRESA"
+- runFlow:
+    file: ../comum/tocar-inicio.yaml
+    env: { BOTAO: "SOU EMPRESA" }
 - assertVisible: "ÁREA DA EMPRESA"
 - tapOn: "ENTRAR"
 - assertVisible: "Informe e-mail e senha."

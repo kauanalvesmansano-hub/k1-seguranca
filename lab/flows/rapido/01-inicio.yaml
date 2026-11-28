@@ -4,10 +4,9 @@ tags: [rapido, telas]
 ---
 - runFlow: ../comum/abrir.yaml
 - takeScreenshot: 01-inicio
-- assertVisible: "SOU FUNCIONÁRIO"
-- assertVisible: "SOU EMPRESA"
-- assertVisible: "PESSOAL / FAMÍLIA"
-- scrollUntilVisible:
-    element: "SOU CONTATO DE EMERGÊNCIA"
-    direction: DOWN
-- assertVisible: "SOU VIGILANTE · PLANO INDIVIDUAL"
+- scrollUntilVisible: { element: "SOU FUNCIONÁRIO", direction: DOWN }
+- scrollUntilVisible: { element: "SOU EMPRESA", direction: DOWN }
+- scrollUntilVisible: { element: "PESSOAL / FAMÍLIA", direction: DOWN }
+- scrollUntilVisible: { element: "SOU VIGILANTE · PLANO INDIVIDUAL", direction: DOWN }
+- scrollUntilVisible: { element: "SOU CONTATO DE EMERGÊNCIA", direction: DOWN }
+- takeScreenshot: 01-inicio-rolado

@@ -3,8 +3,10 @@ name: "Cadastro da empresa — validações (sem criar conta)"
 tags: [completo, cadastro]
 ---
 - runFlow: ../comum/abrir.yaml
-- tapOn: "SOU EMPRESA"
-- tapOn: "CADASTRE SUA EMPRESA"
+- runFlow:
+    file: ../comum/tocar-inicio.yaml
+    env: { BOTAO: "SOU EMPRESA" }
+- tapOn: ".*CADASTRE SUA EMPRESA.*"
 - assertVisible: "CADASTRO DA EMPRESA"
 - takeScreenshot: 04-cadastro-empresa
 - scrollUntilVisible:

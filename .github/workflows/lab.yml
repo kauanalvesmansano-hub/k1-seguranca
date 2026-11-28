@@ -44,11 +44,11 @@ jobs:
       max-parallel: 5
       matrix:
         include:
-          - { nome: "1-compacto", api: 29, perfil: "Nexus S", rede: "-netspeed full", suites: "rapido completo" }
-          - { nome: "2-padrao", api: 33, perfil: "pixel_6", rede: "-netspeed full", suites: "rapido completo" }
-          - { nome: "3-tela-grande", api: 34, perfil: "pixel_c", rede: "-netspeed full", suites: "rapido completo" }
-          - { nome: "4-rede-instavel", api: 33, perfil: "pixel_5", rede: "-netdelay umts -netspeed edge", suites: "rapido rede" }
-          - { nome: "5-falhas", api: 31, perfil: "pixel_4", rede: "-netspeed full", suites: "rapido falhas" }
+          - { nome: "1-compacto", api: 29, perfil: "Nexus S", rede: "-netspeed full -gpu guest", suites: "rapido completo" }
+          - { nome: "2-padrao", api: 33, perfil: "pixel_6", rede: "-netspeed full -gpu guest", suites: "rapido completo" }
+          - { nome: "3-tela-grande", api: 34, perfil: "pixel_c", rede: "-netspeed full -gpu guest", suites: "rapido completo" }
+          - { nome: "4-rede-instavel", api: 33, perfil: "pixel_5", rede: "-netdelay umts -netspeed edge -gpu swiftshader_indirect", suites: "rapido rede" }
+          - { nome: "5-falhas", api: 31, perfil: "pixel_4", rede: "-netspeed full -gpu guest", suites: "rapido falhas" }
     steps:
       - uses: actions/checkout@v4
       - name: Decide se este celular roda neste modo
@@ -87,7 +87,7 @@ jobs:
           profile: ${{ matrix.perfil }}
           ram-size: 3072M
           disk-size: 4096M
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim ${{ matrix.rede }}
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim ${{ matrix.rede }}
           disable-animations: true
           script: bash lab/rodar.sh "${{ matrix.nome }}" "${{ matrix.api }}" "${{ steps.d.outputs.suites }}"
       - if: always() && steps.d.outputs.suites != ''

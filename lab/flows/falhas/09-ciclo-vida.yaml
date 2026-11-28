@@ -3,7 +3,9 @@ name: "Falhas — minimizar, reabrir, girar, voltar e toques rápidos"
 tags: [falhas]
 ---
 - runFlow: ../comum/abrir.yaml
-- tapOn: "SOU EMPRESA"
+- runFlow:
+    file: ../comum/tocar-inicio.yaml
+    env: { BOTAO: "SOU EMPRESA" }
 - pressKey: Home
 - launchApp:
     clearState: false

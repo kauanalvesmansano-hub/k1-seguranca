@@ -16,6 +16,8 @@ tags: [completo, contato]
 - hideKeyboard
 - tapOn: "RECEBER OS ALERTAS NESTE CELULAR"
 - extendedWaitUntil:
-    visible: "Sou contato de emergência"
-    timeout: 30000
-- takeScreenshot: 06-contato-codigo-invalido
+    visible: ".*Digite os 6 números.*"
+    timeout: 15000
+- takeScreenshot: 06-contato-codigo-curto
+- tapOn: "OK"
+- assertVisible: "Sou contato de emergência"

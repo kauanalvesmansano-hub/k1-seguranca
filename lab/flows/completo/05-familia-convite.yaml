@@ -3,7 +3,9 @@ name: "Família — código de convite inválido"
 tags: [completo, familia]
 ---
 - runFlow: ../comum/abrir.yaml
-- tapOn: "PESSOAL / FAMÍLIA"
+- runFlow:
+    file: ../comum/tocar-inicio.yaml
+    env: { BOTAO: "PESSOAL / FAMÍLIA" }
 - assertVisible: "K1 FAMÍLIA · PROTEÇÃO PESSOAL"
 - tapOn: "ENTRAR NA FAMÍLIA"
 - assertVisible: ".*O código tem 8 letras e números.*"

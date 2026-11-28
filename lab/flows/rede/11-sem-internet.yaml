@@ -3,7 +3,9 @@ name: "Rede — login sem internet, depois reconecta"
 tags: [rede]
 ---
 - runFlow: ../comum/abrir.yaml
-- tapOn: "SOU EMPRESA"
+- runFlow:
+    file: ../comum/tocar-inicio.yaml
+    env: { BOTAO: "SOU EMPRESA" }
 - setAirplaneMode: enabled
 - tapOn: "E-MAIL"
 - inputText: "lab-inexistente@k1lab.test"

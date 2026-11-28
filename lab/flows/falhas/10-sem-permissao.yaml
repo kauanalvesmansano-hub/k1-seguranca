@@ -10,7 +10,9 @@ tags: [falhas]
     visible: "COMO VOCÊ VAI ACESSAR?"
     timeout: 90000
 - takeScreenshot: 10-sem-permissao
-- tapOn: "SOU FUNCIONÁRIO"
+- runFlow:
+    file: ../comum/tocar-inicio.yaml
+    env: { BOTAO: "SOU FUNCIONÁRIO" }
 - assertVisible: "MATRÍCULA"
 - back
 - scrollUntilVisible:

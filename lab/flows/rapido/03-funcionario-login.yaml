@@ -3,7 +3,9 @@ name: "Funcionário — login vazio e inválido"
 tags: [rapido, login]
 ---
 - runFlow: ../comum/abrir.yaml
-- tapOn: "SOU FUNCIONÁRIO"
+- runFlow:
+    file: ../comum/tocar-inicio.yaml
+    env: { BOTAO: "SOU FUNCIONÁRIO" }
 - tapOn: "ENTRAR"
 - assertVisible: "Informe matrícula e senha."
 - tapOn: "MATRÍCULA"
