@@ -36,6 +36,11 @@ jobs:
           python3 lab/escolher_reais.py modelos.json "${{ inputs.celulares || '2' }}" > devices.txt
           cat devices.txt
           echo "args=$(tr '\n' ' ' < devices.txt)" >> $GITHUB_OUTPUT
+      - name: Pasta de resultados no próprio projeto (a conta de testes tem acesso só a ela)
+        run: |
+          B=gs://k1-lab-resultados-k1-monitoramento-fb1a8
+          gsutil ls -b $B >/dev/null 2>&1 || gsutil mb -l us-central1 -b on $B 2>&1 | tail -3
+          gsutil ls -b $B
       - name: Roda no Firebase Test Lab (instala, abre, explora todas as telas)
         id: run
         continue-on-error: true
@@ -43,6 +48,7 @@ jobs:
           gcloud firebase test android run --type robo --app K1-Seguranca.apk \
             ${{ steps.cel.outputs.args }} \
             --timeout "${{ inputs.tempo || '300s' }}" \
+            --results-bucket k1-lab-resultados-k1-monitoramento-fb1a8 \
             --results-history-name "K1 LAB" --format=json --quiet 2>&1 | tee saida-ftl.txt
       - name: Baixa os resultados (logcat, crashes, mapa de telas)
         run: python3 lab/resultado_reais.py saida-ftl.txt "${{ steps.apk.outputs.tag }}" "${{ github.run_id }}" > relatorio-real.md || true; cat relatorio-real.md >> $GITHUB_STEP_SUMMARY
