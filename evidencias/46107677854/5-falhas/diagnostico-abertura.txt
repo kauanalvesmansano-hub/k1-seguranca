@@ -1,0 +1,12 @@
+--- 10s
+  mCurrentFocus=Window{e54bfe8 u0 com.k1.seguranca/com.k1.seguranca.MainActivity}
+  mFocusedApp=ActivityRecord{aa2239c u0 com.k1.seguranca/.MainActivity t17}
+text="COMO VOCÊ VAI ACESSAR?"
+--- 30s
+  mCurrentFocus=Window{e54bfe8 u0 com.k1.seguranca/com.k1.seguranca.MainActivity}
+  mFocusedApp=ActivityRecord{aa2239c u0 com.k1.seguranca/.MainActivity t17}
+text="COMO VOCÊ VAI ACESSAR?"
+--- 60s
+  mCurrentFocus=Window{e54bfe8 u0 com.k1.seguranca/com.k1.seguranca.MainActivity}
+  mFocusedApp=ActivityRecord{aa2239c u0 com.k1.seguranca/.MainActivity t17}
+text="COMO VOCÊ VAI ACESSAR?"
