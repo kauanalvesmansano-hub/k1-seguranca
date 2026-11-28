@@ -83,7 +83,7 @@ jobs:
         env:
           LAB_SENHA: ${{ secrets.K1_LAB_SENHA }}
           LAB_PIN: ${{ secrets.K1_LAB_PIN }}
-          LAB_MATRICULA: ${{ secrets.K1_LAB_MATRICULA }}
+          LAB_MATRICULA: ${{ vars.K1_LAB_MATRICULA || secrets.K1_LAB_MATRICULA }}
         with:
           api-level: ${{ matrix.api }}
           arch: x86_64

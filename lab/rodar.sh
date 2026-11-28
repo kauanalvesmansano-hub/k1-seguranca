@@ -30,7 +30,7 @@ adb shell am force-stop $APP
 # 3) testes
 for s in $SUITES; do
   if [ "$s" = logado ] && [ -z "${LAB_SENHA:-}" -o -z "${LAB_PIN:-}" -o -z "${LAB_MATRICULA:-}" ]; then
-    echo "suite logado pulada: faltam os segredos K1_LAB_SENHA / K1_LAB_PIN / K1_LAB_MATRICULA" >> "$OUT/suites.txt"; continue; fi
+    echo "suite logado pulada: faltam os segredos K1_LAB_SENHA / K1_LAB_PIN (ou a matrícula LAB)" >> "$OUT/suites.txt"; continue; fi
   if [[ "$s" == so:* ]]; then alvo=$(ls lab/flows/*/"${s#so:}"*.yaml | head -1); s=unico; else alvo="lab/flows/$s"; fi
   [ -n "$alvo" ] || continue
   timeout 1500 maestro test -e LAB_EMAIL="lab@k1seguranca.test" -e LAB_SENHA="${LAB_SENHA:-}" -e LAB_PIN="${LAB_PIN:-}" -e LAB_MATRICULA="${LAB_MATRICULA:-}" "$alvo" --format junit --output "$OUT/junit-$s.xml" --test-output-dir "$OUT/maestro-$s" --debug-output "$OUT/debug-$s" > "$OUT/maestro-$s.txt" 2>&1
